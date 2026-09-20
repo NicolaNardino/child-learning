@@ -101,7 +101,7 @@
     min-height: 100vh;
   }
 
-  /* ---------- Doors: Figure & Seek scene dressing ---------- */
+  /* ---------- Doors: Figure scene dressing ---------- */
   .doors-scene{
     position: fixed;
     top: 0;
@@ -114,15 +114,6 @@
   }
   .doors-scene svg{ width: 100%; height: 100%; display: block; }
   .doors-figure{ left: 0; }
-  .doors-seek{ right: 0; }
-  @keyframes seek-glow{
-    0%, 100%{ opacity: 1; }
-    50%{ opacity: 0.55; }
-  }
-  @keyframes seek-bob{
-    0%, 100%{ transform: translateY(0); }
-    50%{ transform: translateY(-6px); }
-  }
   @keyframes figure-sway{
     0%, 100%{ transform: rotate(0deg); }
     50%{ transform: rotate(0.6deg); }
@@ -131,13 +122,6 @@
     0%, 100%{ opacity: 0.9; }
     50%{ opacity: 0.45; }
   }
-  @keyframes rush-surge{
-    0%, 100%{ transform: translateX(0); }
-    50%{ transform: translateX(-9px); }
-  }
-  .rush{ animation: rush-surge 5.5s ease-in-out infinite; }
-  .seek-eye{ animation: seek-glow 2.6s ease-in-out infinite; transform-origin: center; }
-  .seek-goo{ animation: seek-bob 4.5s ease-in-out infinite; transform-origin: bottom center; }
   .figure-body{ animation: figure-sway 7s ease-in-out infinite; transform-origin: bottom center; }
   .figure-blisters{ animation: blister-pulse 3.4s ease-in-out infinite; }
 
@@ -145,7 +129,7 @@
     .doors-scene{ display: block; }
   }
   @media (prefers-reduced-motion: reduce){
-    .seek-eye, .seek-goo, .figure-body, .figure-blisters, .rush{ animation: none; }
+    .figure-body, .figure-blisters{ animation: none; }
   }
 
   .wrap{ position: relative; z-index: 1; }
@@ -450,170 +434,6 @@
         <circle cx="194" cy="668" r="6" fill="url(#blisterGlow)"/>
       </g>
     </g>
-  </svg>
-</div>
-
-<div class="doors-scene doors-seek" aria-hidden="true">
-  <svg viewBox="0 0 260 800" preserveAspectRatio="xMidYMid meet">
-    <defs>
-      <linearGradient id="slimeBody" x1="0" y1="0" x2="0" y2="1">
-        <stop offset="0" stop-color="#191a16"/>
-        <stop offset="1" stop-color="#040504"/>
-      </linearGradient>
-      <filter id="softGlow" x="-60%" y="-60%" width="220%" height="220%">
-        <feGaussianBlur stdDeviation="9"/>
-      </filter>
-      <filter id="smokeBlur" x="-50%" y="-50%" width="200%" height="200%">
-        <feGaussianBlur stdDeviation="13"/>
-      </filter>
-      <radialGradient id="rushSkull" cx="38%" cy="32%" r="72%">
-        <stop offset="0" stop-color="#6e6862"/>
-        <stop offset="60%" stop-color="#454039"/>
-        <stop offset="100%" stop-color="#1d1a16"/>
-      </radialGradient>
-    </defs>
-
-    <!-- dark corridor wall, right -->
-    <rect x="120" y="-600" width="230" height="2000" fill="#150d0a"/>
-
-    <!-- the wall itself, swallowed in goo -->
-    <path d="M320 -600 L320 1400 L154 1400
-             C148 1300, 162 1210, 152 1120 C142 1030, 158 940, 150 850
-             C142 760, 160 670, 148 580 C138 490, 158 400, 148 310
-             C140 220, 160 140, 150 50 C142 -40, 158 -130, 148 -240
-             C140 -350, 158 -470, 152 -600 Z"
-      fill="url(#slimeBody)"/>
-    <path d="M154 1400 C148 1300, 162 1210, 152 1120 C142 1030, 158 940, 150 850
-             C142 760, 160 670, 148 580 C138 490, 158 400, 148 310
-             C140 220, 160 140, 150 50 C142 -40, 158 -130, 148 -240
-             C140 -350, 158 -470, 152 -600"
-      fill="none" stroke="#ff4a2e" stroke-width="8" opacity="0.35" filter="url(#softGlow)"/>
-
-    <!-- Rush: a grinning skull in a cloud of black smoke, top right -->
-    <g class="rush">
-      <!-- billowing smoke -->
-      <g fill="#07070a" filter="url(#smokeBlur)">
-        <ellipse cx="196" cy="150" rx="96" ry="84"/>
-        <ellipse cx="252" cy="96" rx="70" ry="56"/>
-        <ellipse cx="244" cy="216" rx="76" ry="58"/>
-        <ellipse cx="132" cy="110" rx="46" ry="38"/>
-        <ellipse cx="124" cy="206" rx="42" ry="34"/>
-      </g>
-      <!-- speed streaks trailing behind -->
-      <g stroke="#0b0b0e" stroke-linecap="round" fill="none" opacity="0.75">
-        <path d="M104 96 C150 86, 208 82, 268 88" stroke-width="7"/>
-        <path d="M92 134 C146 126, 212 124, 272 128" stroke-width="5"/>
-        <path d="M98 226 C150 232, 214 234, 274 230" stroke-width="6"/>
-      </g>
-
-      <!-- distorted skull face -->
-      <path d="M166 92 C202 92, 220 120, 218 156
-               C216 188, 204 212, 186 224 C172 233, 152 232, 140 222
-               C124 209, 114 186, 114 156 C114 120, 132 92, 166 92 Z"
-        fill="url(#rushSkull)"/>
-
-      <!-- hollowed-out sockets -->
-      <ellipse cx="142" cy="146" rx="17" ry="20" fill="#08070a"/>
-      <ellipse cx="190" cy="148" rx="17" ry="20" fill="#08070a"/>
-      <circle cx="142" cy="148" r="6" fill="#cfd6d2" opacity="0.5"/>
-      <circle cx="190" cy="150" r="6" fill="#cfd6d2" opacity="0.5"/>
-
-      <!-- cracks and holes -->
-      <g stroke="#14120f" stroke-linecap="round" fill="none" opacity="0.8">
-        <path d="M166 100 C162 114, 170 122, 164 134" stroke-width="3"/>
-        <path d="M206 116 C198 124, 200 134, 194 140" stroke-width="2.5"/>
-        <path d="M124 170 C132 176, 132 186, 126 192" stroke-width="2.5"/>
-      </g>
-      <g fill="#100e0c" opacity="0.85">
-        <circle cx="206" cy="180" r="5"/>
-        <circle cx="128" cy="128" r="4"/>
-        <circle cx="176" cy="210" r="3.5"/>
-      </g>
-
-      <!-- the big grin -->
-      <path d="M128 178 C142 210, 190 212, 206 180
-               C204 202, 190 222, 166 224 C144 226, 130 204, 128 178 Z"
-        fill="#0a0908"/>
-      <g stroke="#ddd8cc" stroke-width="3" opacity="0.9">
-        <path d="M139 190 L141 205"/>
-        <path d="M151 197 L152 214"/>
-        <path d="M165 200 L165 218"/>
-        <path d="M179 198 L178 215"/>
-        <path d="M193 191 L190 206"/>
-      </g>
-    </g>
-
-    <g class="seek-goo">
-      <!-- long arms reaching out of the wall, below Rush -->
-      <g stroke-linecap="round" fill="none">
-        <g stroke="#ff4a2e" opacity="0.3" filter="url(#softGlow)">
-          <path d="M236 408 C188 400, 136 412, 92 432" stroke-width="64"/>
-          <path d="M232 630 C194 622, 154 632, 116 650" stroke-width="56"/>
-        </g>
-        <g stroke="#0c0d0a">
-          <path d="M236 408 C188 400, 136 412, 92 432" stroke-width="56"/>
-          <path d="M232 630 C194 622, 154 632, 116 650" stroke-width="48"/>
-        </g>
-      </g>
-
-      <!-- grabbing hands -->
-      <g fill="#0c0d0a" stroke="#0c0d0a" stroke-linecap="round">
-        <!-- upper hand, reaching out -->
-        <ellipse cx="90" cy="434" rx="37" ry="33"/>
-        <g stroke-width="21" fill="none">
-          <path d="M74 412 C62 406, 50 406, 42 410"/>
-          <path d="M66 428 C52 426, 42 428, 34 432"/>
-          <path d="M66 446 C52 450, 42 456, 36 464"/>
-          <path d="M76 458 C70 470, 66 482, 66 492"/>
-          <path d="M100 412 C98 398, 92 388, 82 382"/>
-        </g>
-        <!-- lower hand, clawing out and down -->
-        <ellipse cx="114" cy="652" rx="33" ry="30"/>
-        <g stroke-width="19" fill="none">
-          <path d="M100 632 C92 620, 82 612, 72 608"/>
-          <path d="M92 646 C78 642, 66 642, 56 646"/>
-          <path d="M94 666 C82 672, 72 680, 64 690"/>
-          <path d="M118 630 C118 618, 114 608, 106 600"/>
-          <path d="M130 666 C134 656, 136 646, 132 636"/>
-        </g>
-      </g>
-
-      <!-- goo dripping off the arms -->
-      <g fill="#0a0b09">
-        <path d="M126 450 C120 490, 116 524, 124 550 C132 524, 130 488, 136 452 Z"/>
-        <path d="M182 430 C176 464, 172 492, 180 514 C188 492, 186 462, 192 432 Z"/>
-        <path d="M150 668 C144 698, 140 722, 148 742 C156 722, 154 696, 160 670 Z"/>
-        <path d="M200 648 C194 674, 190 694, 198 712 C206 694, 204 672, 210 650 Z"/>
-      </g>
-
-      <!-- wet highlights along the arms -->
-      <g stroke="#3b4038" fill="none" opacity="0.4" stroke-linecap="round">
-        <path d="M212 394 C168 388, 124 398, 90 414" stroke-width="4"/>
-        <path d="M210 616 C176 610, 146 618, 118 632" stroke-width="3"/>
-      </g>
-
-      <!-- eyes set into the goo, watching -->
-      <g class="seek-eye">
-        <circle cx="214" cy="330" r="40" fill="#ff4a2e" opacity="0.45" filter="url(#softGlow)"/>
-        <ellipse cx="214" cy="330" rx="26" ry="28" fill="#f4efe2"/>
-        <circle cx="212" cy="334" r="11" fill="#150a08"/>
-        <circle cx="205" cy="322" r="5" fill="#ffffff" opacity="0.5"/>
-
-        <circle cx="198" cy="524" r="20" fill="#ff4a2e" opacity="0.4" filter="url(#softGlow)"/>
-        <ellipse cx="198" cy="524" rx="12" ry="13" fill="#e8e2d4"/>
-        <circle cx="197" cy="527" r="5" fill="#150a08"/>
-
-        <circle cx="226" cy="722" r="17" fill="#ff4a2e" opacity="0.4" filter="url(#softGlow)"/>
-        <ellipse cx="226" cy="722" rx="10" ry="11" fill="#e8e2d4"/>
-        <circle cx="225" cy="725" r="4" fill="#150a08"/>
-      </g>
-    </g>
-
-    <!-- goo pooling along the floor -->
-    <path d="M-60 800 L-60 700 C-10 682, 40 712, 92 700 C140 688, 176 716, 218 706
-             C252 698, 290 710, 320 702 L320 800 Z" fill="url(#slimeBody)"/>
-    <path d="M-60 716 C-10 698, 40 728, 92 716 C140 704, 176 732, 218 722 C252 714, 290 726, 320 718"
-      fill="none" stroke="#ff4a2e" stroke-width="6" opacity="0.3" filter="url(#softGlow)"/>
   </svg>
 </div>
 
