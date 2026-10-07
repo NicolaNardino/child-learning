@@ -348,6 +348,22 @@
     .answer-row{ flex-direction: column; }
     .answer-row .btn{ width: 100%; }
   }
+  /* ---------- fun effects: rainbow button flash + confetti ---------- */
+  @keyframes rainbow-flash{
+    0%  { background-color: #ff4d4d; color: #1a0a00; }
+    17% { background-color: #ff9f1c; color: #1a0a00; }
+    34% { background-color: #ffe14d; color: #1a0a00; }
+    51% { background-color: #4dd66b; color: #1a0a00; }
+    68% { background-color: #4da6ff; color: #1a0a00; }
+    85% { background-color: #b46bff; color: #1a0a00; }
+    100%{ background-color: #ff6bd6; color: #1a0a00; }
+  }
+  button.rainbow{ animation: rainbow-flash 0.6s linear; }
+  .confetti-layer{ position: fixed; inset: 0; pointer-events: none; z-index: 1000; overflow: hidden; }
+  .confetti-piece{ position: absolute; width: 9px; height: 14px; border-radius: 2px; }
+  @media (prefers-reduced-motion: reduce){
+    button.rainbow{ animation: none; }
+  }
 </style>
 
 <div class="doors-scene doors-figure" aria-hidden="true">
@@ -1197,6 +1213,7 @@
       store.streak++; if (store.streak > store.best) store.best = store.streak;
       feedback.className = "feedback show correct";
       verdictEl.textContent = "Correct!";
+      confettiBurst(checkBtn);
     } else {
       store.streak = 0;
       feedback.className = "feedback show incorrect";
@@ -1333,6 +1350,7 @@
       trialCorrect++;
       trialQuickFeedback.textContent = "✓ Correct";
       trialQuickFeedback.className = "trial-quick correct";
+      confettiBurst(trialCheckBtn);
     } else {
       trialQuickFeedback.textContent = "✗ " + trialCurrentProblem.answerDisplay;
       trialQuickFeedback.className = "trial-quick incorrect";
@@ -1395,6 +1413,52 @@
   trialAnswerInput.addEventListener("keydown", e => {
     if (e.key === "Enter") { e.preventDefault(); submitTrialAnswer(); }
   });
+
+  /* ---------------- fun effects ---------------- */
+  const reduceMotion = window.matchMedia("(prefers-reduced-motion: reduce)");
+  const CONFETTI_COLOURS = ["#ff4d4d", "#ff9f1c", "#ffe14d", "#4dd66b", "#4da6ff", "#b46bff", "#ff6bd6"];
+
+  // Every button flashes through the rainbow when clicked.
+  document.addEventListener("click", e => {
+    const btn = e.target.closest("button");
+    if (!btn || btn.disabled) return;
+    btn.classList.remove("rainbow");
+    void btn.offsetWidth; // restart the animation on quick repeat clicks
+    btn.classList.add("rainbow");
+  });
+  document.addEventListener("animationend", e => {
+    if (e.animationName === "rainbow-flash") e.target.classList.remove("rainbow");
+  });
+
+  // A burst of confetti that shoots up from an element and falls down.
+  function confettiBurst(fromEl){
+    if (reduceMotion.matches) return;
+    const r = fromEl.getBoundingClientRect();
+    const x0 = r.left + r.width / 2, y0 = r.top + r.height / 2;
+    const layer = document.createElement("div");
+    layer.className = "confetti-layer";
+    document.body.appendChild(layer);
+    let left = 70;
+    for (let i = 0; i < 70; i++) {
+      const piece = document.createElement("div");
+      piece.className = "confetti-piece";
+      piece.style.left = x0 + "px";
+      piece.style.top = y0 + "px";
+      piece.style.background = CONFETTI_COLOURS[i % CONFETTI_COLOURS.length];
+      if (i % 3 === 0) piece.style.borderRadius = "50%";
+      layer.appendChild(piece);
+      const angle = -Math.PI / 2 + (Math.random() - 0.5) * Math.PI * 0.9;
+      const speed = 160 + Math.random() * 220;
+      const dx = Math.cos(angle) * speed, dy = Math.sin(angle) * speed;
+      const spin = (Math.random() - 0.5) * 1440;
+      piece.animate([
+        { transform: "translate(0,0) rotate(0deg)", opacity: 1 },
+        { transform: `translate(${dx}px, ${dy}px) rotate(${spin / 2}deg)`, opacity: 1, offset: 0.35 },
+        { transform: `translate(${dx * 1.5}px, ${dy + 420 + Math.random() * 200}px) rotate(${spin}deg)`, opacity: 0 }
+      ], { duration: 1300 + Math.random() * 700, easing: "cubic-bezier(.2,.6,.4,1)" })
+        .finished.then(() => { if (--left === 0) layer.remove(); });
+    }
+  }
 
   /* ---------------- boot ---------------- */
   function start(hot){
