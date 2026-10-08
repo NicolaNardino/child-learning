@@ -85,6 +85,7 @@
   }
 
   *{ box-sizing: border-box; }
+  [hidden]{ display: none !important; }
   body{
     background: var(--paper);
     background-image:
@@ -364,6 +365,100 @@
   @media (prefers-reduced-motion: reduce){
     button.rainbow{ animation: none; }
   }
+
+  /* ---------- race track: your car vs the rival ---------- */
+  .race{
+    background: var(--paper-raised);
+    border: 1.5px solid var(--line-strong);
+    border-radius: 10px;
+    padding: 14px 18px 16px;
+    display: flex; flex-direction: column; gap: 10px;
+  }
+  .race-head{ display: flex; justify-content: space-between; align-items: baseline; gap: 10px; flex-wrap: wrap; }
+  .race-head h2{ font-size: 16px; font-weight: 700; }
+  .race-msg{ font-size: 13px; color: var(--ink-soft); }
+  .race-msg.win{ color: var(--good); font-weight: 700; }
+  .race-msg.lose{ color: var(--bad); font-weight: 700; }
+  .track{
+    position: relative;
+    background: #24262c;
+    border-radius: 8px;
+    padding: 6px 0;
+    overflow: hidden;
+  }
+  /* checkered finish line on the right */
+  .track::after{
+    content: "";
+    position: absolute; top: 0; bottom: 0; right: 0; width: 14px;
+    background: conic-gradient(#fff 25%, #111 0 50%, #fff 0 75%, #111 0) 0 0 / 14px 14px;
+  }
+  .lane{ position: relative; height: 34px; }
+  .lane + .lane{ border-top: 2px dashed rgba(255,255,255,0.35); }
+  .lane-tag{
+    position: absolute; right: 22px; top: 50%; transform: translateY(-50%);
+    font: 700 10.5px "IBM Plex Mono", monospace; color: rgba(255,255,255,0.4); letter-spacing: 0.06em;
+  }
+  .race-car{
+    position: absolute; top: 3px;
+    width: 56px; height: 28px;
+    left: 4px;
+    transition: left 0.6s cubic-bezier(.3,1.4,.5,1);
+  }
+  .race-car svg{ width: 100%; height: 100%; display: block; }
+  .race-car.you{ color: #ffd400; }
+  .race-car.rival{ color: #9b3cff; }
+  .race-car.zoom{ animation: car-zoom 0.6s ease-out; }
+  @keyframes car-zoom{
+    0%{ filter: drop-shadow(-4px 0 0 rgba(255,212,0,0)); }
+    40%{ filter: drop-shadow(-14px 0 2px rgba(255,212,0,0.7)); }
+    100%{ filter: drop-shadow(-4px 0 0 rgba(255,212,0,0)); }
+  }
+
+  /* ---------- trophy shelf ---------- */
+  .trophies{
+    background: var(--paper-raised);
+    border: 1.5px solid var(--line-strong);
+    border-radius: 10px;
+    padding: 16px 18px 18px;
+    display: flex; flex-direction: column; gap: 12px;
+  }
+  .trophies-head{ display: flex; justify-content: space-between; align-items: baseline; gap: 10px; }
+  .trophies-head h2{ font-size: 16px; font-weight: 700; }
+  .trophy-grid{ display: grid; grid-template-columns: repeat(auto-fill, minmax(112px, 1fr)); gap: 10px; }
+  .badge{
+    display: flex; flex-direction: column; align-items: center; gap: 3px; text-align: center;
+    padding: 10px 6px; border-radius: 8px;
+    border: 1.5px solid var(--line-strong);
+    background: var(--paper);
+  }
+  .badge .icon{ font-size: 28px; line-height: 1.1; }
+  .badge .name{ font-weight: 700; font-size: 12.5px; }
+  .badge .desc{ font-size: 11px; color: var(--ink-soft); line-height: 1.25; }
+  .badge.locked .icon{ filter: grayscale(1); opacity: 0.3; }
+  .badge.locked .name{ color: var(--ink-soft); }
+  .badge.earned{ border-color: var(--accent); background: linear-gradient(180deg, rgba(211,165,74,0.18), var(--paper)); }
+
+  .toast-stack{
+    position: fixed; left: 50%; bottom: 20px; transform: translateX(-50%);
+    display: flex; flex-direction: column; gap: 8px; align-items: center;
+    z-index: 1001; pointer-events: none; width: max-content; max-width: calc(100vw - 32px);
+  }
+  .toast{
+    display: flex; align-items: center; gap: 12px;
+    background: var(--paper-raised); color: var(--ink);
+    border: 2px solid var(--accent); border-radius: 12px;
+    padding: 10px 18px; box-shadow: 0 8px 24px var(--shadow);
+    animation: toast-in 0.4s cubic-bezier(.3,1.5,.5,1);
+  }
+  .toast .icon{ font-size: 30px; }
+  .toast .t1{ font-size: 11.5px; letter-spacing: 0.06em; text-transform: uppercase; color: var(--accent); font-weight: 700; }
+  .toast .t2{ font-weight: 800; font-size: 15px; }
+  .toast.out{ opacity: 0; transform: translateY(10px); transition: opacity 0.35s, transform 0.35s; }
+  @keyframes toast-in{ from{ opacity: 0; transform: translateY(20px) scale(0.9); } to{ opacity: 1; transform: none; } }
+  @media (prefers-reduced-motion: reduce){
+    .race-car{ transition: none; }
+    .race-car.zoom, .toast{ animation: none; }
+  }
 </style>
 
 <div class="doors-scene doors-figure" aria-hidden="true">
@@ -621,6 +716,17 @@
     <span class="level-desc" id="trialBestText"></span>
   </div>
 
+  <section class="race" id="raceSection" aria-label="Race">
+    <div class="race-head">
+      <h2>🏁 Race to the finish</h2>
+      <span class="race-msg" id="raceMsg" aria-live="polite"></span>
+    </div>
+    <div class="track">
+      <div class="lane"><span class="lane-tag">YOU</span><div class="race-car you" id="carYou"></div></div>
+      <div class="lane"><span class="lane-tag">RIVAL</span><div class="race-car rival" id="carRival"></div></div>
+    </div>
+  </section>
+
   <section class="page" id="practicePage">
     <h2 id="topicTitle"></h2>
     <div class="problem mono" id="problem" aria-live="polite"></div>
@@ -645,6 +751,14 @@
     <div class="stat"><span class="n mono" id="stBest">0</span><span class="k">best streak</span></div>
     <button class="btn ghost small ledger-reset" id="resetBtn">Reset progress</button>
   </div>
+
+  <section class="trophies" id="trophySection" aria-label="Trophy shelf">
+    <div class="trophies-head">
+      <h2>🏆 Trophy shelf</h2>
+      <span class="level-desc mono" id="trophyCount"></span>
+    </div>
+    <div class="trophy-grid" id="trophyGrid"></div>
+  </section>
 
   <section class="trial-page" id="trialPage" hidden>
     <div class="trial-head">
@@ -1041,6 +1155,10 @@
   TOPICS.forEach(t => { if (!store.topics[t.id]) store.topics[t.id] = { attempted: 0, correct: 0 }; });
   if (!store.modes) store.modes = {};
   if (!store.trialBest) store.trialBest = {};
+  if (!store.badges) store.badges = {};
+  if (!store.race) store.race = { you: 0, rival: 0 };
+  if (!store.racesWon) store.racesWon = 0;
+  if (!store.challengeCorrect) store.challengeCorrect = 0;
 
   let currentTopicId = store.topic || TOPICS[0].id;
   let currentLevel = store.level || "warmup";
@@ -1211,6 +1329,7 @@
     if (correct) {
       sessionCorrect++; ts.correct++;
       store.streak++; if (store.streak > store.best) store.best = store.streak;
+      if (currentLevel === "challenge") store.challengeCorrect++;
       feedback.className = "feedback show correct";
       verdictEl.textContent = "Correct!";
       confettiBurst(checkBtn);
@@ -1220,6 +1339,8 @@
       verdictEl.textContent = `Not quite — the answer is ${currentProblem.answerDisplay}.`;
     }
     explainEl.innerHTML = currentProblem.explain();
+    raceStep(correct);
+    checkBadges();
     saveStore();
     renderLedger();
     renderTopicNav();
@@ -1247,12 +1368,14 @@
   });
 
   resetBtn.addEventListener("click", () => {
-    if (!confirm("Clear all saved progress on this device?")) return;
+    if (!confirm("Clear all saved progress on this device? This also takes your trophies off the shelf.")) return;
     TOPICS.forEach(t => { store.topics[t.id] = { attempted: 0, correct: 0 }; });
     store.streak = 0; store.best = 0;
+    store.badges = {}; store.race = { you: 0, rival: 0 }; store.racesWon = 0; store.challengeCorrect = 0;
     sessionAttempted = 0; sessionCorrect = 0;
     saveStore();
-    renderTopicNav(); renderLedger();
+    renderTopicNav(); renderLedger(); renderRace(); renderTrophies();
+    raceMsg.textContent = ""; raceMsg.className = "race-msg";
   });
 
   /* ---------------- time trial ---------------- */
@@ -1307,6 +1430,8 @@
     trialRow.hidden = true;
     practicePage.hidden = true;
     ledgerSection.hidden = true;
+    raceSection.hidden = true;
+    trophySection.hidden = true;
     trialPage.hidden = false;
     trialQuiz.hidden = false;
     trialResults.hidden = true;
@@ -1390,6 +1515,7 @@
       saveStore();
     }
     updateTrialBestDisplay();
+    checkBadges();
   }
 
   function exitTimeTrial(){
@@ -1402,6 +1528,8 @@
     trialRow.hidden = false;
     practicePage.hidden = false;
     ledgerSection.hidden = false;
+    raceSection.hidden = false;
+    trophySection.hidden = false;
     renderModeSeg();
   }
 
@@ -1460,6 +1588,125 @@
     }
   }
 
+  /* ---------------- race: every right answer moves your car ---------------- */
+  // Your car moves on a right answer, the rival moves on a wrong one.
+  const RACE_STEPS = 10;
+  const raceSection = document.getElementById("raceSection");
+  const raceMsg = document.getElementById("raceMsg");
+  const carYou = document.getElementById("carYou");
+  const carRival = document.getElementById("carRival");
+  const CAR_SVG = `<svg viewBox="0 0 60 28" aria-hidden="true"><g transform="translate(60,0) scale(-1,1)">
+    <rect x="53" y="6" width="2.5" height="7" fill="#0a0c11"/>
+    <rect x="49" y="3" width="10" height="3.5" rx="1" fill="currentColor" stroke="#0a0c11" stroke-width="1.2"/>
+    <path d="M2 21 L2 17 C2 15 4 14 7 14 L14 13 C18 8 24 6 32 6 L38 6 C44 7 48 10 51 13 L56 15 C58 16 58 18 58 20 L58 21 Z"
+      fill="currentColor" stroke="#0a0c11" stroke-width="1.5" stroke-linejoin="round"/>
+    <path d="M18 13 C21 9 26 8 31 8 L37 8 C41 9 44 11 46 13 Z" fill="#9fdde0" stroke="#0a0c11" stroke-width="1"/>
+    <circle cx="14" cy="21" r="5.5" fill="#15161b"/><circle cx="14" cy="21" r="2.2" fill="#c9ced8"/>
+    <circle cx="46" cy="21" r="5.5" fill="#15161b"/><circle cx="46" cy="21" r="2.2" fill="#c9ced8"/>
+  </g></svg>`;
+  carYou.innerHTML = CAR_SVG;
+  carRival.innerHTML = CAR_SVG;
+
+  function placeCar(car, steps){
+    // start at the left edge, stop with the nose touching the finish line
+    car.style.left = `calc(4px + (100% - 74px) * ${steps / RACE_STEPS})`;
+  }
+  function renderRace(){
+    placeCar(carYou, store.race.you);
+    placeCar(carRival, store.race.rival);
+  }
+  function setRaceMsg(text, cls){
+    raceMsg.textContent = text;
+    raceMsg.className = "race-msg" + (cls ? " " + cls : "");
+  }
+  function raceStep(correct){
+    const car = correct ? carYou : carRival;
+    if (correct) store.race.you++; else store.race.rival++;
+    renderRace();
+    car.classList.remove("zoom"); void car.offsetWidth; car.classList.add("zoom");
+
+    if (store.race.you >= RACE_STEPS) {
+      store.racesWon++;
+      setRaceMsg(`🏆 You won race #${store.racesWon}!`, "win");
+      confettiBurst(carYou); confettiBurst(carYou);
+      store.race = { you: 0, rival: 0 };
+      setTimeout(renderRace, 1400);
+    } else if (store.race.rival >= RACE_STEPS) {
+      setRaceMsg("The rival got there first. New race, go go go!", "lose");
+      store.race = { you: 0, rival: 0 };
+      setTimeout(renderRace, 1400);
+    } else {
+      const left = RACE_STEPS - store.race.you;
+      setRaceMsg(correct ? `Vroom! ${left} more to the finish.` : "Oh no, the rival sped up!");
+    }
+  }
+
+  /* ---------------- trophies ---------------- */
+  const trophySection = document.getElementById("trophySection");
+  const trophyGrid = document.getElementById("trophyGrid");
+  const trophyCount = document.getElementById("trophyCount");
+  function totalCorrect(){ return TOPICS.reduce((sum, t) => sum + store.topics[t.id].correct, 0); }
+  function bestTrial(){ return Math.max(0, ...Object.values(store.trialBest)); }
+
+  const TOPIC_ICONS = { addsub: "➕", muldiv: "✖️", fractions: "🍕", decpct: "💯", orderops: "🧮", shapes: "📐" };
+  const BADGES = [
+    { id: "first",    icon: "⭐", name: "First Lap",      desc: "Get your first answer right", test: () => totalCorrect() >= 1 },
+    { id: "streak5",  icon: "🔥", name: "Hot Streak",     desc: "5 right in a row",            test: () => store.best >= 5 },
+    { id: "streak10", icon: "🚀", name: "On Fire",        desc: "10 right in a row",           test: () => store.best >= 10 },
+    { id: "streak25", icon: "⚡", name: "Unstoppable",    desc: "25 right in a row",           test: () => store.best >= 25 },
+    { id: "race1",    icon: "🏁", name: "Race Winner",    desc: "Win a race",                  test: () => store.racesWon >= 1 },
+    { id: "race5",    icon: "🏆", name: "Champion",       desc: "Win 5 races",                 test: () => store.racesWon >= 5 },
+    { id: "race20",   icon: "👑", name: "Legend",         desc: "Win 20 races",                test: () => store.racesWon >= 20 },
+    { id: "trial",    icon: "⏱️", name: "Speed Demon",    desc: "Score 15+ in a Time Trial",   test: () => bestTrial() >= 15 },
+    { id: "challenge",icon: "💪", name: "Challenger",     desc: "10 right on Challenge level", test: () => store.challengeCorrect >= 10 },
+    { id: "century",  icon: "💯", name: "Century",        desc: "100 right answers in total",  test: () => totalCorrect() >= 100 },
+    ...TOPICS.map(t => ({
+      id: "master-" + t.id, icon: TOPIC_ICONS[t.id] || "🎓", name: t.label + " Master",
+      desc: `20 right in ${t.label}`, test: () => store.topics[t.id].correct >= 20
+    }))
+  ];
+
+  function renderTrophies(){
+    trophyGrid.innerHTML = "";
+    let earned = 0;
+    BADGES.forEach(b => {
+      const got = !!store.badges[b.id];
+      if (got) earned++;
+      const el = document.createElement("div");
+      el.className = "badge " + (got ? "earned" : "locked");
+      el.innerHTML = `<span class="icon">${b.icon}</span><span class="name"></span><span class="desc"></span>`;
+      el.querySelector(".name").textContent = b.name;
+      el.querySelector(".desc").textContent = b.desc;
+      trophyGrid.appendChild(el);
+    });
+    trophyCount.textContent = `${earned} / ${BADGES.length}`;
+  }
+
+  function checkBadges(){
+    const fresh = BADGES.filter(b => !store.badges[b.id] && b.test());
+    if (!fresh.length) return;
+    fresh.forEach(b => { store.badges[b.id] = true; });
+    saveStore();
+    renderTrophies();
+    fresh.forEach((b, i) => setTimeout(() => showToast(b), i * 900));
+  }
+
+  let toastStack = null;
+  function showToast(b){
+    if (!toastStack) {
+      toastStack = document.createElement("div");
+      toastStack.className = "toast-stack";
+      toastStack.setAttribute("aria-live", "polite");
+      document.body.appendChild(toastStack);
+    }
+    const t = document.createElement("div");
+    t.className = "toast";
+    t.innerHTML = `<span class="icon">${b.icon}</span><div><div class="t1">New trophy!</div><div class="t2"></div></div>`;
+    t.querySelector(".t2").textContent = b.name;
+    toastStack.appendChild(t);
+    setTimeout(() => { t.classList.add("out"); setTimeout(() => t.remove(), 400); }, 3200);
+  }
+
   /* ---------------- boot ---------------- */
   function start(hot){
     if (hot && hot.currentTopicId) currentTopicId = hot.currentTopicId;
@@ -1471,6 +1718,9 @@
     renderModeSeg();
     renderLedger();
     updateTrialBestDisplay();
+    renderRace();
+    renderTrophies();
+    checkBadges();
     newProblem();
     if (hot && hot.answerValue) answerInput.value = hot.answerValue;
   }
