@@ -1978,7 +1978,7 @@
 
   function resetTag(){
     player = makeBody(TW / 2 - 11, 470, 22, 30);
-    player.jumps = 1; player.coyote = 0; player.wallLock = 0; player.face = 1;
+    player.jumps = 1; player.coyote = 0; player.wallLock = 0; player.face = 1; player.floor = player.y + player.h;
     robots = [];
     tagTime = 0;
     // the first robot starts up on the far left ledge
@@ -1993,7 +1993,7 @@
     if (input) p.face = input;
     p.wallLock = Math.max(0, p.wallLock - dt);
     if (p.wallLock <= 0) p.vx = approach(p.vx, input * PLAYER_SPEED, (p.onGround ? 2600 : 1700) * dt);
-    if (p.onGround) { p.coyote = 0.08; p.jumps = 1; } else p.coyote = Math.max(0, p.coyote - dt);
+    if (p.onGround) { p.coyote = 0.08; p.jumps = 1; p.floor = p.y + p.h; } else p.coyote = Math.max(0, p.coyote - dt);
 
     if (jumpQueued) {
       jumpQueued = false;
@@ -2015,20 +2015,28 @@
   function updateRobot(r, dt){
     const speed = ROBOT_SPEED * speedMult();
     const rx = r.x + r.w / 2, px = player.x + player.w / 2;
-    const rBottom = r.y + r.h, pBottom = player.y + player.h;
+    const rBottom = r.y + r.h;
+    // remember the ledge you were last standing on, so jumping around doesn't fool them
+    const pBottom = player.onGround ? player.y + player.h : player.floor;
     const dy = pBottom - rBottom;
-    let targetX = px, wantJump = false;
+    // guess where you're running to, not just where you are right now
+    const aheadX = Math.min(Math.max(px + player.vx * 0.25, 0), TW);
+    let targetX = Math.abs(dy) < 40 ? aheadX : px, wantJump = false;
     r.jumpCd = Math.max(0, r.jumpCd - dt);
+    r.goal = null;
 
-    if (dy < -40 && player.onGround) {
+    if (dy < -40) {
       // you're higher up: head for a platform it can jump onto, then jump
       let best = null, bestD = Infinity;
       PLATFORMS.forEach(p => {
         if (p.y >= rBottom - 20 || p.y < rBottom - 125) return;
-        const d = Math.max(0, p.x - rx, rx - (p.x + p.w)) + Math.abs((p.x + p.w / 2) - px) * 0.3;
+        let d = Math.max(0, p.x - rx, rx - (p.x + p.w)) + Math.abs((p.x + p.w / 2) - px) * 0.3;
+        // teamwork: pick a different way up than the other robots
+        if (robots.some(o => o !== r && o.goal === p)) d += 120;
         if (d < bestD) { bestD = d; best = p; }
       });
       if (best) {
+        r.goal = best;
         targetX = Math.min(Math.max(px, best.x + 12), best.x + best.w - 12);
         if (rx > best.x - 30 && rx < best.x + best.w + 30) wantJump = true;
       }

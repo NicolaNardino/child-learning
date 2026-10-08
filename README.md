@@ -22,7 +22,7 @@ Each topic has three levels: **Warm-up**, **Practice** and **Challenge**.
 - ⏱️ **Time Trial**: answer 16 questions in 2 minutes and earn a rating, from *Keep practicing* up to *Outstanding!*
 - 🏁 **Race to the finish**: every right answer moves your car forward, while Robo 🤖, the AI rival, drives on its own. Pick Robo's speed (🐢 Easy: every 10 seconds, 🚗 Medium: every 8, 🚀 Hard: every 5) and get 10 right before Robo crosses the line! Robo waits until you start typing, and the ↻ Restart button starts a fresh race.
 - 🏆 **Trophy shelf**: 18 trophies to earn, like *Hot Streak*, *Champion*, *Speed Demon*, *Uncatchable* and a *Master* trophy for each topic.
-- 🏃 **Robot Tag**: a 3D-style parkour game (the button is next to the trophy shelf). Run, double-jump and wall-jump to escape the robot taggers for 3 minutes. You start with 1 robot and another joins every minute, and they keep getting faster!
+- 🏃 **Robot Tag**: a 3D-style parkour game (the button is next to the trophy shelf). Run, double-jump and wall-jump to escape the robot taggers for 3 minutes. You start with 1 robot and another joins every minute, and they keep getting faster! The robots are smart too: they guess where you are running, remember which ledge you jumped from, and team up by taking different ways up.
 - 🎊 **Confetti** for every correct answer.
 - 🌈 **Rainbow flash** whenever you click a button.
 - 🏁 **Race cars** zooming through a rainbow down the side of the page.
