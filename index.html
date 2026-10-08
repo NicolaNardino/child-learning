@@ -116,6 +116,22 @@
   .doors-scene svg{ width: 100%; height: 100%; display: block; }
   .doors-figure{ left: 0; }
   .doors-cars{ right: 0; }
+  /* rainbow behind the race cars, fading out toward the middle of the page */
+  .doors-cars::before{
+    content: "";
+    position: absolute; inset: 0;
+    z-index: -1;
+    background: linear-gradient(180deg, #ff4d4d, #ff9f1c, #ffe14d, #4dd66b, #4da6ff, #b46bff, #ff6bd6, #ff4d4d);
+    background-size: 100% 200%;
+    -webkit-mask-image: linear-gradient(90deg, transparent, #000 35%);
+    mask-image: linear-gradient(90deg, transparent, #000 35%);
+    opacity: 0.85;
+    animation: rainbow-slide 12s linear infinite;
+  }
+  @keyframes rainbow-slide{
+    from{ background-position: 0 0; }
+    to{ background-position: 0 -200%; }
+  }
 
   /* five race cars, one colour each */
   .hw-car1{ color: #ffd400; }
@@ -149,7 +165,7 @@
     .doors-scene{ display: block; }
   }
   @media (prefers-reduced-motion: reduce){
-    .figure-body, .figure-blisters, .hw-car{ animation: none; }
+    .figure-body, .figure-blisters, .hw-car, .doors-cars::before{ animation: none; }
   }
 
   .wrap{ position: relative; z-index: 1; }
@@ -376,6 +392,7 @@
   }
   .race-head{ display: flex; justify-content: space-between; align-items: baseline; gap: 10px; flex-wrap: wrap; }
   .race-head h2{ font-size: 16px; font-weight: 700; }
+  .race-head .segmented button{ padding: 4px 10px; font-size: 12px; }
   .race-msg{ font-size: 13px; color: var(--ink-soft); }
   .race-msg.win{ color: var(--good); font-weight: 700; }
   .race-msg.lose{ color: var(--bad); font-weight: 700; }
@@ -719,11 +736,12 @@
   <section class="race" id="raceSection" aria-label="Race">
     <div class="race-head">
       <h2>🏁 Race to the finish</h2>
-      <span class="race-msg" id="raceMsg" aria-live="polite"></span>
+      <div class="segmented" id="roboSeg" role="group" aria-label="Robo driver"></div>
     </div>
+    <span class="race-msg" id="raceMsg" aria-live="polite">Answer questions to race Robo! 🤖</span>
     <div class="track">
       <div class="lane"><span class="lane-tag">YOU</span><div class="race-car you" id="carYou"></div></div>
-      <div class="lane"><span class="lane-tag">RIVAL</span><div class="race-car rival" id="carRival"></div></div>
+      <div class="lane"><span class="lane-tag">ROBO 🤖</span><div class="race-car rival" id="carRival"></div></div>
     </div>
   </section>
 
@@ -1158,6 +1176,7 @@
   if (!store.badges) store.badges = {};
   if (!store.race) store.race = { you: 0, rival: 0 };
   if (!store.racesWon) store.racesWon = 0;
+  if (!store.robo) store.robo = "easy";
   if (!store.challengeCorrect) store.challengeCorrect = 0;
 
   let currentTopicId = store.topic || TOPICS[0].id;
@@ -1589,7 +1608,6 @@
   }
 
   /* ---------------- race: every right answer moves your car ---------------- */
-  // Your car moves on a right answer, the rival moves on a wrong one.
   const RACE_STEPS = 10;
   const raceSection = document.getElementById("raceSection");
   const raceMsg = document.getElementById("raceMsg");
@@ -1619,27 +1637,79 @@
     raceMsg.textContent = text;
     raceMsg.className = "race-msg" + (cls ? " " + cls : "");
   }
-  function raceStep(correct){
-    const car = correct ? carYou : carRival;
-    if (correct) store.race.you++; else store.race.rival++;
-    renderRace();
-    car.classList.remove("zoom"); void car.offsetWidth; car.classList.add("zoom");
+  // Robo, the AI rival, drives one step every few seconds while you think.
+  const ROBO_DRIVERS = [
+    { id: "easy",   label: "🐢 Easy",   secs: 10 },
+    { id: "medium", label: "🚗 Medium", secs: 8 },
+    { id: "hard",   label: "🚀 Hard",   secs: 5 }
+  ];
+  const roboSeg = document.getElementById("roboSeg");
+  let roboSecs = 0;       // seconds since Robo's last step
+  let raceLocked = false; // short pause after someone wins
 
+  function renderRoboSeg(){
+    roboSeg.innerHTML = "";
+    ROBO_DRIVERS.forEach(d => {
+      const btn = document.createElement("button");
+      btn.type = "button";
+      btn.textContent = d.label;
+      btn.setAttribute("aria-pressed", String(d.id === store.robo));
+      btn.addEventListener("click", () => { store.robo = d.id; saveStore(); renderRoboSeg(); });
+      roboSeg.appendChild(btn);
+    });
+  }
+
+  function bump(car){ car.classList.remove("zoom"); void car.offsetWidth; car.classList.add("zoom"); }
+
+  function newRace(){
+    store.race = { you: 0, rival: 0 };
+    roboSecs = 0;
+    raceLocked = true;
+    setTimeout(() => { raceLocked = false; renderRace(); }, 1600);
+  }
+
+  function checkFinish(){
     if (store.race.you >= RACE_STEPS) {
       store.racesWon++;
-      setRaceMsg(`🏆 You won race #${store.racesWon}!`, "win");
+      setRaceMsg(`🏆 You beat Robo! Race #${store.racesWon} won!`, "win");
       confettiBurst(carYou); confettiBurst(carYou);
-      store.race = { you: 0, rival: 0 };
-      setTimeout(renderRace, 1400);
-    } else if (store.race.rival >= RACE_STEPS) {
-      setRaceMsg("The rival got there first. New race, go go go!", "lose");
-      store.race = { you: 0, rival: 0 };
-      setTimeout(renderRace, 1400);
-    } else {
+      newRace();
+      return true;
+    }
+    if (store.race.rival >= RACE_STEPS) {
+      setRaceMsg("🤖 Robo got there first. New race, go go go!", "lose");
+      newRace();
+      return true;
+    }
+    return false;
+  }
+
+  function raceStep(correct){
+    if (!correct || raceLocked) return;
+    store.race.you++;
+    renderRace();
+    bump(carYou);
+    if (!checkFinish()) {
       const left = RACE_STEPS - store.race.you;
-      setRaceMsg(correct ? `Vroom! ${left} more to the finish.` : "Oh no, the rival sped up!");
+      setRaceMsg(`Vroom! ${left} more to the finish.`);
     }
   }
+
+  function roboTick(){
+    if (raceLocked || answered || trialActive || document.hidden || raceSection.hidden) return;
+    const driver = ROBO_DRIVERS.find(d => d.id === store.robo) || ROBO_DRIVERS[0];
+    if (++roboSecs < driver.secs) return;
+    roboSecs = 0;
+    store.race.rival++;
+    renderRace();
+    bump(carRival);
+    if (!checkFinish()) {
+      if (store.race.rival > store.race.you) setRaceMsg("🤖 Robo is pulling ahead!");
+      else if (store.race.rival === store.race.you) setRaceMsg("Neck and neck!");
+    }
+    saveStore();
+  }
+  setInterval(roboTick, 1000);
 
   /* ---------------- trophies ---------------- */
   const trophySection = document.getElementById("trophySection");
@@ -1719,6 +1789,7 @@
     renderLedger();
     updateTrialBestDisplay();
     renderRace();
+    renderRoboSeg();
     renderTrophies();
     checkBadges();
     newProblem();

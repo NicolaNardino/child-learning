@@ -20,11 +20,11 @@ Each topic has three levels: **Warm-up**, **Practice** and **Challenge**.
 - ✅ **Instant feedback**: right or wrong, you see how the answer is worked out.
 - 🔥 **Streaks**: keep track of your current streak, your best streak and your accuracy.
 - ⏱️ **Time Trial**: answer 16 questions in 2 minutes and earn a rating, from *Keep practicing* up to *Outstanding!*
-- 🏁 **Race to the finish**: every right answer moves your car forward, every wrong one moves the rival's. Get 10 right first to win the race!
+- 🏁 **Race to the finish**: every right answer moves your car forward, while Robo 🤖, the AI rival, drives on its own. Pick Robo's speed (🐢 Easy: every 10 seconds, 🚗 Medium: every 8, 🚀 Hard: every 5) and get 10 right before Robo crosses the line!
 - 🏆 **Trophy shelf**: 16 trophies to earn, like *Hot Streak*, *Champion*, *Speed Demon* and a *Master* trophy for each topic.
 - 🎊 **Confetti** for every correct answer.
 - 🌈 **Rainbow flash** whenever you click a button.
-- 🏁 **Race cars** zooming down the side of the page.
+- 🏁 **Race cars** zooming through a rainbow down the side of the page.
 
 ## How to use it
 
