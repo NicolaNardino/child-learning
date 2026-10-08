@@ -393,6 +393,7 @@
   .race-head{ display: flex; justify-content: space-between; align-items: baseline; gap: 10px; flex-wrap: wrap; }
   .race-head h2{ font-size: 16px; font-weight: 700; }
   .race-head .segmented button{ padding: 4px 10px; font-size: 12px; }
+  .race-controls{ display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
   .race-msg{ font-size: 13px; color: var(--ink-soft); }
   .race-msg.win{ color: var(--good); font-weight: 700; }
   .race-msg.lose{ color: var(--bad); font-weight: 700; }
@@ -736,9 +737,12 @@
   <section class="race" id="raceSection" aria-label="Race">
     <div class="race-head">
       <h2>🏁 Race to the finish</h2>
-      <div class="segmented" id="roboSeg" role="group" aria-label="Robo driver"></div>
+      <div class="race-controls">
+        <div class="segmented" id="roboSeg" role="group" aria-label="Robo driver"></div>
+        <button class="btn ghost small" id="raceRestartBtn" type="button">↻ Restart</button>
+      </div>
     </div>
-    <span class="race-msg" id="raceMsg" aria-live="polite">Answer questions to race Robo! 🤖</span>
+    <span class="race-msg" id="raceMsg" aria-live="polite">Start typing an answer and Robo will go! 🤖</span>
     <div class="track">
       <div class="lane"><span class="lane-tag">YOU</span><div class="race-car you" id="carYou"></div></div>
       <div class="lane"><span class="lane-tag">ROBO 🤖</span><div class="race-car rival" id="carRival"></div></div>
@@ -1394,7 +1398,7 @@
     sessionAttempted = 0; sessionCorrect = 0;
     saveStore();
     renderTopicNav(); renderLedger(); renderRace(); renderTrophies();
-    raceMsg.textContent = ""; raceMsg.className = "race-msg";
+    raceStarted = false; setRaceMsg(WAITING_MSG);
   });
 
   /* ---------------- time trial ---------------- */
@@ -1646,6 +1650,9 @@
   const roboSeg = document.getElementById("roboSeg");
   let roboSecs = 0;       // seconds since Robo's last step
   let raceLocked = false; // short pause after someone wins
+  let raceStarted = false; // Robo waits until you start answering
+  const raceRestartBtn = document.getElementById("raceRestartBtn");
+  const WAITING_MSG = "Start typing an answer and Robo will go! 🤖";
 
   function renderRoboSeg(){
     roboSeg.innerHTML = "";
@@ -1664,8 +1671,9 @@
   function newRace(){
     store.race = { you: 0, rival: 0 };
     roboSecs = 0;
+    raceStarted = false;
     raceLocked = true;
-    setTimeout(() => { raceLocked = false; renderRace(); }, 1600);
+    setTimeout(() => { raceLocked = false; renderRace(); setRaceMsg(WAITING_MSG); }, 1600);
   }
 
   function checkFinish(){
@@ -1696,7 +1704,7 @@
   }
 
   function roboTick(){
-    if (raceLocked || answered || trialActive || document.hidden || raceSection.hidden) return;
+    if (!raceStarted || raceLocked || answered || trialActive || document.hidden || raceSection.hidden) return;
     const driver = ROBO_DRIVERS.find(d => d.id === store.robo) || ROBO_DRIVERS[0];
     if (++roboSecs < driver.secs) return;
     roboSecs = 0;
@@ -1710,6 +1718,23 @@
     saveStore();
   }
   setInterval(roboTick, 1000);
+
+  answerInput.addEventListener("input", () => {
+    if (raceStarted || raceLocked) return;
+    raceStarted = true;
+    setRaceMsg("🚦 Go go go!");
+  });
+
+  raceRestartBtn.addEventListener("click", () => {
+    store.race = { you: 0, rival: 0 };
+    roboSecs = 0;
+    raceStarted = false;
+    raceLocked = false;
+    saveStore();
+    renderRace();
+    setRaceMsg(WAITING_MSG);
+    answerInput.focus();
+  });
 
   /* ---------------- trophies ---------------- */
   const trophySection = document.getElementById("trophySection");
