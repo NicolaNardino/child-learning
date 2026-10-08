@@ -863,7 +863,7 @@
     <div class="tag-hud">
       <h2>🏃 Robot Tag</h2>
       <span class="mono tag-stat" id="tagTimer">3:00</span>
-      <span class="mono tag-stat" id="tagRobots">🤖 ×2</span>
+      <span class="mono tag-stat" id="tagRobots">🤖 ×1</span>
       <span class="mono tag-stat" id="tagSpeed">Speed ×1.0</span>
       <button class="btn ghost small" id="tagCloseBtn" type="button">✕ Exit</button>
     </div>
@@ -1893,8 +1893,8 @@
   const GRAVITY = 1800;
   const PLAYER_SPEED = 270;
   const ROBOT_SPEED = 150;      // at the start; grows to ×1.9 by the end
-  const NEW_ROBOT_EVERY = 45;   // seconds
-  const MAX_ROBOTS = 5;
+  const NEW_ROBOT_EVERY = 60;   // seconds
+  const MAX_ROBOTS = 3;
 
   // solid blocks: you can't pass through them (and can wall-jump off their sides)
   const SOLIDS = [
@@ -1981,11 +1981,9 @@
     player.jumps = 1; player.coyote = 0; player.wallLock = 0; player.face = 1;
     robots = [];
     tagTime = 0;
-    // the first two robots start up on the far left and right ledges
+    // the first robot starts up on the far left ledge
     spawnRobot();
     robots[0].x = 20; robots[0].y = 290;
-    spawnRobot();
-    robots[1].x = TW - 46; robots[1].y = 290;
     tagFlash = { text: "", t: 0 };
   }
 
@@ -2054,7 +2052,7 @@
   function tagStep(dt){
     if (tagCountdown > 0) { tagCountdown -= dt; return; }
     tagTime += dt;
-    const wanted = Math.min(MAX_ROBOTS, 2 + Math.floor(tagTime / NEW_ROBOT_EVERY));
+    const wanted = Math.min(MAX_ROBOTS, 1 + Math.floor(tagTime / NEW_ROBOT_EVERY));
     if (robots.length < wanted) { spawnRobot(); tagFlash = { text: "⚠ A new robot joined!", t: 2 }; }
     if (tagFlash.t > 0) tagFlash.t -= dt;
     updatePlayer(dt);
@@ -2241,7 +2239,7 @@
     tagOverlay.hidden = false;
     document.body.style.overflow = "hidden";
     tagPanelTitle.textContent = "🏃 Robot Tag";
-    tagPanelText.textContent = "The robots want to tag you! Run, jump and wall-jump to stay away for 3 minutes. Every 45 seconds another robot joins, and they get faster and faster…"
+    tagPanelText.textContent = "The robots want to tag you! Run, jump and wall-jump to stay away for 3 minutes. Every minute another robot joins, and they get faster and faster…"
       + (store.tagBest ? ` Your best: ${formatTrialTime(store.tagBest)}.` : "");
     tagPlayBtn.textContent = "▶ Play";
     tagPanel.hidden = false;
