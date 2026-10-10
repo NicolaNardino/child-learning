@@ -519,10 +519,41 @@
     .tag-touch{ display: flex; }
     .tag-help{ display: none; }
   }
+  /* robot tag leaves a little room all round, so it fits phones, tablets and small laptops
+     (dvh skips the phone browser's address bar; plain vh is for older browsers) */
+  #tagOverlay .tag-box{
+    width: min(1100px, 94%, calc((100vh - 140px) * 16 / 9));
+    width: min(1100px, 94%, calc((100dvh - 140px) * 16 / 9));
+  }
+  @media (pointer: coarse){
+    #tagOverlay .tag-box{
+      width: min(1100px, 96%, calc((100vh - 190px) * 16 / 9));
+      width: min(1100px, 96%, calc((100dvh - 190px) * 16 / 9));
+    }
+  }
+  /* small screens: a slimmer top bar, smaller words and buttons, so the game gets the space */
+  @media (max-width: 640px), (max-height: 500px){
+    #tagOverlay .tag-hud{ gap: 6px; }
+    #tagOverlay .tag-hud h2{ font-size: 15px; }
+    #tagOverlay .tag-stat{ font-size: 12px; padding: 2px 7px; }
+    #tagOverlay .tag-panel{ gap: 6px; padding: 8px; }
+    #tagOverlay .tag-panel-title{ font-size: 22px; }
+    #tagOverlay .tag-panel-text{ font-size: 12px; line-height: 1.35; }
+    #tagOverlay .tag-touch .btn{ min-width: 52px; padding: 8px 12px; font-size: 16px; }
+  }
+  @media (max-height: 500px){
+    #tagOverlay{ padding: 6px; }
+    #tagOverlay .tag-box{ gap: 5px; }
+    #tagOverlay .tag-hud{ flex-wrap: nowrap; }
+    #tagOverlay .tag-box{
+      width: min(1100px, 96%, calc((100vh - 100px) * 16 / 9));
+      width: min(1100px, 96%, calc((100dvh - 100px) * 16 / 9));
+    }
+  }
 
   /* ---------- pac-man ---------- */
-  #tagOverlay .tag-box, #zbOverlay .tag-box{ width: min(100%, calc((100vh - 110px) * 16 / 9)); }
-  @media (pointer: coarse){ #tagOverlay .tag-box, #zbOverlay .tag-box{ width: min(100%, calc((100vh - 170px) * 16 / 9)); } }
+  #zbOverlay .tag-box{ width: min(100%, calc((100vh - 110px) * 16 / 9)); }
+  @media (pointer: coarse){ #zbOverlay .tag-box{ width: min(100%, calc((100vh - 170px) * 16 / 9)); } }
   #zbCanvas:focus{ outline: none; }
   #zbCanvas{
     display: block; width: 100%; aspect-ratio: 16 / 9; height: auto;
