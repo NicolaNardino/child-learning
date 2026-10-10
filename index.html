@@ -1,5 +1,6 @@
 <!doctype html>
 <meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Fast Math</title>
 <meta name="description" content="A number-line-styled arithmetic notebook for practicing 5th-grade maths, with instant, worked feedback.">
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -441,7 +442,8 @@
     display: flex; flex-direction: column; gap: 12px;
   }
   .trophies-head{ display: flex; justify-content: space-between; align-items: center; gap: 10px; flex-wrap: wrap; }
-  .trophies-right{ display: flex; align-items: center; gap: 12px; }
+  .trophies-right{ display: flex; align-items: center; gap: 8px 12px; flex-wrap: wrap; }
+  #trophyCount{ white-space: nowrap; }
   .trophies-head h2{ font-size: 16px; font-weight: 700; }
   .trophy-grid{ display: grid; grid-template-columns: repeat(auto-fill, minmax(112px, 1fr)); gap: 10px; }
   .badge{
@@ -519,41 +521,43 @@
     .tag-touch{ display: flex; }
     .tag-help{ display: none; }
   }
-  /* robot tag leaves a little room all round, so it fits phones, tablets and small laptops
-     (dvh skips the phone browser's address bar; plain vh is for older browsers) */
+  /* robot tag fills the screen (dvh skips the phone browser's address bar; plain vh is for older browsers) */
   #tagOverlay .tag-box{
-    width: min(1100px, 94%, calc((100vh - 140px) * 16 / 9));
-    width: min(1100px, 94%, calc((100dvh - 140px) * 16 / 9));
+    width: min(100%, calc((100vh - 110px) * 16 / 9));
+    width: min(100%, calc((100dvh - 110px) * 16 / 9));
   }
   @media (pointer: coarse){
     #tagOverlay .tag-box{
-      width: min(1100px, 96%, calc((100vh - 190px) * 16 / 9));
-      width: min(1100px, 96%, calc((100dvh - 190px) * 16 / 9));
+      width: min(100%, calc((100vh - 170px) * 16 / 9));
+      width: min(100%, calc((100dvh - 170px) * 16 / 9));
     }
   }
-  /* small screens: a slimmer top bar, smaller words and buttons, so the game gets the space */
+  /* small screens (all the games): a slimmer top bar, smaller words and buttons, so the game gets the space */
   @media (max-width: 640px), (max-height: 500px){
-    #tagOverlay .tag-hud{ gap: 6px; }
-    #tagOverlay .tag-hud h2{ font-size: 15px; }
-    #tagOverlay .tag-stat{ font-size: 12px; padding: 2px 7px; }
-    #tagOverlay .tag-panel{ gap: 6px; padding: 8px; }
-    #tagOverlay .tag-panel-title{ font-size: 22px; }
-    #tagOverlay .tag-panel-text{ font-size: 12px; line-height: 1.35; }
-    #tagOverlay .tag-touch .btn{ min-width: 52px; padding: 8px 12px; font-size: 16px; }
+    .tag-hud{ gap: 6px; }
+    .tag-hud h2{ font-size: 15px; }
+    .tag-stat{ font-size: 12px; padding: 2px 7px; }
+    .tag-panel{ gap: 6px; padding: 8px; }
+    .tag-panel-title{ font-size: 22px; }
+    .tag-panel-text{ font-size: 12px; line-height: 1.35; }
+    .tag-touch .btn{ min-width: 52px; padding: 8px 12px; font-size: 16px; }
   }
   @media (max-height: 500px){
-    #tagOverlay{ padding: 6px; }
-    #tagOverlay .tag-box{ gap: 5px; }
-    #tagOverlay .tag-hud{ flex-wrap: nowrap; }
-    #tagOverlay .tag-box{
-      width: min(1100px, 96%, calc((100vh - 100px) * 16 / 9));
-      width: min(1100px, 96%, calc((100dvh - 100px) * 16 / 9));
-    }
+    .tag-overlay{ padding: 6px; }
+    .tag-box{ gap: 5px; }
+    .tag-hud{ flex-wrap: nowrap; }
   }
 
   /* ---------- pac-man ---------- */
   #zbOverlay .tag-box{ width: min(100%, calc((100vh - 110px) * 16 / 9)); }
   @media (pointer: coarse){ #zbOverlay .tag-box{ width: min(100%, calc((100vh - 170px) * 16 / 9)); } }
+  /* short screens, like a phone held sideways: the slimmer bars above leave more room for the game */
+  @media (max-height: 500px){
+    #tagOverlay .tag-box, #zbOverlay .tag-box{
+      width: min(100%, calc((100vh - 100px) * 16 / 9));
+      width: min(100%, calc((100dvh - 100px) * 16 / 9));
+    }
+  }
   #zbCanvas:focus{ outline: none; }
   #zbCanvas{
     display: block; width: 100%; aspect-ratio: 16 / 9; height: auto;
@@ -578,6 +582,15 @@
   .pac-pad [data-dir="right"]{ grid-column: 3; grid-row: 2; }
   @media (pointer: coarse){
     .pac-pad{ display: grid; }
+  }
+  /* phone held sideways: the steering pad sits next to the maze instead of under it */
+  @media (pointer: coarse) and (max-height: 500px) and (orientation: landscape){
+    .pac-box{
+      width: auto; display: grid; grid-template-columns: auto auto; align-items: center; gap: 6px 16px;
+    }
+    .pac-box .tag-hud{ grid-column: 1 / -1; }
+    .pac-box .tag-stage{ width: calc((100vh - 60px) * 19 / 21); width: calc((100dvh - 60px) * 19 / 21); }
+    .pac-pad{ grid-template-columns: repeat(3, 54px); }
   }
 </style>
 
