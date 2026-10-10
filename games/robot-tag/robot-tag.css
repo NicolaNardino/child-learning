@@ -1,0 +1,25 @@
+/* Robot Tag fills the screen (dvh skips the phone browser's address bar; plain vh is for older browsers). */
+#tagCanvas:focus{ outline: none; }
+#tagCanvas{
+  display: block; width: 100%; aspect-ratio: 16 / 9; height: auto;
+  border-radius: 12px; border: 2px solid rgba(255,255,255,0.25);
+  background: linear-gradient(180deg, #2f6fd6, #ff9a3c);
+  touch-action: none;
+}
+#tagOverlay .game-box{
+  width: min(100%, calc((100vh - 110px) * 16 / 9));
+  width: min(100%, calc((100dvh - 110px) * 16 / 9));
+}
+@media (pointer: coarse){
+  #tagOverlay .game-box{
+    width: min(100%, calc((100vh - 170px) * 16 / 9));
+    width: min(100%, calc((100dvh - 170px) * 16 / 9));
+  }
+}
+/* short screens, like a phone held sideways: the slimmer bars leave more room for the game */
+@media (max-height: 500px){
+  #tagOverlay .game-box{
+    width: min(100%, calc((100vh - 100px) * 16 / 9));
+    width: min(100%, calc((100dvh - 100px) * 16 / 9));
+  }
+}

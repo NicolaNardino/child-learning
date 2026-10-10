@@ -1,0 +1,49 @@
+/* The frame every game sits in: a full screen with a top bar, the play area, a start/end panel,
+   keyboard help, and touch buttons on phones and tablets. */
+.game-screen{
+  position: fixed; inset: 0; z-index: 900;
+  background: rgba(8,10,20,0.95);
+  display: flex; align-items: center; justify-content: center;
+  padding: 12px;
+}
+.game-box{
+  width: min(960px, 100%, calc((100vh - 150px) * 16 / 9));
+  display: flex; flex-direction: column; gap: 8px;
+}
+.game-hud{ display: flex; align-items: center; gap: 14px; flex-wrap: wrap; color: #fff; }
+.game-hud h2{ font-size: 18px; font-weight: 800; margin-right: auto; }
+.game-stat{ font-size: 15px; font-weight: 700; background: rgba(255,255,255,0.12); padding: 3px 10px; border-radius: 999px; }
+.game-stat.low{ color: #ffb15c; }
+.game-hud .btn.ghost{ color: #fff; border-color: rgba(255,255,255,0.4); }
+.game-stage{ position: relative; }
+.game-panel{
+  position: absolute; inset: 0;
+  display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 12px;
+  text-align: center; color: #fff; padding: 20px;
+  background: rgba(10,20,45,0.55); border-radius: 12px;
+}
+.game-panel-title{ font: 800 clamp(26px, 5vw, 44px) "Bricolage Grotesque", sans-serif; text-shadow: 0 3px 0 rgba(0,0,0,0.35); }
+.game-panel-text{ font-size: 15px; max-width: 46ch; line-height: 1.5; }
+.game-help{ color: rgba(255,255,255,0.7); font-size: 12.5px; text-align: center; }
+.game-touch{ display: none; gap: 10px; justify-content: center; }
+.game-touch .btn{ min-width: 64px; padding: 14px 16px; font-size: 18px; user-select: none; -webkit-user-select: none; touch-action: none; }
+.game-touch .btn.ghost{ color: #fff; border-color: rgba(255,255,255,0.4); }
+@media (pointer: coarse){
+  .game-touch{ display: flex; }
+  .game-help{ display: none; }
+}
+/* small screens (all the games): a slimmer top bar, smaller words and buttons, so the game gets the space */
+@media (max-width: 640px), (max-height: 500px){
+  .game-hud{ gap: 6px; }
+  .game-hud h2{ font-size: 15px; }
+  .game-stat{ font-size: 12px; padding: 2px 7px; }
+  .game-panel{ gap: 6px; padding: 8px; }
+  .game-panel-title{ font-size: 22px; }
+  .game-panel-text{ font-size: 12px; line-height: 1.35; }
+  .game-touch .btn{ min-width: 52px; padding: 8px 12px; font-size: 16px; }
+}
+@media (max-height: 500px){
+  .game-screen{ padding: 6px; }
+  .game-box{ gap: 5px; }
+  .game-hud{ flex-wrap: nowrap; }
+}

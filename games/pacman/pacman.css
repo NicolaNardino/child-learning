@@ -1,0 +1,28 @@
+/* Pac-Man: a tall maze, with an arrow pad on touch screens. */
+.pac-box{ width: min(100%, calc((100vh - 110px) * 19 / 21)); }
+@media (pointer: coarse){ .pac-box{ width: min(100%, calc((100vh - 200px) * 19 / 21)); } }
+#pacCanvas:focus{ outline: none; }
+#pacCanvas{
+  display: block; width: 100%; aspect-ratio: 19 / 21; height: auto;
+  border-radius: 12px; border: 2px solid rgba(255,255,255,0.25);
+  background: #000; touch-action: none;
+}
+.pac-panel{ background: rgba(0,0,0,0.65); }
+.pac-pad{ display: none; grid-template-columns: repeat(3, 64px); gap: 6px; justify-content: center; }
+.pac-pad .btn{ padding: 12px 0; font-size: 18px; color: #fff; border-color: rgba(255,255,255,0.4); user-select: none; -webkit-user-select: none; touch-action: none; }
+.pac-pad [data-dir="up"]{ grid-column: 2; }
+.pac-pad [data-dir="left"]{ grid-column: 1; grid-row: 2; }
+.pac-pad [data-dir="down"]{ grid-column: 2; grid-row: 2; }
+.pac-pad [data-dir="right"]{ grid-column: 3; grid-row: 2; }
+@media (pointer: coarse){
+  .pac-pad{ display: grid; }
+}
+/* phone held sideways: the steering pad sits next to the maze instead of under it */
+@media (pointer: coarse) and (max-height: 500px) and (orientation: landscape){
+  .pac-box{
+    width: auto; display: grid; grid-template-columns: auto auto; align-items: center; gap: 6px 16px;
+  }
+  .pac-box .game-hud{ grid-column: 1 / -1; }
+  .pac-box .game-stage{ width: calc((100vh - 60px) * 19 / 21); width: calc((100dvh - 60px) * 19 / 21); }
+  .pac-pad{ grid-template-columns: repeat(3, 54px); }
+}

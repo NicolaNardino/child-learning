@@ -1,37 +1,78 @@
-# 🏎️ Fast Math
+# 🎒 Learn & Play
 
-A maths practice notebook for 5th graders. It gives you endless new questions, and every answer comes with a worked explanation.
+Learning and games for a 5th grader. The home screen asks **Learning** or **Games**, and each one lists its apps and has its own 🏆 trophy shelf.
 
-It's a single web page, so there's nothing to install. Just open `index.html` in a browser.
+There's nothing to install and no build step. Just open `index.html` in a browser.
 
-## Topics
+## 📚 Learning
 
-- ➕ **Add & Subtract**
-- ✖️ **Multiply & Divide**: mixed, × only, or ÷ only
-- 🍕 **Fractions**
-- 💯 **Decimals & Percents**
-- 🧮 **Order of Operations**
-- 📐 **Shapes**: area and perimeter
+- 🔢 **Fast Math**: a maths practice notebook. It gives you endless new questions, and every answer comes with a worked explanation.
+  - Six topics: ➕ Add & Subtract, ✖️ Multiply & Divide, 🍕 Fractions, 💯 Decimals & Percents, 🧮 Order of Operations, 📐 Shapes.
+  - Three levels: **Warm-up**, **Practice** and **Challenge**.
+  - ⏱️ **Time Trial**: answer 16 questions in 2 minutes and earn a rating, from *Keep practicing* up to *Outstanding!*
+  - 🏁 **Race to the finish**: every right answer moves your car forward, while Robo 🤖 drives on its own. Pick Robo's speed (🐢 Easy, 🚗 Medium, 🚀 Hard) and get 10 right before Robo crosses the line!
+  - 🔥 Streaks, accuracy and 🎊 confetti for every right answer.
 
-Each topic has three levels: **Warm-up**, **Practice** and **Challenge**.
+## 🎮 Games
 
-## Features
+- 🏃 **Robot Tag**: a 3D-style parkour game. Run, double-jump and wall-jump to escape the robot taggers for 3 minutes. Another robot joins every minute, and they keep getting faster. The robots plan a real route to you, but they can't tag you through a wall or from under a platform.
+- 👻 **Pac-Man**: eat every dot and dodge the four ghosts. Gobble a big flashing dot and the ghosts turn blue, so you can chase them for bonus points.
+- 🧟 **Zombie Blaster**: a 3D-style shooter in a moonlit graveyard. Point the mouse and click to blast goo. Waves get bigger, with speedy runners from wave 2 and big brutes from wave 3. Clear a wave to win back a heart.
 
-- ✅ **Instant feedback**: right or wrong, you see how the answer is worked out.
-- 🔥 **Streaks**: keep track of your current streak, your best streak and your accuracy.
-- ⏱️ **Time Trial**: answer 16 questions in 2 minutes and earn a rating, from *Keep practicing* up to *Outstanding!*
-- 🏁 **Race to the finish**: every right answer moves your car forward, while Robo 🤖, the AI rival, drives on its own. Pick Robo's speed (🐢 Easy: every 10 seconds, 🚗 Medium: every 8, 🚀 Hard: every 5) and get 10 right before Robo crosses the line! Robo waits until you start typing, and the ↻ Restart button starts a fresh race.
-- 🏆 **Trophy shelf**: 19 trophies to earn, like *Hot Streak*, *Champion*, *Speed Demon*, *Uncatchable*, *Zombie Buster* and a *Master* trophy for each topic.
-- 🏃 **Robot Tag**: a 3D-style parkour game (the button is next to the trophy shelf). Run, double-jump and wall-jump to escape the robot taggers for 3 minutes. You start with 1 robot and another joins every minute, and they keep getting faster! The robots plan a real route to you, so there's no hiding spot they can't reach, but they can't tag you through a wall or from under a platform. The game fills your whole screen.
-- 👻 **Pac-Man**: the button is next to the Tag Game. Eat every dot in the maze and dodge the four ghosts! They're slower than you, so you can outrun them. Gobble a big flashing dot and the ghosts turn blue, so you can chase them for bonus points. You get 3 lives, and each new level gets a bit faster. The maze is as big as your screen.
-- 🧟 **Zombie Blaster**: a 3D-style shooter (the button is next to Pac-Man). Silly zombies climb out of a moonlit graveyard and you blast them with a goo blaster, with a little aim help. Waves get bigger, with speedy runners from wave 2 and big brutes from wave 3. Clear a wave to win back a heart, and watch the radar so nobody sneaks up behind you!
-- 🎊 **Confetti** for every correct answer.
-- 🌈 **Rainbow flash** whenever you click a button.
-- 🏁 **Race cars** zooming through a rainbow down the side of the page.
+Every game fills the screen and has touch buttons on phones and tablets.
 
-## How to use it
+## How it's built
 
-1. Open `index.html` in your browser.
-2. Type your name, pick a topic and a level.
-3. Answer the question and press **Check**, or hit Enter.
-4. Press **Next question →** to keep going, or try a **Time Trial**!
+```
+index.html                 the launcher: home, section lists, and the list of apps
+core/
+  core.css                 the shared look: theme, buttons, effects, trophies, launcher
+  core.js                  saved progress, trophies, confetti, the app list and screen switching (window.Hub)
+learning/
+  math/                    Fast Math (math.css, math.js)
+games/
+  game-frame.css           the full-screen frame every game sits in
+  robot-tag/               Robot Tag
+  pacman/                  Pac-Man
+  zombie-blaster/          Zombie Blaster
+```
+
+The address bar keeps track of where you are: `#/` is home, `#/games` is a section, and `#/games/pacman` is an app. That makes the browser's back button work, and you can bookmark a game.
+
+Progress is saved in this browser's `localStorage` under one key, shared by every app.
+
+### Adding a new app
+
+1. Make a folder, like `learning/spelling/` or `games/snake/`, with a `.js` file (and a `.css` file if it needs one).
+2. In the `.js` file, register the app:
+
+   ```js
+   (function(){
+     "use strict";
+     const store = Hub.store; // saved progress; call Hub.saveStore() after changing it
+
+     Hub.register({
+       id: "spelling", section: "learning",          // section is "learning" or "games"
+       title: "Spelling Bee", icon: "🐝",
+       blurb: "One line about the app, for its card.",
+       stat: () => store.spellingBest ? "Best: " + store.spellingBest : "", // optional
+       badges: [                                     // optional: trophies for the section's shelf
+         { id: "spell10", icon: "🐝", name: "Busy Bee", desc: "Spell 10 words right", test: () => (store.spellingRight || 0) >= 10 }
+       ],
+       mount
+     });
+
+     // called the first time the app is opened: build it inside host
+     function mount(host){
+       host.innerHTML = `<div class="wrap"><a class="back-link" href="#/learning">← Learning</a> ...</div>`;
+       return {
+         open(){ /* shown: start timers or game loops */ },
+         close(){ /* hidden: stop them */ }
+       };
+     }
+   })();
+   ```
+
+3. Add its `<link>` and `<script>` lines to `index.html`, next to the other apps.
+
+The app shows up in its section's list, and its trophies go on that section's shelf. Call `Hub.checkBadges()` after progress changes to award new trophies. Games can reuse the `game-screen` frame from `games/game-frame.css`, and call `Hub.leave()` from their Exit button.
