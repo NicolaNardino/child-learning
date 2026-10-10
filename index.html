@@ -527,7 +527,7 @@
   #zbCanvas{
     display: block; width: 100%; aspect-ratio: 16 / 9; height: auto;
     border-radius: 12px; border: 2px solid rgba(255,255,255,0.25);
-    background: #0b0d2b; touch-action: none; cursor: crosshair;
+    background: #0b0d2b; touch-action: none; cursor: none;
   }
   .zb-panel{ background: rgba(5,8,25,0.6); }
   .pac-box{ width: min(100%, calc((100vh - 110px) * 19 / 21)); }
@@ -960,7 +960,7 @@
         <button class="btn" id="zbPlayBtn" type="button">▶ Play</button>
       </div>
     </div>
-    <div class="tag-help">← → or A D to turn · ↑ W to walk · ↓ S to back up · Q E to sidestep · Space or click to blast!</div>
+    <div class="tag-help">← → or A D to turn · ↑ W to walk · ↓ S to back up · Q E to sidestep · Space to blast ahead · point the mouse and click to blast there!</div>
     <div class="tag-touch">
       <button class="btn ghost" data-zkey="left" type="button" aria-label="Turn left">↶</button>
       <button class="btn ghost" data-zkey="up" type="button" aria-label="Walk forward">▲</button>
@@ -2992,6 +2992,7 @@
     let zbFlash = { text: "", t: 0 };
     const zbKeys = { left: false, right: false, up: false, down: false, strafeL: false, strafeR: false, fire: false };
     const cam = { x: 0, z: 0, s: 0, c: 1 };
+    let zbMouse = null; // where the mouse is on the game screen, or null when it's away
 
     function resetZb(){
       hero = { x: 0, z: 0, a: 0, r: 0.4, hearts: 3, inv: 0, cd: 0, walk: 0, moving: false, flash: 0 };
@@ -3055,13 +3056,19 @@
         // goo ball out of the blaster in your right hand
         h.cd = SHOT_EVERY; h.flash = 0.07;
         const gx = h.x + s * 0.7 + c * 0.3, gz = h.z + c * 0.7 - s * 0.3;
-        // a little aim help: lock onto a zombie that's nearly straight ahead
         let dir = h.a, bestOff = 0.2;
-        zombies.forEach(z => {
-          if (z.rise > 0.5 || Math.hypot(z.x - gx, z.z - gz) > 20) return;
-          const toZ = Math.atan2(z.x - gx, z.z - gz), off = Math.abs(angleDiff(toZ, h.a));
-          if (off < bestOff) { bestOff = off; dir = toZ; }
-        });
+        if (zbMouse) {
+          // shoot right where the mouse is pointing
+          const [tx, tz] = mouseTarget();
+          dir = Math.atan2(tx - gx, tz - gz);
+        } else {
+          // a little aim help: lock onto a zombie that's nearly straight ahead
+          zombies.forEach(z => {
+            if (z.rise > 0.5 || Math.hypot(z.x - gx, z.z - gz) > 20) return;
+            const toZ = Math.atan2(z.x - gx, z.z - gz), off = Math.abs(angleDiff(toZ, h.a));
+            if (off < bestOff) { bestOff = off; dir = toZ; }
+          });
+        }
         shots.push({ x: gx, z: gz, vx: Math.sin(dir) * SHOT_SPEED, vz: Math.cos(dir) * SHOT_SPEED, life: 1.1, r: 0.14 });
       }
       pickups = pickups.filter(p => {
@@ -3169,6 +3176,26 @@
       }
       const p = toScreen(a), q = toScreen(b);
       ctx.moveTo(p[0], p[1]); ctx.lineTo(q[0], q[1]);
+    }
+    // the spot under the mouse: a zombie if you're pointing at one, otherwise the ground
+    function mouseTarget(){
+      const [mx, my] = zbMouse;
+      let best = null;
+      zombies.forEach(z => {
+        if (z.rise > 0.5) return;
+        const p = camSpace(z.x, 0, z.z);
+        if (p[2] < NEAR) return;
+        const [sx, sy] = toScreen(p), s = FOCAL / p[2] * z.size;
+        const over = Math.abs(mx - sx) < 0.5 * s && my < sy + 0.1 * s && my > sy - 2.2 * s;
+        if (over && (!best || p[2] < best.d)) best = { z, d: p[2] };
+      });
+      if (best) return [best.z.x, best.z.z];
+      // follow the line from the camera through the mouse until it reaches goo height
+      const cx = (mx - ZW / 2) / FOCAL, cy = (ZH / 2 - my) / FOCAL;
+      const up = cy * COS_P - SIN_P, fd = cy * SIN_P + COS_P;
+      let t = up < 0 ? (1 - CAM_H) / up : Infinity;
+      t = Math.max(8 / fd, Math.min(40 / fd, t)); // never behind you, never past the fog
+      return [cam.x + (cx * cam.c + fd * cam.s) * t, cam.z + (fd * cam.c - cx * cam.s) * t];
     }
     // how far apart two directions are, from -π to π
     function angleDiff(a, b){ return ((a - b) % (Math.PI * 2) + Math.PI * 3) % (Math.PI * 2) - Math.PI; }
@@ -3443,9 +3470,8 @@
       });
       ctx.globalAlpha = 1;
 
-      // aiming circle where your goo flies
-      const aim = camSpace(h.x + cam.s * 12, 1, h.z + cam.c * 12);
-      const [ax, ay] = toScreen(aim);
+      // aiming circle where your goo flies: on the mouse, or straight ahead
+      const [ax, ay] = zbMouse || toScreen(camSpace(h.x + cam.s * 12, 1, h.z + cam.c * 12));
       ctx.strokeStyle = "rgba(255,255,255,0.75)"; ctx.lineWidth = 2;
       ctx.beginPath(); ctx.arc(ax, ay, 9, 0, Math.PI * 2);
       ctx.moveTo(ax - 15, ay); ctx.lineTo(ax - 5, ay); ctx.moveTo(ax + 5, ay); ctx.lineTo(ax + 15, ay);
@@ -3554,9 +3580,17 @@
       if (k) zbKeys[k] = false;
     });
     window.addEventListener("blur", () => Object.keys(zbKeys).forEach(k => { zbKeys[k] = false; }));
-    // hold the mouse button on the game to keep blasting
-    zbCanvas.addEventListener("pointerdown", e => { if (zbRunning) { e.preventDefault(); zbKeys.fire = true; } });
-    ["pointerup", "pointercancel", "pointerleave"].forEach(ev => zbCanvas.addEventListener(ev, () => { zbKeys.fire = false; }));
+    // point with the mouse and hold the button to keep blasting there
+    function trackMouse(e){
+      const r = zbCanvas.getBoundingClientRect();
+      zbMouse = [(e.clientX - r.left) / r.width * ZW, (e.clientY - r.top) / r.height * ZH];
+    }
+    zbCanvas.addEventListener("pointermove", trackMouse);
+    zbCanvas.addEventListener("pointerdown", e => { trackMouse(e); if (zbRunning) { e.preventDefault(); zbKeys.fire = true; } });
+    ["pointerup", "pointercancel", "pointerleave"].forEach(ev => zbCanvas.addEventListener(ev, e => {
+      zbKeys.fire = false;
+      if (ev === "pointerleave" || e.pointerType === "touch") zbMouse = null; // a finger lifted isn't pointing anymore
+    }));
     document.querySelectorAll("[data-zkey]").forEach(btn => {
       const k = btn.dataset.zkey;
       btn.addEventListener("pointerdown", e => { e.preventDefault(); zbKeys[k] = true; });
