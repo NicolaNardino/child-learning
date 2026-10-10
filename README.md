@@ -18,6 +18,7 @@ There's nothing to install and no build step. Just open `index.html` in a browse
 - 🏃 **Robot Tag**: a 3D-style parkour game. Run, double-jump and wall-jump to escape the robot taggers for 3 minutes. Another robot joins every minute, and they keep getting faster. The robots plan a real route to you, but they can't tag you through a wall or from under a platform.
 - 👻 **Pac-Man**: eat every dot and dodge the four ghosts. Gobble a big flashing dot and the ghosts turn blue, so you can chase them for bonus points.
 - 🧟 **Zombie Blaster**: a 3D-style shooter in a moonlit graveyard. Point the mouse and click to blast goo. Waves get bigger, with speedy runners from wave 2 and big brutes from wave 3. Clear a wave to win back a heart.
+- 🧗 **Parkour Run**: a 3D obby high in the sky. Jump across orange, yellow, blue, green and black blocks that climb up and drop down: rainbow steps, a kill brick run, skinny beams, a spiral tower and a big drop. Touch a red kill brick or fall off and you go back to your last 🚩 checkpoint. Reach the 🏆 as fast as you can!
 
 Every game fills the screen and has touch buttons on phones and tablets.
 
@@ -35,6 +36,7 @@ games/
   robot-tag/               Robot Tag
   pacman/                  Pac-Man
   zombie-blaster/          Zombie Blaster
+  parkour/                 Parkour Run
 ```
 
 The address bar keeps track of where you are: `#/` is home, `#/games` is a section, and `#/games/pacman` is an app. That makes the browser's back button work, and you can bookmark a game.
