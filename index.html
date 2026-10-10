@@ -2970,7 +2970,7 @@
         if (Math.hypot(x, z) < 6) continue; // keep the middle clear for you
         if (list.some(p => Math.hypot(p.x - x, p.z - z) < 3.2)) continue;
         const kind = kinds[list.length % kinds.length];
-        list.push({ x, z, kind, r: kind === "stone" ? 0.5 : 0.42, tilt: (rnd() - 0.5) * 0.25 });
+        list.push({ x, z, kind, r: kind === "stone" ? 0.5 : 0.42, tilt: (rnd() - 0.5) * 0.25, lines: list.length % 3 === 0 });
       }
       return list;
     })();
@@ -2985,6 +2985,39 @@
       return list;
     })();
     const MOON_ANG = 0.5;
+    // little things in the grass: tufts, flowers, glowing mushrooms and old bones
+    const DECOR = (() => {
+      const rnd = seeded(11), list = [], kinds = ["grass", "grass", "grass", "flower", "mushroom", "grass", "bone"];
+      while (list.length < 120) {
+        const x = (rnd() * 2 - 1) * (ARENA - 1), z = (rnd() * 2 - 1) * (ARENA - 1);
+        if (PROPS.some(p => Math.hypot(p.x - x, p.z - z) < 1.2)) continue;
+        list.push({ x, z, kind: kinds[list.length % kinds.length], color: ["#ff8ad8", "#ffe14d", "#9ad7ff"][list.length % 3], turn: rnd() * 6.28 });
+      }
+      return list;
+    })();
+    // dirt and grass patches that make the ground look less flat
+    const PATCHES = (() => {
+      const rnd = seeded(13), list = [], cols = ["rgba(20,45,25,0.55)", "rgba(70,55,35,0.45)", "rgba(90,140,80,0.22)", "rgba(30,60,30,0.5)"];
+      for (let i = 0; i < 90; i++) list.push({ x: (rnd() * 2 - 1) * ARENA, z: (rnd() * 2 - 1) * ARENA, r: 0.6 + rnd() * 1.6, col: cols[i % cols.length] });
+      return list;
+    })();
+    // sky stuff spread all the way round: clouds and the bumpy treeline
+    const CLOUDS = (() => {
+      const rnd = seeded(17), list = [];
+      for (let i = 0; i < 8; i++) list.push({ ang: i * 0.785 + rnd() * 0.5, y: 30 + rnd() * 90, w: 60 + rnd() * 70 });
+      return list;
+    })();
+    const TREELINE = (() => {
+      const rnd = seeded(19), list = [];
+      for (let a = 0; a < Math.PI * 2; a += 0.09 + rnd() * 0.12) list.push({ ang: a, h: 10 + rnd() * 16, dead: rnd() < 0.4 });
+      return list;
+    })();
+    const HOUSE_ANG = MOON_ANG + 2.6;
+    const FIREFLIES = (() => {
+      const rnd = seeded(5), list = [];
+      for (let i = 0; i < 22; i++) list.push({ x: (rnd() * 2 - 1) * (ARENA - 3), z: (rnd() * 2 - 1) * (ARENA - 3), ph: rnd() * 6.28 });
+      return list;
+    })();
 
     let zbRunning = false, zbLast = 0, zbFrame = 0, zbClock = 0;
     let hero = null, zombies = [], shots = [], puffs = [], pickups = [];
@@ -3205,6 +3238,7 @@
       return Math.abs(d) < 1.3 ? ZW / 2 + Math.tan(d) * FOCAL : null;
     }
 
+    function nearHillY(ang){ return HORIZON - 14 - 12 * Math.sin(ang * 3 + 1) - 7 * Math.sin(ang * 7) - 4 * Math.sin(ang * 13 + 2); }
     function drawSky(ctx){
       const sky = ctx.createLinearGradient(0, 0, 0, HORIZON);
       sky.addColorStop(0, "#0b0d2b"); sky.addColorStop(1, "#46377a");
@@ -3225,20 +3259,89 @@
         ctx.fillStyle = "rgba(200,190,150,0.5)";
         [[-10, -8, 7], [12, 6, 5], [-4, 14, 4]].forEach(([cx, cy, r]) => { ctx.beginPath(); ctx.arc(mx + cx, 70 + cy, r, 0, Math.PI * 2); ctx.fill(); });
       }
+      // bats flapping around the moon
+      ctx.fillStyle = "#07061a";
+      for (let i = 0; i < 4; i++) {
+        const x = skyX(MOON_ANG + (i - 1.5) * 0.25 + Math.sin(zbClock * 0.3 + i * 2.1) * 0.35);
+        if (x === null) continue;
+        const y = 55 + i * 22 + Math.sin(zbClock * 1.7 + i) * 12, flap = Math.sin(zbClock * 14 + i * 3) * 6;
+        ctx.beginPath();
+        ctx.moveTo(x - 13, y - flap); ctx.quadraticCurveTo(x - 6, y - 3, x, y);
+        ctx.quadraticCurveTo(x + 6, y - 3, x + 13, y - flap);
+        ctx.quadraticCurveTo(x + 7, y + 2, x, y + 4); ctx.quadraticCurveTo(x - 7, y + 2, x - 13, y - flap);
+        ctx.fill();
+        ctx.beginPath(); ctx.moveTo(x - 2.5, y - 1); ctx.lineTo(x - 2, y - 5); ctx.lineTo(x, y - 2); ctx.lineTo(x + 2, y - 5); ctx.lineTo(x + 2.5, y - 1); ctx.fill();
+      }
+      // slow drifting clouds
+      CLOUDS.forEach((c, i) => {
+        const x = skyX(c.ang + zbClock * 0.004);
+        if (x === null) return;
+        ctx.fillStyle = "rgba(120,100,190,0.16)";
+        ctx.beginPath();
+        ctx.ellipse(x, c.y, c.w, c.w * 0.18, 0, 0, Math.PI * 2);
+        ctx.ellipse(x - c.w * 0.35, c.y - 6, c.w * 0.45, c.w * 0.17, 0, 0, Math.PI * 2);
+        ctx.ellipse(x + c.w * 0.3, c.y - 9, c.w * 0.4, c.w * 0.2, 0, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.fillStyle = "rgba(200,190,255,0.08)";
+        ctx.beginPath(); ctx.ellipse(x + c.w * 0.25, c.y - 13, c.w * 0.3, c.w * 0.08, 0, 0, Math.PI * 2); ctx.fill();
+      });
+      // a faraway row of hills
+      const hillY = (ang, k) => HORIZON - k * (22 + 16 * Math.sin(ang * 2 + 4) + 8 * Math.sin(ang * 5 + 1));
+      ctx.fillStyle = "#2a2358";
+      ctx.beginPath(); ctx.moveTo(0, HORIZON + 1);
+      for (let x = 0; x <= ZW; x += 8) ctx.lineTo(x, hillY(hero.a + Math.atan((x - ZW / 2) / FOCAL), 1));
+      ctx.lineTo(ZW, HORIZON + 1); ctx.closePath(); ctx.fill();
+      // a haunted house up on the far hill
+      const hx = skyX(HOUSE_ANG);
+      if (hx !== null) {
+        const hy = hillY(HOUSE_ANG, 1) + 4;
+        ctx.fillStyle = "#1f1946";
+        ctx.fillRect(hx - 22, hy - 26, 44, 26); ctx.fillRect(hx + 8, hy - 44, 10, 22);
+        ctx.beginPath(); ctx.moveTo(hx - 27, hy - 26); ctx.lineTo(hx - 6, hy - 44); ctx.lineTo(hx + 15, hy - 26); ctx.fill();
+        ctx.beginPath(); ctx.moveTo(hx + 5, hy - 44); ctx.lineTo(hx + 13, hy - 56); ctx.lineTo(hx + 21, hy - 44); ctx.fill();
+        ctx.fillStyle = Math.sin(zbClock * 3) > -0.8 ? "#ffd86b" : "#c99a3a";
+        ctx.fillRect(hx - 14, hy - 18, 6, 7); ctx.fillRect(hx + 4, hy - 18, 6, 7); ctx.fillRect(hx + 11, hy - 38, 4, 5);
+      }
       // far-off hills that slide past as you turn
       ctx.fillStyle = "#1a1640";
       ctx.beginPath(); ctx.moveTo(0, HORIZON + 1);
       for (let x = 0; x <= ZW; x += 8) {
         const ang = hero.a + Math.atan((x - ZW / 2) / FOCAL);
-        ctx.lineTo(x, HORIZON - 14 - 12 * Math.sin(ang * 3 + 1) - 7 * Math.sin(ang * 7) - 4 * Math.sin(ang * 13 + 2));
+        ctx.lineTo(x, nearHillY(ang));
       }
       ctx.lineTo(ZW, HORIZON + 1); ctx.closePath(); ctx.fill();
+      // spooky trees along the near hills
+      ctx.strokeStyle = "#1a1640"; ctx.lineCap = "round";
+      TREELINE.forEach(t => {
+        const x = skyX(t.ang);
+        if (x === null) return;
+        const y = nearHillY(t.ang) + 2;
+        if (t.dead) {
+          ctx.lineWidth = 2;
+          ctx.beginPath(); ctx.moveTo(x, y); ctx.lineTo(x, y - t.h);
+          ctx.moveTo(x, y - t.h * 0.55); ctx.lineTo(x - t.h * 0.3, y - t.h * 0.85);
+          ctx.moveTo(x, y - t.h * 0.7); ctx.lineTo(x + t.h * 0.3, y - t.h * 1.0); ctx.stroke();
+        } else {
+          ctx.beginPath(); ctx.moveTo(x - t.h * 0.32, y); ctx.lineTo(x, y - t.h * 1.3); ctx.lineTo(x + t.h * 0.32, y); ctx.fill();
+        }
+      });
     }
 
     function drawGround(ctx){
       const g = ctx.createLinearGradient(0, HORIZON, 0, ZH);
       g.addColorStop(0, "#232a3a"); g.addColorStop(0.35, "#1f3a2a"); g.addColorStop(1, "#2f5e30");
       ctx.fillStyle = g; ctx.fillRect(0, HORIZON, ZW, ZH - HORIZON);
+      // dirt and grass patches lying flat on the ground
+      PATCHES.forEach(pt => {
+        const p = camSpace(pt.x, 0, pt.z);
+        if (p[2] < 1.5 || p[2] > 46) return;
+        const [sx, sy] = toScreen(p), w = pt.r * FOCAL / p[2];
+        if (sx + w < 0 || sx - w > ZW) return;
+        ctx.globalAlpha = Math.min(1, (48 - p[2]) / 22);
+        ctx.fillStyle = pt.col;
+        ctx.beginPath(); ctx.ellipse(sx, sy, w, w * Math.min(0.5, 2.8 / p[2]), 0, 0, Math.PI * 2); ctx.fill();
+      });
+      ctx.globalAlpha = 1;
       ctx.strokeStyle = "rgba(150,230,150,0.10)"; ctx.lineWidth = 1;
       ctx.beginPath();
       for (let k = -ARENA; k <= ARENA; k += 2) {
@@ -3246,6 +3349,15 @@
         zbLine(ctx, -ARENA, 0, k, ARENA, 0, k);
       }
       ctx.stroke();
+      // spooky mist hanging low over the far graves
+      const fog = ctx.createLinearGradient(0, HORIZON - 30, 0, HORIZON + 70);
+      fog.addColorStop(0, "rgba(150,140,210,0)"); fog.addColorStop(0.45, "rgba(150,140,210,0.22)"); fog.addColorStop(1, "rgba(150,140,210,0)");
+      ctx.fillStyle = fog; ctx.fillRect(0, HORIZON - 30, ZW, 100);
+      ctx.fillStyle = "rgba(170,160,230,0.08)";
+      for (let i = 0; i < 6; i++) {
+        const x = ((i * 260 + zbClock * 14 - hero.a * 400) % 1560 + 1560) % 1560 - 300;
+        ctx.beginPath(); ctx.ellipse(x, HORIZON + 18 + (i % 3) * 14, 160, 16, 0, 0, Math.PI * 2); ctx.fill();
+      }
     }
 
     function drawShadowAt(ctx, w){
@@ -3259,7 +3371,17 @@
         ctx.fillStyle = "#5d6275"; roundRect(ctx, -0.36, -1.0, 0.8, 1.0, 0.36); ctx.fill();
         ctx.fillStyle = "#8a90a6"; roundRect(ctx, -0.4, -1.0, 0.76, 1.0, 0.36); ctx.fill();
         ctx.strokeStyle = "#5d6275"; ctx.lineWidth = 0.07; ctx.lineCap = "round";
-        ctx.beginPath(); ctx.moveTo(-0.02, -0.8); ctx.lineTo(-0.02, -0.4); ctx.moveTo(-0.17, -0.65); ctx.lineTo(0.13, -0.65); ctx.stroke();
+        if (p.lines) {
+          // worn-out writing nobody can read anymore
+          [[-0.68, 0.22], [-0.52, 0.28], [-0.36, 0.18]].forEach(([y, w]) => { ctx.beginPath(); ctx.moveTo(-0.02 - w, y); ctx.lineTo(-0.02 + w, y); ctx.stroke(); });
+        } else {
+          ctx.beginPath(); ctx.moveTo(-0.02, -0.8); ctx.lineTo(-0.02, -0.4); ctx.moveTo(-0.17, -0.65); ctx.lineTo(0.13, -0.65); ctx.stroke();
+        }
+        // a crack and some moss
+        ctx.strokeStyle = "#4a4f60"; ctx.lineWidth = 0.03;
+        ctx.beginPath(); ctx.moveTo(0.3, -0.85); ctx.lineTo(0.2, -0.72); ctx.lineTo(0.26, -0.6); ctx.lineTo(0.17, -0.48); ctx.stroke();
+        ctx.fillStyle = "#4f8a46";
+        ctx.beginPath(); ctx.ellipse(-0.28, -0.12, 0.13, 0.1, 0, 0, Math.PI * 2); ctx.ellipse(-0.33, -0.26, 0.06, 0.06, 0, 0, Math.PI * 2); ctx.fill();
         ctx.fillStyle = "#3f7a3a";
         [-0.3, 0, 0.25].forEach(x => { ctx.beginPath(); ctx.moveTo(x - 0.08, 0); ctx.lineTo(x, -0.18); ctx.lineTo(x + 0.08, 0); ctx.fill(); });
       } else if (p.kind === "tree") {
@@ -3269,6 +3391,19 @@
         ctx.strokeStyle = "#3b2a20"; ctx.lineCap = "round";
         [[0, -1.5, -0.7, -2.1, 0.1], [0, -1.8, 0.6, -2.4, 0.09], [0, -2.3, -0.4, -2.9, 0.07], [0, -2.3, 0.35, -2.8, 0.07], [-0.45, -1.85, -0.75, -1.75, 0.05], [0.4, -2.15, 0.7, -2.1, 0.05]]
           .forEach(([x0, y0, x1, y1, w]) => { ctx.lineWidth = w; ctx.beginPath(); ctx.moveTo(x0, y0); ctx.lineTo(x1, y1); ctx.stroke(); });
+        // a sleepy owl keeping watch
+        ctx.save(); ctx.translate(-0.5, -1.95);
+        ctx.fillStyle = "#7a5a3c"; ctx.beginPath(); ctx.ellipse(0, -0.15, 0.13, 0.17, 0, 0, Math.PI * 2); ctx.fill();
+        ctx.beginPath(); ctx.moveTo(-0.12, -0.24); ctx.lineTo(-0.1, -0.36); ctx.lineTo(-0.04, -0.28); ctx.moveTo(0.12, -0.24); ctx.lineTo(0.1, -0.36); ctx.lineTo(0.04, -0.28); ctx.fill();
+        ctx.fillStyle = "#c9a57a"; ctx.beginPath(); ctx.ellipse(0, -0.09, 0.08, 0.09, 0, 0, Math.PI * 2); ctx.fill();
+        if (Math.sin(zbClock * 0.8 + p.x) > 0.95) {
+          ctx.fillStyle = "#3b2a20"; ctx.fillRect(-0.1, -0.22, 0.08, 0.025); ctx.fillRect(0.02, -0.22, 0.08, 0.025); // blink
+        } else {
+          ctx.fillStyle = "#ffd23a"; ctx.beginPath(); ctx.arc(-0.055, -0.21, 0.045, 0, Math.PI * 2); ctx.arc(0.055, -0.21, 0.045, 0, Math.PI * 2); ctx.fill();
+          ctx.fillStyle = "#1b1f2a"; ctx.beginPath(); ctx.arc(-0.055, -0.21, 0.02, 0, Math.PI * 2); ctx.arc(0.055, -0.21, 0.02, 0, Math.PI * 2); ctx.fill();
+        }
+        ctx.fillStyle = "#e8a020"; ctx.beginPath(); ctx.moveTo(-0.02, -0.17); ctx.lineTo(0.02, -0.17); ctx.lineTo(0, -0.13); ctx.fill();
+        ctx.restore();
       } else {
         drawShadowAt(ctx, 0.45);
         ctx.fillStyle = "#e8741c"; ctx.beginPath(); ctx.ellipse(0, -0.32, 0.45, 0.33, 0, 0, Math.PI * 2); ctx.fill();
@@ -3280,6 +3415,38 @@
         ctx.beginPath(); ctx.moveTo(0.06, -0.42); ctx.lineTo(0.16, -0.56); ctx.lineTo(0.26, -0.42); ctx.fill();
         ctx.beginPath(); ctx.moveTo(-0.25, -0.28); ctx.lineTo(-0.12, -0.2); ctx.lineTo(0, -0.28); ctx.lineTo(0.12, -0.2); ctx.lineTo(0.25, -0.28); ctx.lineTo(0, -0.12); ctx.fill();
       }
+    }
+    function drawDecor(ctx, d){
+      ctx.lineCap = "round";
+      if (d.kind === "grass") {
+        ctx.strokeStyle = "#3f7a3a"; ctx.lineWidth = 0.035;
+        ctx.beginPath(); ctx.moveTo(-0.06, 0); ctx.lineTo(-0.12, -0.22); ctx.moveTo(0, 0); ctx.lineTo(0.01, -0.3); ctx.moveTo(0.06, 0); ctx.lineTo(0.13, -0.2); ctx.stroke();
+      } else if (d.kind === "flower") {
+        ctx.strokeStyle = "#3f7a3a"; ctx.lineWidth = 0.03;
+        ctx.beginPath(); ctx.moveTo(0, 0); ctx.lineTo(0, -0.28); ctx.stroke();
+        ctx.fillStyle = d.color;
+        for (let i = 0; i < 5; i++) { const a = i * 1.257; ctx.beginPath(); ctx.arc(Math.cos(a) * 0.06, -0.3 + Math.sin(a) * 0.06, 0.045, 0, Math.PI * 2); ctx.fill(); }
+        ctx.fillStyle = "#fff6cf"; ctx.beginPath(); ctx.arc(0, -0.3, 0.035, 0, Math.PI * 2); ctx.fill();
+      } else if (d.kind === "mushroom") {
+        const glow = ctx.createRadialGradient(0, -0.15, 0, 0, -0.15, 0.4);
+        glow.addColorStop(0, `rgba(190,110,255,${0.3 + 0.12 * Math.sin(zbClock * 2 + d.turn)})`); glow.addColorStop(1, "rgba(190,110,255,0)");
+        ctx.fillStyle = glow; ctx.beginPath(); ctx.arc(0, -0.15, 0.4, 0, Math.PI * 2); ctx.fill();
+        ctx.fillStyle = "#e9e3f5"; ctx.fillRect(-0.03, -0.16, 0.06, 0.16);
+        ctx.fillStyle = "#b45cff"; ctx.beginPath(); ctx.ellipse(0, -0.16, 0.12, 0.08, 0, Math.PI, 0); ctx.fill();
+        ctx.fillStyle = "#f2dcff"; ctx.beginPath(); ctx.arc(-0.05, -0.19, 0.018, 0, Math.PI * 2); ctx.arc(0.04, -0.21, 0.018, 0, Math.PI * 2); ctx.fill();
+      } else {
+        ctx.rotate(Math.sin(d.turn) * 0.4);
+        ctx.strokeStyle = "#e8e2cf"; ctx.lineWidth = 0.05;
+        ctx.beginPath(); ctx.moveTo(-0.14, -0.04); ctx.lineTo(0.14, -0.04); ctx.stroke();
+        ctx.fillStyle = "#e8e2cf";
+        [[-0.16, -0.07], [-0.16, -0.01], [0.16, -0.07], [0.16, -0.01]].forEach(([x, y]) => { ctx.beginPath(); ctx.arc(x, y, 0.035, 0, Math.PI * 2); ctx.fill(); });
+      }
+    }
+    function drawFirefly(ctx, f){
+      ctx.globalAlpha *= 0.25 + 0.75 * Math.max(0, Math.sin(zbClock * 2.5 + f.ph * 3));
+      const g = ctx.createRadialGradient(0, 0, 0, 0, 0, 0.16);
+      g.addColorStop(0, "#fbffb0"); g.addColorStop(0.3, "rgba(230,255,120,0.8)"); g.addColorStop(1, "rgba(230,255,120,0)");
+      ctx.fillStyle = g; ctx.beginPath(); ctx.arc(0, 0, 0.16, 0, Math.PI * 2); ctx.fill();
     }
     function drawPost(ctx){
       ctx.fillStyle = "#6b5844";
@@ -3304,20 +3471,55 @@
       ctx.fillStyle = zb.hit > 0 ? "#ffffff" : T.shirt;
       roundRect(ctx, -0.3, -1.32, 0.6, 0.6, 0.12); ctx.fill();
       ctx.beginPath(); ctx.moveTo(-0.3, -0.78); for (let i = 0; i <= 6; i++) ctx.lineTo(-0.3 + i * 0.1, i % 2 ? -0.66 : -0.76); ctx.lineTo(0.3, -0.78); ctx.fill();
-      ctx.fillStyle = "rgba(0,0,0,0.18)"; ctx.fillRect(0.06, -1.1, 0.14, 0.12);
+      // a patch sewn on with big stitches
+      ctx.fillStyle = "rgba(255,255,255,0.2)"; ctx.fillRect(0.06, -1.1, 0.14, 0.12);
+      ctx.strokeStyle = "rgba(0,0,0,0.35)"; ctx.lineWidth = 0.02;
+      ctx.beginPath(); [0.08, 0.13, 0.18].forEach(x => { ctx.moveTo(x, -1.12); ctx.lineTo(x + 0.02, -1.08); }); ctx.stroke();
+      if (zb.type === "walker") {
+        // a droopy old tie
+        ctx.fillStyle = zb.hit > 0 ? "#ffffff" : "#b8322a";
+        ctx.beginPath(); ctx.moveTo(-0.05, -1.3); ctx.lineTo(0.05, -1.3); ctx.lineTo(0.03, -1.24); ctx.lineTo(0.07, -0.95); ctx.lineTo(0, -0.88); ctx.lineTo(-0.05, -0.97); ctx.lineTo(-0.03, -1.24); ctx.fill();
+      }
       // arms reaching out for you
       const sway = Math.sin(zbClock * 3 + zb.phase) * 0.06;
       ctx.strokeStyle = skin; ctx.lineWidth = 0.13; ctx.lineCap = "round";
       ctx.beginPath(); ctx.moveTo(-0.27, -1.2); ctx.lineTo(-0.52, -1.27 + sway); ctx.moveTo(0.27, -1.2); ctx.lineTo(0.52, -1.27 - sway); ctx.stroke();
+      // grabby hands with wiggly fingers
+      ctx.fillStyle = skin; ctx.lineWidth = 0.035;
+      [[-0.55, -1.27 + sway, -1], [0.55, -1.27 - sway, 1]].forEach(([x, y, d]) => {
+        ctx.beginPath(); ctx.arc(x, y, 0.075, 0, Math.PI * 2); ctx.fill();
+        const wig = Math.sin(zbClock * 8 + zb.phase + x) * 0.02;
+        ctx.beginPath(); [-0.05, 0, 0.05].forEach(fy => { ctx.moveTo(x + d * 0.05, y + fy); ctx.lineTo(x + d * 0.13, y + fy * 1.4 + wig); }); ctx.stroke();
+      });
+      if (zb.type === "brute") {
+        // Frankenstein bolts in the neck
+        ctx.fillStyle = "#9aa0b4"; ctx.fillRect(-0.33, -1.38, 0.1, 0.06); ctx.fillRect(0.23, -1.38, 0.1, 0.06);
+      }
       // big goofy head
       ctx.fillStyle = skin; ctx.beginPath(); ctx.arc(0, -1.57, 0.27, 0, Math.PI * 2); ctx.fill();
       ctx.fillStyle = "#3f7a3a"; ctx.beginPath(); ctx.moveTo(-0.2, -1.76); ctx.lineTo(-0.08, -1.92); ctx.lineTo(0, -1.8); ctx.lineTo(0.1, -1.94); ctx.lineTo(0.18, -1.76); ctx.fill();
+      // a stitched-up scar on the cheek
+      ctx.strokeStyle = "#4d7a3f"; ctx.lineWidth = 0.022;
+      ctx.beginPath(); ctx.moveTo(0.08, -1.5); ctx.lineTo(0.22, -1.56);
+      [0.11, 0.15, 0.19].forEach(x => { const y = -1.5 - (x - 0.08) * 0.43; ctx.moveTo(x - 0.01, y - 0.03); ctx.lineTo(x + 0.01, y + 0.03); });
+      ctx.stroke();
+      if (zb.type === "runner") {
+        // a sporty sweatband
+        ctx.fillStyle = zb.hit > 0 ? "#ffffff" : "#ff3b5c"; ctx.fillRect(-0.26, -1.77, 0.52, 0.07);
+      } else if (zb.type === "brute") {
+        // a bandage wrapped round the head
+        ctx.fillStyle = "#efe8d6"; ctx.fillRect(-0.27, -1.78, 0.54, 0.08);
+        ctx.strokeStyle = "#c9bfa6"; ctx.lineWidth = 0.02;
+        ctx.beginPath(); ctx.moveTo(-0.1, -1.78); ctx.lineTo(-0.04, -1.7); ctx.moveTo(0.08, -1.78); ctx.lineTo(0.14, -1.7); ctx.stroke();
+      }
       ctx.fillStyle = "#fff";
       ctx.beginPath(); ctx.arc(-0.1, -1.6, 0.09, 0, Math.PI * 2); ctx.arc(0.11, -1.62, 0.065, 0, Math.PI * 2); ctx.fill();
       ctx.fillStyle = "#1b1f2a";
       ctx.beginPath(); ctx.arc(-0.09, -1.59, 0.04, 0, Math.PI * 2); ctx.arc(0.11, -1.61, 0.03, 0, Math.PI * 2); ctx.fill();
       ctx.strokeStyle = "#1b1f2a"; ctx.lineWidth = 0.03;
       ctx.beginPath(); ctx.moveTo(-0.12, -1.44); ctx.lineTo(0.12, -1.46); ctx.stroke();
+      // wonky eyebrows
+      ctx.beginPath(); ctx.moveTo(-0.19, -1.72); ctx.lineTo(-0.03, -1.68); ctx.moveTo(0.05, -1.7); ctx.lineTo(0.17, -1.74); ctx.stroke();
       ctx.fillStyle = "#fff"; ctx.fillRect(-0.06, -1.45, 0.05, 0.05); ctx.fillRect(0.03, -1.46, 0.05, 0.05);
       if (zb.hp < zb.max) {
         ctx.fillStyle = "rgba(0,0,0,0.6)"; ctx.fillRect(-0.3, -2.12, 0.6, 0.08);
@@ -3430,6 +3632,11 @@
         items.push({ zz: p[2], sx, sy, draw });
       };
       PROPS.forEach(p => add(p.x, 0, p.z, ctx => drawProp(ctx, p)));
+      DECOR.forEach(d => { if (Math.abs(d.x - h.x) + Math.abs(d.z - h.z) < 30) add(d.x, 0, d.z, ctx => drawDecor(ctx, d)); });
+      FIREFLIES.forEach(f => {
+        const t = zbClock * 0.4 + f.ph;
+        add(f.x + Math.sin(t) * 1.6, 1.1 + 0.5 * Math.sin(t * 2.3), f.z + Math.cos(t * 1.3) * 1.6, ctx => drawFirefly(ctx, f));
+      });
       POSTS.forEach(([x, z], i) => {
         add(x, 0, z, drawPost);
         const [nx, nz] = POSTS[(i + 1) % POSTS.length];
