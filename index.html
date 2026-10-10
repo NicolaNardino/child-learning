@@ -521,6 +521,8 @@
   }
 
   /* ---------- pac-man ---------- */
+  #tagOverlay .tag-box{ width: min(100%, calc((100vh - 110px) * 16 / 9)); }
+  @media (pointer: coarse){ #tagOverlay .tag-box{ width: min(100%, calc((100vh - 170px) * 16 / 9)); } }
   .pac-box{ width: min(560px, 100%, calc((100vh - 170px) * 19 / 21)); }
   #pacCanvas:focus{ outline: none; }
   #pacCanvas{
@@ -2059,33 +2061,142 @@
     moveBody(p, dt);
   }
 
+  /* ----- robot brain: a map of every jump and drop a robot can make ----- */
+  const RW = 26, RH = 30;
+  // every place you can stand; a pillar standing on a floor cuts it into two pieces
+  const SPOTS = [];
+  [...SOLIDS, ...PLATFORMS].forEach(s => {
+    let pieces = [[s.x, s.x + s.w]];
+    SOLIDS.forEach(b => {
+      if (b === s || Math.abs(b.y + b.h - s.y) > 1) return;
+      pieces = pieces.flatMap(([a, z]) => [[a, Math.min(z, b.x)], [Math.max(a, b.x + b.w), z]]).filter(([a, z]) => z > a);
+    });
+    pieces.forEach(([a, z]) => SPOTS.push({ x: a, y: s.y, w: z - a, base: s }));
+  });
+  // which piece of this platform or block is x on?
+  function spotAt(surface, x){
+    let best = null, bestD = Infinity;
+    SPOTS.forEach(p => {
+      if (p.base !== surface) return;
+      const d = Math.max(0, p.x - x, x - p.x - p.w);
+      if (d < bestD) { bestD = d; best = p; }
+    });
+    return best;
+  }
+
+  // try one move in a pretend world and see which surface the robot lands on
+  function tryMove(from, sx, kind, tx, speed){
+    const b = makeBody(sx - RW / 2, from.y - RH, RW, RH);
+    if (SOLIDS.some(s => overlap(b, s))) return null; // can't start inside a wall
+    b.onGround = true; b.on = from.base;
+    if (kind === "jump") b.vy = -660;
+    if (kind === "drop") b.dropT = 0.3;
+    for (let t = 0; t < 2.5; t += 1 / 60) {
+      const cx = b.x + RW / 2;
+      const dir = Math.abs(tx - cx) < 4 ? 0 : Math.sign(tx - cx);
+      b.vx = approach(b.vx, dir * speed, 2000 / 60);
+      moveBody(b, 1 / 60);
+      if (!b.onGround) continue;
+      const to = spotAt(b.on, b.x + RW / 2);
+      if (to !== from) return { to, lx: b.x + RW / 2 };
+      if (kind === "jump") return null; // landed back where it started
+    }
+    return null;
+  }
+
+  function buildRobotMoves(){
+    const moves = new Map(SPOTS.map(s => [s, []]));
+    const seen = new Set();
+    const add = (from, sx, kind, tx) => {
+      const slow = tryMove(from, sx, kind, tx, ROBOT_SPEED);
+      const fast = tryMove(from, sx, kind, tx, ROBOT_SPEED * 1.9);
+      // only keep moves that work at every robot speed
+      if (!slow || !fast || slow.to !== fast.to) return;
+      const key = [SPOTS.indexOf(from), SPOTS.indexOf(slow.to), kind, Math.round(sx / 24), Math.sign(tx - sx)].join();
+      const old = seen.has(key) && moves.get(from).find(m => m.key === key);
+      if (old && Math.abs(old.tx - old.sx) <= Math.abs(tx - sx)) return;
+      if (old) moves.get(from).splice(moves.get(from).indexOf(old), 1);
+      seen.add(key);
+      moves.get(from).push({ key, kind, sx, tx, to: slow.to, lx: slow.lx });
+    };
+    SPOTS.forEach(from => {
+      const edge = Math.min(RW / 2 + 1, from.w / 2); // skinny pillars: stand in the middle
+      const lo = from.x + edge, hi = from.x + from.w - edge;
+      for (let sx = lo; sx <= hi + 0.1; sx += Math.max(1, Math.min(24, (hi - lo) / 2))) {
+        for (let off = -160; off <= 160; off += 20) {
+          const tx = Math.min(TW - RW / 2, Math.max(RW / 2, sx + off));
+          add(from, sx, "jump", tx);
+          if (!SOLIDS.includes(from.base)) add(from, sx, "drop", tx);
+        }
+      }
+      // walk right off either end
+      for (let off = 10; off <= 150; off += 20) {
+        add(from, lo, "walk", Math.max(RW / 2, from.x - RW / 2 - off));
+        add(from, hi, "walk", Math.min(TW - RW / 2, from.x + from.w + RW / 2 + off));
+      }
+    });
+    return moves;
+  }
+  const ROBOT_MOVES = buildRobotMoves();
+
+  // the spot you're standing on, or the one you'll land on if you're in the air
+  function spotUnder(b){
+    const cx = b.x + b.w / 2, feet = b.y + b.h;
+    if (b.onGround) return spotAt(b.on, cx);
+    let best = null;
+    SPOTS.forEach(s => {
+      if (cx < s.x || cx > s.x + s.w || s.y < feet - 1) return;
+      if (!best || s.y < best.y) best = s;
+    });
+    return best;
+  }
+
+  // shortest chain of moves from where the robot stands to you (at gx on goal); returns the first move
+  function planRoute(from, x, goal, gx){
+    const done = new Set(), cost = new Map([[from, 0]]), at = new Map([[from, x]]), first = new Map([[from, null]]);
+    while (true) {
+      let s = null;
+      cost.forEach((c, k) => { if (!done.has(k) && (s === null || c < cost.get(s))) s = k; });
+      if (s === null) return null;
+      if (s === goal) return first.get(s);
+      done.add(s);
+      ROBOT_MOVES.get(s).forEach(m => {
+        const c = cost.get(s) + Math.abs(at.get(s) - m.sx) + 60 + (m.to === goal ? Math.abs(m.lx - gx) : 0);
+        if (done.has(m.to) || (cost.has(m.to) && cost.get(m.to) <= c)) return;
+        cost.set(m.to, c); at.set(m.to, m.lx); first.set(m.to, first.get(s) || m);
+      });
+    }
+  }
+
   function updateRobot(r, dt){
     const speed = ROBOT_SPEED * speedMult();
     const rx = r.x + r.w / 2, px = player.x + player.w / 2;
-    const rBottom = r.y + r.h, pBottom = player.y + player.h;
-    const dy = pBottom - rBottom;
-    let targetX = px, wantJump = false;
+    let targetX = px, wantJump = false, chasing = true;
     r.jumpCd = Math.max(0, r.jumpCd - dt);
 
-    if (dy < -40 && player.onGround) {
-      // you're higher up: head for a platform it can jump onto, then jump
-      let best = null, bestD = Infinity;
-      PLATFORMS.forEach(p => {
-        if (p.y >= rBottom - 20 || p.y < rBottom - 125) return;
-        const d = Math.max(0, p.x - rx, rx - (p.x + p.w)) + Math.abs((p.x + p.w / 2) - px) * 0.3;
-        if (d < bestD) { bestD = d; best = p; }
-      });
-      if (best) {
-        targetX = Math.min(Math.max(px, best.x + 12), best.x + best.w - 12);
-        if (rx > best.x - 30 && rx < best.x + best.w + 30) wantJump = true;
+    if (r.onGround) {
+      const here = spotAt(r.on, rx), goal = spotUnder(player);
+      r.move = goal && goal !== here ? planRoute(here, rx, goal, px) : null;
+      const m = r.move;
+      if (m) {
+        chasing = false;
+        targetX = m.kind === "walk" ? m.tx : m.sx;
+        if (m.kind !== "walk" && Math.abs(rx - m.sx) < 6) {
+          // standing on the take-off spot: go!
+          if (m.kind === "drop") { r.dropT = 0.3; r.vx = 0; targetX = m.tx; }
+          else if (r.jumpCd <= 0) { r.vy = -660; r.vx = 0; r.jumpCd = 0.35; targetX = m.tx; }
+        }
+      } else if (goal === here && player.y + player.h < r.y + r.h - 40 && Math.abs(px - rx) < 50) {
+        wantJump = true; // you jumped right above it
       }
-    } else if (dy > 40 && r.on && !SOLIDS.includes(r.on) && Math.abs(px - rx) < 90) {
-      r.dropT = 0.3; // you're below: drop down through the platform
+    } else if (r.move) {
+      chasing = false;
+      targetX = r.move.tx; // in the air: steer to where the move lands
     }
 
     const dir = Math.abs(targetX - rx) < 4 ? 0 : Math.sign(targetX - rx);
     r.vx = approach(r.vx, dir * speed, 2000 * dt);
-    if (r.onGround && ((dir < 0 && r.wallL) || (dir > 0 && r.wallR))) wantJump = true;
+    if (chasing && r.onGround && ((dir < 0 && r.wallL) || (dir > 0 && r.wallR))) wantJump = true;
 
     // stuck in one spot for a while? hop!
     if (Math.abs(r.x - r.lastX) < 1.5 && r.onGround) r.stuckT += dt; else r.stuckT = 0;
@@ -2188,8 +2299,18 @@
       ctx.fillStyle = "#ff3b2f"; ctx.fillRect(p.x - 1, p.y + 3, p.w + 2, 4); // headband
     });
   }
+  // the game fills the screen now, so draw it at the real size to keep it sharp
+  let tagScale = 1;
+  function fitTagCanvas(){
+    const s = Math.min(3, Math.max(1, tagCanvas.clientWidth * (window.devicePixelRatio || 1) / TW));
+    if (Math.abs(s - tagScale) < 0.01) return;
+    tagScale = s;
+    tagCanvas.width = Math.round(TW * s); tagCanvas.height = Math.round(TH * s);
+  }
   function drawTag(){
     const ctx = tagCtx;
+    fitTagCanvas();
+    ctx.setTransform(tagScale, 0, 0, tagScale, 0, 0);
     const sky = ctx.createLinearGradient(0, 0, 0, TH);
     sky.addColorStop(0, "#2f6fd6"); sky.addColorStop(0.55, "#6fa3e6"); sky.addColorStop(1, "#ff9a3c");
     ctx.fillStyle = sky; ctx.fillRect(0, 0, TW, TH);
