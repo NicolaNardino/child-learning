@@ -523,7 +523,8 @@
   /* ---------- pac-man ---------- */
   #tagOverlay .tag-box{ width: min(100%, calc((100vh - 110px) * 16 / 9)); }
   @media (pointer: coarse){ #tagOverlay .tag-box{ width: min(100%, calc((100vh - 170px) * 16 / 9)); } }
-  .pac-box{ width: min(560px, 100%, calc((100vh - 170px) * 19 / 21)); }
+  .pac-box{ width: min(100%, calc((100vh - 110px) * 19 / 21)); }
+  @media (pointer: coarse){ .pac-box{ width: min(100%, calc((100vh - 200px) * 19 / 21)); } }
   #pacCanvas:focus{ outline: none; }
   #pacCanvas{
     display: block; width: 100%; aspect-ratio: 19 / 21; height: auto;
@@ -2207,6 +2208,26 @@
     moveBody(r, dt);
   }
 
+  // does the straight line from (ax, ay) to (bx, by) pass through this box?
+  function lineHitsBox(ax, ay, bx, by, r){
+    let t0 = 0, t1 = 1;
+    const dx = bx - ax, dy = by - ay;
+    for (const [p, q] of [[-dx, ax - r.x], [dx, r.x + r.w - ax], [-dy, ay - r.y], [dy, r.y + r.h - ay]]) {
+      if (p === 0) { if (q < 0) return false; continue; }
+      const t = q / p;
+      if (p < 0) { if (t > t1) return false; t0 = Math.max(t0, t); }
+      else { if (t < t0) return false; t1 = Math.min(t1, t); }
+    }
+    return true;
+  }
+  // platforms are drawn 12px thick, so they count as walls too
+  const TAG_WALLS = [...SOLIDS, ...PLATFORMS.map(p => ({ x: p.x, y: p.y, w: p.w, h: 12 }))];
+  function wallBetween(a, b){
+    const ax = a.x + a.w / 2, ay = a.y + a.h / 2, bx = b.x + b.w / 2, by = b.y + b.h / 2;
+    // squeezing through a platform counts as being behind it
+    return TAG_WALLS.some(w => lineHitsBox(ax, ay, bx, by, w) || overlap(a, w) || overlap(b, w));
+  }
+
   function tagStep(dt){
     if (tagCountdown > 0) { tagCountdown -= dt; return; }
     tagTime += dt;
@@ -2216,7 +2237,8 @@
     updatePlayer(dt);
     robots.forEach(r => updateRobot(r, dt));
     const shrunk = { x: player.x + 3, y: player.y + 3, w: player.w - 6, h: player.h - 6 };
-    if (robots.some(r => overlap(shrunk, r))) { endTag(false); return; }
+    // a robot can't tag you through a wall or from under a platform
+    if (robots.some(r => overlap(shrunk, r) && !wallBetween(player, r))) { endTag(false); return; }
     if (tagTime >= TAG_SECONDS) endTag(true);
   }
 
@@ -2757,8 +2779,18 @@
       ctx.beginPath(); ctx.arc(cx + ox + lx * 1.8, cy - 3 + ly * 2, 2, 0, Math.PI * 2); ctx.fill();
     });
   }
+  // the maze fills the screen now, so draw it at the real size to keep it sharp
+  let pacScale = 1;
+  function fitPacCanvas(){
+    const s = Math.min(3, Math.max(1, pacCanvas.clientWidth * (window.devicePixelRatio || 1) / (PCOLS * PT)));
+    if (Math.abs(s - pacScale) < 0.01) return;
+    pacScale = s;
+    pacCanvas.width = Math.round(PCOLS * PT * s); pacCanvas.height = Math.round(PROWS * PT * s);
+  }
   function drawPac(){
     const ctx = pacCtx;
+    fitPacCanvas();
+    ctx.setTransform(pacScale, 0, 0, pacScale, 0, 0);
     drawPacMaze(ctx);
     if (!pausedFor("clear") && !pausedFor("dead")) ghosts.forEach(g => drawGhost(ctx, g));
     if (!pausedFor("eat")) drawPacman(ctx);
