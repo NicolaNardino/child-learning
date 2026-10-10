@@ -2019,7 +2019,8 @@
   const tagRobotsEl = document.getElementById("tagRobots");
   const tagSpeedEl = document.getElementById("tagSpeed");
 
-  const TW = 960, TH = 540;
+  // the world is bigger than the screen; it's drawn zoomed out so lots of platforms fit
+  const TW = 1280, TH = 720, VIEW_W = 960, VIEW_H = 540, ZOOM = VIEW_W / TW;
   const TAG_SECONDS = 180;
   const GRAVITY = 1800;
   const PLAYER_SPEED = 270;
@@ -2029,17 +2030,21 @@
 
   // solid blocks: you can't pass through them (and can wall-jump off their sides)
   const SOLIDS = [
-    { x: 0, y: 510, w: 960, h: 30 },
-    { x: 180, y: 440, w: 18, h: 70 },
-    { x: 762, y: 440, w: 18, h: 70 },
-    { x: 471, y: 175, w: 18, h: 90 }
+    { x: 0, y: 690, w: 1280, h: 30 },
+    { x: 300, y: 620, w: 18, h: 70 },
+    { x: 962, y: 620, w: 18, h: 70 },
+    { x: 631, y: 220, w: 18, h: 90 }
   ];
   // thin platforms: jump up through them from below, press down to drop through
+  // (rows are 95 apart, so a robot's single jump can always reach the next row up)
   const PLATFORMS = [
-    { x: 60, y: 415, w: 170 }, { x: 400, y: 415, w: 160 }, { x: 730, y: 415, w: 170 },
-    { x: 0, y: 320, w: 80 }, { x: 220, y: 320, w: 150 }, { x: 590, y: 320, w: 150 }, { x: 880, y: 320, w: 80 },
-    { x: 60, y: 225, w: 160 }, { x: 390, y: 265, w: 180 }, { x: 740, y: 225, w: 160 },
-    { x: 230, y: 130, w: 120 }, { x: 610, y: 130, w: 120 }, { x: 420, y: 60, w: 120 }
+    { x: 60, y: 595, w: 180 }, { x: 360, y: 595, w: 170 }, { x: 750, y: 595, w: 170 }, { x: 1040, y: 595, w: 180 },
+    { x: 0, y: 500, w: 100 }, { x: 220, y: 500, w: 160 }, { x: 560, y: 500, w: 160 }, { x: 900, y: 500, w: 160 }, { x: 1180, y: 500, w: 100 },
+    { x: 80, y: 405, w: 170 }, { x: 380, y: 405, w: 150 }, { x: 750, y: 405, w: 150 }, { x: 1030, y: 405, w: 170 },
+    { x: 0, y: 310, w: 110 }, { x: 230, y: 310, w: 150 }, { x: 565, y: 310, w: 150 }, { x: 900, y: 310, w: 150 }, { x: 1170, y: 310, w: 110 },
+    { x: 90, y: 215, w: 160 }, { x: 380, y: 215, w: 160 }, { x: 740, y: 215, w: 160 }, { x: 1030, y: 215, w: 160 },
+    { x: 230, y: 120, w: 140 }, { x: 570, y: 120, w: 140 }, { x: 910, y: 120, w: 140 },
+    { x: 410, y: 40, w: 140 }, { x: 730, y: 40, w: 140 }
   ];
 
   let tagOpen = false, tagRunning = false;
@@ -2108,13 +2113,13 @@
   }
 
   function resetTag(){
-    player = makeBody(TW / 2 - 11, 470, 22, 30);
+    player = makeBody(TW / 2 - 11, SOLIDS[0].y - 40, 22, 30);
     player.jumps = 1; player.coyote = 0; player.wallLock = 0; player.face = 1;
     robots = [];
     tagTime = 0;
     // the first robot starts up on the far left ledge
     spawnRobot();
-    robots[0].x = 20; robots[0].y = 290;
+    robots[0].x = 20; robots[0].y = 470;
     tagFlash = { text: "", t: 0 };
   }
 
@@ -2330,7 +2335,7 @@
     ctx.arcTo(x, y + h, x, y, r); ctx.arcTo(x, y, x + w, y, r); ctx.closePath();
   }
   /* ----- 3D drawing: a simple perspective camera ----- */
-  const EYE_X = TW / 2, EYE_Y = 190;  // where the vanishing point sits
+  const EYE_X = TW / 2, EYE_Y = 253;  // where the vanishing point sits
   const FOCAL = 600, WORLD_DEPTH = 70, ACTOR_Z0 = 22, ACTOR_Z1 = 48;
   const BLOCK_COLOURS = { front: "#1d2b44", top: "#46638f", side: "#14203a", bottom: "#0f1830", edge: "#ffb15c" };
   function proj(x, y, z){
@@ -2405,25 +2410,25 @@
   // the game fills the screen now, so draw it at the real size to keep it sharp
   let tagScale = 1;
   function fitTagCanvas(){
-    const s = Math.min(3, Math.max(1, tagCanvas.clientWidth * (window.devicePixelRatio || 1) / TW));
+    const s = Math.min(3, Math.max(1, tagCanvas.clientWidth * (window.devicePixelRatio || 1) / VIEW_W));
     if (Math.abs(s - tagScale) < 0.01) return;
     tagScale = s;
-    tagCanvas.width = Math.round(TW * s); tagCanvas.height = Math.round(TH * s);
+    tagCanvas.width = Math.round(VIEW_W * s); tagCanvas.height = Math.round(VIEW_H * s);
   }
   function drawTag(){
     const ctx = tagCtx;
     fitTagCanvas();
-    ctx.setTransform(tagScale, 0, 0, tagScale, 0, 0);
+    ctx.setTransform(tagScale * ZOOM, 0, 0, tagScale * ZOOM, 0, 0);
     const sky = ctx.createLinearGradient(0, 0, 0, TH);
     sky.addColorStop(0, "#2f6fd6"); sky.addColorStop(0.55, "#6fa3e6"); sky.addColorStop(1, "#ff9a3c");
     ctx.fillStyle = sky; ctx.fillRect(0, 0, TW, TH);
     // big orange sun and a few clouds
-    const sun = ctx.createRadialGradient(800, 420, 10, 800, 420, 150);
+    const sun = ctx.createRadialGradient(1067, 560, 13, 1067, 560, 200);
     sun.addColorStop(0, "rgba(255,190,90,0.95)"); sun.addColorStop(1, "rgba(255,150,60,0)");
-    ctx.fillStyle = sun; ctx.fillRect(600, 250, 400, 300);
+    ctx.fillStyle = sun; ctx.fillRect(800, 333, 480, 387);
     ctx.fillStyle = "rgba(255,255,255,0.35)";
-    [[120, 70], [700, 50], [330, 200]].forEach(([cx, cy]) => {
-      ctx.beginPath(); ctx.ellipse(cx, cy, 50, 14, 0, 0, Math.PI * 2); ctx.ellipse(cx + 30, cy - 8, 30, 12, 0, 0, Math.PI * 2); ctx.fill();
+    [[160, 90], [930, 70], [440, 270], [1150, 180]].forEach(([cx, cy]) => {
+      ctx.beginPath(); ctx.ellipse(cx, cy, 66, 18, 0, 0, Math.PI * 2); ctx.ellipse(cx + 40, cy - 10, 40, 16, 0, 0, Math.PI * 2); ctx.fill();
     });
 
     // 3D world: every thing is a box with depth, seen from a camera in front
@@ -2448,12 +2453,12 @@
     actors.forEach(a => a.robot ? drawRobot(ctx, a.b) : drawPlayer(ctx, a.b));
 
     if (tagCountdown > 0) {
-      ctx.fillStyle = "#fff"; ctx.font = "800 90px 'Bricolage Grotesque', sans-serif"; ctx.textAlign = "center";
+      ctx.fillStyle = "#fff"; ctx.font = "800 120px 'Bricolage Grotesque', sans-serif"; ctx.textAlign = "center";
       ctx.fillText(String(Math.ceil(tagCountdown)), TW / 2, TH / 2 - 40);
     }
     if (tagFlash.t > 0) {
-      ctx.fillStyle = "#fff"; ctx.font = "800 28px 'Bricolage Grotesque', sans-serif"; ctx.textAlign = "center";
-      ctx.fillText(tagFlash.text, TW / 2, 40);
+      ctx.fillStyle = "#fff"; ctx.font = "800 37px 'Bricolage Grotesque', sans-serif"; ctx.textAlign = "center";
+      ctx.fillText(tagFlash.text, TW / 2, 53);
     }
   }
 
