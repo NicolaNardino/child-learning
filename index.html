@@ -2619,8 +2619,8 @@
   }
   function ghostSpeed(g){
     if (g.state === "eyes") return 15;
-    if (g.state === "leave" || g.scared) return 4;
-    return (inTunnel(g) ? 3.5 : 7) * levelBoost();
+    if (g.state === "leave" || g.scared) return 3;
+    return (inTunnel(g) ? 2.5 : 5) * levelBoost(); // a good bit slower than you (7.5)
   }
   function moveGhost(g, i, dt){
     if (g.state === "wait") {
