@@ -89,12 +89,23 @@
   /* ---------------- picking a fish that bites ---------------- */
   // zone: where the hook is · night: true at night · luck: 0 (none) to 1 (lots) makes rare fish likelier
   function pickFish(zone, night, luck){
-    const pool = FISH.filter(f => f.zone === zone && (night || !f.night));
+    return pickFrom(FISH.filter(f => f.zone === zone && (night || !f.night)), luck);
+  }
+  function pickFrom(pool, luck){
     const weight = f => f.species.bite * f.rarity.weight * Math.pow(1 + 2.5 * luck, f.rarityIndex);
     const total = pool.reduce((s, f) => s + weight(f), 0);
     let r = Math.random() * total;
     for (const f of pool) { r -= weight(f); if (r <= 0) return f; }
     return pool[pool.length - 1];
+  }
+
+  // a hungry big fish that might eat the fish on your hook: a hunter living in the same zone or one further out,
+  // and much bigger than the fish you hooked. null if there's no such fish.
+  const HUNTERS = ["Barracuda", "Grouper", "Tuna", "Shark", "Swordfish", "Gulper Eel", "Anglerfish", "Coelacanth"];
+  function pickHunter(hooked, night, luck){
+    const pool = FISH.filter(f => HUNTERS.includes(f.species.name) && (night || !f.night) &&
+      (f.zone === hooked.zone || f.zone === hooked.zone + 1) && f.size[1] >= hooked.size[1] * 1.6);
+    return pool.length ? pickFrom(pool, luck) : null;
   }
 
   /* ---------------- drawing ---------------- */
@@ -320,5 +331,5 @@
     return c;
   }
 
-  window.FishingFish = { ZONES, RARITIES, SPECIES, VARIANTS, FISH, pickFish, draw, picture, lengthOf };
+  window.FishingFish = { ZONES, RARITIES, SPECIES, VARIANTS, FISH, pickFish, pickHunter, draw, picture, lengthOf };
 })();

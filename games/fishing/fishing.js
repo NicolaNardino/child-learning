@@ -81,7 +81,7 @@
 
     let open = false, last = 0, clock = 0, state = "menu", holding = false;
     let power = 0, powerT = 0, bob = null, hook = null, target = null, actor = null, timers = {}, reel = null, msg = null;
-    let swimmers = [], splashes = [], dayStart = 0.32;
+    let swimmers = [], splashes = [], chomp = null, dayStart = 0.32;
     const rod = () => RODS.find(r => r.id === F.rod) || RODS[0];
     const dayTime = () => (dayStart + clock / 360) % 1;       // a whole day lasts 6 minutes
 
@@ -205,16 +205,49 @@
       state = "idle"; bob = null; hook = null; reel = null; target = null;
     }
 
+    const difficulty = fish => 0.25 + fish.rarityIndex * 0.13 + (fish.size[1] > 150 ? 0.1 : 0);
     function startReel(){
       const fish = target;
-      const diff = 0.25 + fish.rarityIndex * 0.13 + (fish.size[1] > 150 ? 0.1 : 0);
-      reel = { fish, diff, fishPos: 0.5, fishTarget: 0.5, retarget: 0, zonePos: 0.3, zoneVel: 0, progress: 0.3, size: rod().control };
+      reel = { fish, diff: difficulty(fish), fishPos: 0.5, fishTarget: 0.5, retarget: 0, zonePos: 0.3, zoneVel: 0, progress: 0.3, size: rod().control, t: 0 };
+      // sometimes a bigger fish turns up and eats the one on your hook!
+      const hunter = Math.random() < 0.2 && FF.pickHunter(fish, SC.light(dayTime()).night, rod().luck);
+      if (hunter) reel.ambush = { fish: hunter, at: 1.2 + Math.random() * 2.5 };
       state = "reeling";
       say("❗ Hold to reel it in!", 1.2);
     }
 
+    // the big fish swims in, gulps down your fish, and now it's on your hook
+    function updateAmbush(dt){
+      const A = reel.ambush;
+      if (!A || A.done || reel.t < A.at || !actor) return;
+      if (!A.hunter) {
+        const side = actor.x > SC.SHORE_X + 200 && Math.random() < 0.5 ? -1 : 1;
+        A.hunter = { fish: A.fish, x: actor.x + side * 260, y: actor.y + 20, dir: -side };
+        say(`⚠️ Something big is coming…`, 1.6);
+      }
+      const H = A.hunter;
+      const sp = 230 * dt;
+      const dx = actor.x - H.x, dy = actor.y - H.y, d = Math.hypot(dx, dy);
+      H.dir = dx < 0 ? -1 : 1;
+      if (d > 18) { H.x += dx / d * sp; H.y += dy / d * sp; return; }
+      // CHOMP
+      A.done = true;
+      splashes.push({ x: actor.x, y: SC.SURFACE, t: 0, big: true });
+      chomp = { x: actor.x, y: actor.y, t: 0 };
+      say(`😱 A ${A.fish.name} ate your ${reel.fish.name}! Reel it in!`, 2.6);
+      actor = { fish: A.fish, x: H.x, y: H.y, dir: H.dir };
+      reel.eaten = reel.fish.name;
+      reel.fish = A.fish;
+      reel.diff = difficulty(A.fish) + 0.1;
+      reel.progress = Math.max(reel.progress, 0.35);
+      reel.ate = true;
+    }
+
     function updateReel(dt){
       const R = reel;
+      R.t += dt;
+      updateAmbush(dt);
+      if (state !== "reeling") return;
       R.retarget -= dt;
       if (R.retarget <= 0) {
         R.fishTarget = Math.max(0.05, Math.min(0.95, R.fishPos + (Math.random() - 0.5) * (0.4 + R.diff)));
@@ -236,7 +269,7 @@
     }
 
     function caught(){
-      const fish = reel.fish;
+      const fish = reel.fish, eaten = reel.eaten;
       const [lo, hi] = fish.size;
       const cm = Math.round(lo + (hi - lo) * Math.pow(Math.random(), 1.6));
       const isNew = !F.caught[fish.id];
@@ -253,7 +286,7 @@
       splashes.push({ x: hook ? hook.x : bob.x, y: SC.SURFACE, t: 0, big: true });
       state = "caught";
       bob = null; hook = null; reel = null; actor = null;
-      showCatch(fish, cm, isNew, rec, newRods);
+      showCatch(fish, cm, isNew, rec, newRods, eaten);
     }
 
     /* ---------------- the panels: start, a catch, the fish book, the rods ---------------- */
@@ -278,13 +311,14 @@
       goBtn.textContent = "🎣 Go fishing!";
     }
 
-    function showCatch(fish, cm, isNew, rec, newRods){
+    function showCatch(fish, cm, isNew, rec, newRods, eaten){
       showPanel("catch");
       title.innerHTML = "";
       title.append(isNew ? "✨ NEW! " : "🎣 ", fish.name);
       title.style.color = fish.rarity.colour;
       text.innerHTML = `<b style="color:${fish.rarity.colour}">${fish.rarity.name}</b> · ${cm} cm · ${FF.ZONES[fish.zone].emoji} ${FF.ZONES[fish.zone].name}` +
         (fish.night ? " · 🌙 night only" : "") +
+        (eaten ? `<br>😱 It gobbled up the ${eaten} on your hook!` : "") +
         `<br>You've caught ${rec.n} of these · biggest ${rec.best} cm · Fish Book ${kinds()}/500` +
         newRods.map(r => `<br><b class="fs-unlock">🎉 You unlocked the ${r.name}!</b>`).join("");
       catchPic.hidden = false;
@@ -416,6 +450,7 @@
         if (s.x < x0 - 30 || s.x > x1 + 30) swimmers[k] = newSwimmer(s.zone);
       });
       splashes.forEach(s => { s.t += dt; });
+      if (chomp && (chomp.t += dt) > 0.9) chomp = null;
       splashes = splashes.filter(s => s.t < 0.8);
       if (msg && (msg.t -= dt) <= 0) msg = null;
     }
@@ -425,7 +460,20 @@
       SC.drawSky(ctx, clock, L, dayTime());
       SC.drawWater(ctx, clock, L);
       swimmers.forEach(s => drawFish(s.fish, s.x, s.y + Math.sin(clock * 2 + s.ph) * 3, s.w, s.dir, 0.9));
-      if (actor) drawFish(actor.fish, actor.x, actor.y, 34 + Math.min(30, actor.fish.size[1] / 8), actor.dir, 1);
+      if (actor) drawFish(actor.fish, actor.x, actor.y, 34 + Math.min(30, actor.fish.size[1] / 8) * (reel && reel.ate ? 1.4 : 1), actor.dir, 1);
+      if (reel && reel.ambush && reel.ambush.hunter && !reel.ambush.done) {
+        const Hn = reel.ambush.hunter;
+        drawFish(Hn.fish, Hn.x, Hn.y + Math.sin(clock * 6) * 3, 34 + Math.min(30, Hn.fish.size[1] / 8) * 1.4, Hn.dir, 1);
+      }
+      if (chomp) {
+        const u = chomp.t / 0.9;
+        ctx.font = `800 ${28 + u * 16}px 'Bricolage Grotesque', sans-serif`; ctx.textAlign = "center";
+        ctx.globalAlpha = 1 - u; ctx.lineWidth = 5; ctx.strokeStyle = "#000"; ctx.fillStyle = "#ff4d4d";
+        ctx.strokeText("CHOMP!", chomp.x, chomp.y - 30 - u * 20); ctx.fillText("CHOMP!", chomp.x, chomp.y - 30 - u * 20);
+        ctx.globalAlpha = 1;
+        ctx.fillStyle = "rgba(255,255,255,0.8)";
+        for (let k = 0; k < 6; k++) { ctx.beginPath(); ctx.arc(chomp.x + Math.cos(k) * 20 * u * 2, chomp.y + Math.sin(k * 2) * 14 * u * 2, 3 * (1 - u), 0, Math.PI * 2); ctx.fill(); }
+      }
       SC.drawSurface(ctx, clock, L);
       SC.drawBeachThings(ctx, clock);
       const tip = drawAngler();
