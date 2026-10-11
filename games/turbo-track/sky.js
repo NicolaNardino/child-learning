@@ -1,6 +1,6 @@
 /* Turbo Track's sky: the track floats high up, so looking down past it you see the sky far below.
    Layers, from farthest to nearest: a blue sky with the sun's glow, far clouds, near clouds,
-   birds and hot-air balloons, floating grassy islands, then (after the track and cars) a few
+   birds and hot-air balloons, the track's floating grassy islands, then (after the track and cars) a few
    wispy clouds drifting above it all. Farther layers move less as the camera moves, which makes
    it feel deep. Clouds and islands are painted once into little canvases, then just copied. */
 (function(){
@@ -143,16 +143,6 @@
       far: layer(9, 0.3, 0.45, 0.75, 6),
       near: layer(7, 0.55, 0.8, 0.95, 10),
       top: layer(4, 1.35, 1.8, 0.15, 16),
-      islands: [
-        [1700, 1150, 330, 11, { trees: 9, house: true, pond: true, flowers: 26 }],
-        [2380, 960, 120, 12, { trees: 3, flowers: 8 }],
-        [620, 1330, 150, 13, { trees: 4, flowers: 12 }],
-        [3300, 2250, 210, 14, { trees: 6, pond: true, flowers: 14 }],
-        [-150, 200, 200, 15, { trees: 5, flowers: 10 }],
-        [3350, 250, 160, 16, { trees: 4, house: true, flowers: 8 }],
-        [1500, 2450, 180, 17, { trees: 5, flowers: 12 }],
-        [2150, 650, 90, 18, { trees: 2 }]
-      ].map(([x, y, r, seed, extras]) => Object.assign({ x, y }, makeIsland(r, seed, extras))),
       balloons: [
         { x: 300, y: 300, img: makeBalloon(["#ff4d4d", "#ffe14d"]), vx: 9, vy: 4 },
         { x: 1100, y: 650, img: makeBalloon(["#4da6ff", "#ffffff", "#b46bff"]), vx: -7, vy: 3 }
@@ -175,8 +165,17 @@
     ctx.globalAlpha = 1;
   }
 
-  // everything below the track
-  function drawBelow(ctx, cam, zoom, W, H, t){
+  // each track's islands, painted the first time that track is raced
+  const islandCache = new Map();
+  function islandsFor(list){
+    if (!islandCache.has(list)) {
+      islandCache.set(list, list.map(([x, y, r, seed, extras]) => Object.assign({ x, y }, makeIsland(r, seed, extras))));
+    }
+    return islandCache.get(list);
+  }
+
+  // everything below the track; islands is the track's list of [x, y, size, seed, extras]
+  function drawBelow(ctx, cam, zoom, W, H, t, islands){
     const S = setup();
     const sky = ctx.createLinearGradient(0, 0, 0, H);
     sky.addColorStop(0, "#7cc4ff"); sky.addColorStop(0.6, "#a9dbff"); sky.addColorStop(1, "#cdeaff");
@@ -207,7 +206,7 @@
 
     // floating islands, a little below the track
     const d = 0.86;
-    S.islands.forEach(is => {
+    islandsFor(islands || []).forEach(is => {
       const s = zoom * d;
       const x = W / 2 + (is.x - cam.x) * s, y = H / 2 + (is.y - cam.y) * s;
       const w = is.canvas.width * s, h = is.canvas.height * s;

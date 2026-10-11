@@ -26,7 +26,7 @@ Every Learning subject has the same three levels, ⏱️ Time Trial, 🏁 race a
 - 🧟 **Zombie Blaster**: a 3D-style shooter in a moonlit graveyard. Point the mouse and click to blast goo. Waves get bigger, with speedy runners from wave 2 and big brutes from wave 3. Clear a wave to win back a heart.
 - 🧗 **Parkour Run**: a 3D obby high in the sky. Jump across orange, yellow, blue, green and black blocks that climb up and drop down: rainbow steps, a kill brick run, skinny beams, a spiral tower and a big drop. Touch a red kill brick or fall off and you go back to your last 🚩 checkpoint. Reach the 🏆 as fast as you can!
 
-- 🏎️ **Turbo Track**: a toy-car race seen from above, on an orange toy track floating high in the sky, with clouds, floating islands, hot-air balloons and birds far below. Pick your car (Muscle, Formula, Shark, Monster or Bubble) and its colour, even 🌈 rainbow or gold, then race three robot cars (🐢 Easy, 🚗 Medium or 🚀 Hard) for 3 laps against the clock. Hit the ⚡ speed boosters, fly off the ramp over the gap, go round the 🌀 loop-the-loop, and brake for the sharp turns. Too slow for the jump or the loop and you have to go back and try again!
+- 🏎️ **Turbo Track**: a toy-car race seen from above, on an orange toy track floating high in the sky, with clouds, floating islands, hot-air balloons and birds far below. Pick your car (Muscle, Formula, Shark, Monster or Bubble) and its colour, even 🌈 rainbow or gold, then race three robot cars (🐢 Easy, 🚗 Medium or 🚀 Hard) for 3 laps against the clock. Hit the ⚡ speed boosters, fly off the ramp over the gap, go round the 🌀 loop-the-loop, and brake for the sharp turns. Too slow for the jump or the loop and you have to go back and try again! Every race is on a random track out of five: ☁️ Sky Loop, 🏜️ Cloud Canyon, 🌈 Rainbow Hairpins, ⛰️ Zigzag Mountain and 🏝️ Island Hopper.
 
 Every game fills the screen and has touch buttons on phones and tablets.
 
@@ -48,7 +48,7 @@ games/
   pacman/                  Pac-Man
   zombie-blaster/          Zombie Blaster
   parkour/                 Parkour Run
-  turbo-track/             Turbo Track (track.js builds the course, sky.js draws the sky, turbo-track.js is the race)
+  turbo-track/             Turbo Track (track.js has the five tracks and builds them, sky.js draws the sky, turbo-track.js is the race)
 ```
 
 The address bar keeps track of where you are: `#/` is home, `#/games` is a section, and `#/games/pacman` is an app. That makes the browser's back button work, and you can bookmark a game.

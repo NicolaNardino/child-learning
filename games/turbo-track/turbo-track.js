@@ -7,17 +7,21 @@
   const store = Hub.store;
   if (!store.turbo) store.turbo = {};
   const T = store.turbo;
+  // best times are kept per track now; the old single best was on the first track
+  if (!T.bestTimes) T.bestTimes = T.bestTime ? { sky: T.bestTime } : {};
+  if (!T.bestLaps) T.bestLaps = T.bestLap ? { sky: T.bestLap } : {};
   const fmtTime = s => Math.floor(s / 60) + ":" + (s % 60).toFixed(1).padStart(4, "0");
 
   Hub.register({
     id: "turbo", section: "games", title: "Turbo Track", icon: "🏎️",
     blurb: "Race robot cars round an orange toy track, with loops, jumps and speed boosters!",
-    stat: () => T.bestTime ? "Best: " + fmtTime(T.bestTime) : "",
+    stat: () => T.wins ? `🏆 ${T.wins} ${T.wins === 1 ? "win" : "wins"}` : "",
     badges: [
       { id: "turbo1",    icon: "🏎️", name: "Turbo Winner",  desc: "Win a race on Turbo Track",   test: () => (T.wins || 0) >= 1 },
       { id: "turbo5",    icon: "🏆", name: "Track Champ",   desc: "Win 5 races on Turbo Track",  test: () => (T.wins || 0) >= 5 },
       { id: "turboHard", icon: "🤖", name: "Robot Crusher", desc: "Beat the Hard robots",        test: () => (T.hardWins || 0) >= 1 },
-      { id: "turboLap",  icon: "⚡", name: "Lightning Lap", desc: "Drive a lap in under 23 seconds", test: () => (T.bestLap || Infinity) < 23 }
+      { id: "turboLap",  icon: "⚡", name: "Lightning Lap", desc: "Drive a super-fast lap on any track",
+        test: () => COURSES.some(k => (T.bestLaps[k.C.layout.id] || Infinity) < k.C.parLap * 1.05) }
     ],
     mount
   });
@@ -115,24 +119,36 @@
     }
   }
 
-  /* ---------------- the course ---------------- */
-  const C = TurboTrackCourse.build();
-  const { samples, N, L, DS, HALF, wrap } = C;
-
+  /* ---------------- the courses: every track is built once, and each race picks one ---------------- */
   // the track drawn as paths: the road (without the gap), the part of the loop that crosses over, the middle line
-  function trackPath(filter){
+  function trackPath(course, filter){
     const p = new Path2D();
     let open = false;
-    for (let i = 0; i <= N; i++) {
-      const s = samples[i % N];
+    for (let i = 0; i <= course.N; i++) {
+      const s = course.samples[i % course.N];
       if (filter(s)) { if (open) p.lineTo(s.x, s.y); else { p.moveTo(s.x, s.y); open = true; } }
       else open = false;
     }
     return p;
   }
-  const ROAD = trackPath(s => s.kind !== "gap");
-  const DECK = trackPath(s => s.deck);
-  const LINE = trackPath(s => s.kind === "road" || s.kind === "loop");
+  const COURSES = TurboTrackCourse.layouts.map(layout => {
+    const C = TurboTrackCourse.build(layout);
+    return {
+      C,
+      ROAD: trackPath(C, s => s.kind !== "gap"),
+      DECK: trackPath(C, s => s.deck),
+      LINE: trackPath(C, s => s.kind === "road" || s.kind === "loop"),
+      // where the track pieces clip together, every 40 samples (not on the ramp or over the gap)
+      JOINTS: C.samples.map((s, i) => i).filter(i => i % 40 === 20 && (C.samples[i].kind === "road" || C.samples[i].kind === "loop"))
+    };
+  });
+  // the track being raced right now
+  let C, samples, N, L, DS, HALF, wrap, ROAD, DECK, LINE, JOINTS;
+  function useCourse(course){
+    ({ C, ROAD, DECK, LINE, JOINTS } = course);
+    ({ samples, N, L, DS, HALF, wrap } = C);
+  }
+  useCourse(COURSES[0]);
 
   // shiny orange plastic: a faint speckle, so the track doesn't look flat
   let plastic = null;
@@ -149,8 +165,6 @@
     plastic = ctx.createPattern(c, "repeat");
     return plastic;
   }
-  // where the track pieces clip together, every 40 samples (not on the ramp or over the gap)
-  const JOINTS = samples.map((s, i) => i).filter(i => i % 40 === 20 && (samples[i].kind === "road" || samples[i].kind === "loop"));
 
   function mount(host){
     host.innerHTML = `
@@ -264,7 +278,12 @@
       }, opts);
     }
 
-    function newRace(){
+    // a random track, but not the one you just raced
+    let lastRaced = null;
+    function newRace(preview){
+      const choices = COURSES.filter(k => k.C.layout.id !== lastRaced);
+      useCourse(choices[Math.floor(Math.random() * choices.length)]);
+      if (preview !== true) lastRaced = C.layout.id;
       const skill = (ROBOTS.find(r => r.id === T.robots) || ROBOTS[0]).skill;
       const m = MODELS.find(x => x.id === T.model) || MODELS[0];
       const others = COLOURS.filter(c => c.id !== T.colour && c.id !== "rainbow" && c.id !== "gold");
@@ -280,6 +299,7 @@
       ];
       cars.forEach(c => { if (!c.me) { c.robot = true; c.lane = c.lat; c.maxV = 540 * c.skill; } });
       sparks = []; msg = null; raceT = 0; countT = 3.2;
+      say(`${C.layout.emoji} ${C.layout.name}`, 3.2);
       state = "countdown";
       panel.hidden = true;
       canvas.focus();
@@ -449,15 +469,17 @@
       order.sort((a, b) => (a.finishT ?? a.guessT) - (b.finishT ?? b.guessT));
       const place = order.indexOf(me) + 1;
       const won = place === 1;
-      const newBest = !T.bestTime || me.finishT < T.bestTime;
+      const id = C.layout.id;
+      const newBest = !T.bestTimes[id] || me.finishT < T.bestTimes[id];
       if (won) { T.wins = (T.wins || 0) + 1; if (T.robots === "hard") T.hardWins = (T.hardWins || 0) + 1; }
-      if (newBest) T.bestTime = me.finishT;
-      if (me.bestLap < (T.bestLap || Infinity)) T.bestLap = me.bestLap;
+      if (newBest) T.bestTimes[id] = me.finishT;
+      if (me.bestLap < (T.bestLaps[id] || Infinity)) T.bestLaps[id] = me.bestLap;
       Hub.saveStore();
       Hub.checkBadges();
 
       panelTitle.textContent = won ? "🏆 You won!" : `🏁 You came ${ordinal(place)}!`;
-      panelText.textContent = `Your time: ${fmtTime(me.finishT)} · best lap ${fmtTime(me.bestLap)}` + (newBest ? " · a new best! 🎉" : ` · your best is ${fmtTime(T.bestTime)}`);
+      panelText.textContent = `${C.layout.emoji} ${C.layout.name} · your time ${fmtTime(me.finishT)} · best lap ${fmtTime(me.bestLap)}`
+        + (newBest ? " · a new best on this track! 🎉" : ` · your best here is ${fmtTime(T.bestTimes[id])}`);
       results.innerHTML = "";
       order.forEach((c, k) => {
         const row = document.createElement("div");
@@ -487,7 +509,7 @@
 
       // the sky far below, then the track floating above it
       ctx.setTransform(1, 0, 0, 1, 0, 0);
-      TurboTrackSky.drawBelow(ctx, { x: camX, y: camY }, ZOOM, W, H, clock);
+      TurboTrackSky.drawBelow(ctx, { x: camX, y: camY }, ZOOM, W, H, clock, C.layout.islands);
       ctx.setTransform(ZOOM, 0, 0, ZOOM, W / 2 - camX * ZOOM, H / 2 - camY * ZOOM);
 
       ctx.lineJoin = "round"; ctx.lineCap = "butt";
@@ -628,12 +650,12 @@
 
     // the whole track, small, in the corner, with a dot for every car
     const MINI = { w: 170, h: 115 };
-    const miniScale = Math.min(MINI.w / C.world.w, MINI.h / C.world.h);
     function drawMinimap(){
+      const miniScale = Math.min(MINI.w / C.world.w, MINI.h / C.world.h);
       ctx.save();
-      ctx.translate(W - MINI.w - 12, 12);
+      ctx.translate(W - MINI.w - 12 + (MINI.w - C.world.w * miniScale) / 2, 12 + (MINI.h - C.world.h * miniScale) / 2);
       ctx.fillStyle = "rgba(0,0,0,0.45)";
-      roundRect(ctx, -6, -6, MINI.w + 12, MINI.h + 12, 8); ctx.fill();
+      roundRect(ctx, -6, -6, C.world.w * miniScale + 12, C.world.h * miniScale + 12, 8); ctx.fill();
       ctx.scale(miniScale, miniScale);
       ctx.strokeStyle = "#ff7a00"; ctx.lineWidth = 2.2 / miniScale; ctx.stroke(ROAD);
       cars.forEach(c => {
@@ -676,7 +698,7 @@
     function showGarage(){
       state = "garage";
       panelTitle.textContent = "🏎️ Turbo Track";
-      panelText.textContent = `Pick your car and colour, then race the robots for ${LAPS} laps!` + (T.bestTime ? ` Your best: ${fmtTime(T.bestTime)}.` : "");
+      panelText.textContent = `Pick your car and colour, then race the robots for ${LAPS} laps. 🎲 Every race is on a random track: there are ${COURSES.length} to discover!`;
       results.hidden = true;
       garage.hidden = false;
       garageBtn.hidden = true;
@@ -697,7 +719,8 @@
     }
     // cars parked on the grid behind the garage panel
     function newPreviewRace(){
-      newRace();
+      newRace(true);
+      msg = null;
       state = "garage";
       panel.hidden = false;
     }

@@ -1,4 +1,4 @@
-/* Turbo Track's course, seen from above: an orange toy track on a bedroom floor.
+/* Turbo Track's courses, seen from above: orange toy tracks floating in the sky.
    The track is a smooth curve through the corner points below, with two special pieces:
    a ramp and jump over a gap, and a loop-the-loop. It's chopped into samples every few pixels,
    and everything else (walls, boosters, laps, the robots' racing line) works from those. */
@@ -10,18 +10,91 @@
   const LOOP_R = 140;    // the loop's radius
   const LOOP_SHIFT = 150; // how far the loop's exit lane sits beside its entry lane
 
-  // the corner points, driving anti-clockwise; "jump" or "loop" means the piece to the next point is special.
-  // The points either side of a special piece are in a straight line with it, so the track runs straight into it.
-  const POINTS = [
-    [600, 2000], [1000, 2000], [1500, 2000, "jump"], [2000, 2000], [2400, 2000],
-    [2800, 1920], [3050, 1650], [2880, 1350], [3100, 1080], [2880, 820], [3020, 560], [2750, 320],
-    [2300, 300], [1950, 300, "loop"], [1350, 300], [950, 300],
-    [600, 360], [360, 600], [320, 900], [720, 1060], [1120, 1000], [1230, 1280], [860, 1420],
-    [380, 1560], [330, 1850]
+  // The tracks. Each is a list of corner points, driven anti-clockwise, so the inside of the track is
+  // always on the driver's left (where the loop curls). "jump" or "loop" means the piece to the next
+  // point is special; the points either side of it are in a straight line, so the track runs straight in.
+  // start: the start line · boosts: booster spots (put them before the jump and the loop) ·
+  // islands: floating islands far below, as [x, y, size, seed, { trees, house, pond, flowers }]
+  const LAYOUTS = [
+    {
+      id: "sky", name: "Sky Loop", emoji: "☁️", world: { w: 3400, h: 2300 },
+      points: [
+        [600, 2000], [1000, 2000], [1500, 2000, "jump"], [2000, 2000], [2400, 2000],
+        [2800, 1920], [3050, 1650], [2880, 1350], [3100, 1080], [2880, 820], [3020, 560], [2750, 320],
+        [2300, 300], [1950, 300, "loop"], [1350, 300], [950, 300],
+        [600, 360], [360, 600], [320, 900], [720, 1060], [1120, 1000], [1230, 1280], [860, 1420],
+        [380, 1560], [330, 1850]
+      ],
+      start: [1150, 2000], boosts: [[1290, 2000], [2380, 300], [330, 760], [2960, 1780]],
+      islands: [
+        [1700, 1150, 330, 11, { trees: 9, house: true, pond: true, flowers: 26 }], [2380, 960, 120, 12, { trees: 3, flowers: 8 }],
+        [620, 1330, 150, 13, { trees: 4, flowers: 12 }], [3300, 2250, 210, 14, { trees: 6, pond: true, flowers: 14 }],
+        [-150, 200, 200, 15, { trees: 5, flowers: 10 }], [3350, 250, 160, 16, { trees: 4, house: true, flowers: 8 }],
+        [1500, 2450, 180, 17, { trees: 5, flowers: 12 }], [2150, 650, 90, 18, { trees: 2 }]
+      ]
+    },
+    {
+      id: "canyon", name: "Cloud Canyon", emoji: "🏜️", world: { w: 3600, h: 2400 },
+      points: [
+        [500, 2050], [900, 2050], [1400, 2050, "jump"], [1900, 2050], [2300, 2050],
+        [2800, 2000], [3200, 1800], [3350, 1450], [2950, 1250], [3300, 1000], [3250, 650], [2950, 400],
+        [2500, 320], [2100, 320, "loop"], [1500, 320], [1100, 320],
+        [700, 380], [420, 650], [450, 1000], [850, 1220], [450, 1450], [380, 1800]
+      ],
+      start: [1000, 2050], boosts: [[1150, 2050], [2550, 320], [3330, 1600], [430, 820]],
+      islands: [
+        [1800, 1250, 380, 21, { trees: 10, house: true, pond: true, flowers: 30 }], [2650, 1500, 140, 22, { trees: 4, flowers: 8 }],
+        [1100, 900, 150, 23, { trees: 3, house: true, flowers: 10 }], [3600, 2300, 220, 24, { trees: 6, flowers: 12 }],
+        [100, 2300, 200, 25, { trees: 5, pond: true }], [3650, 100, 180, 26, { trees: 4, flowers: 10 }]
+      ]
+    },
+    {
+      id: "hairpins", name: "Rainbow Hairpins", emoji: "🌈", world: { w: 3400, h: 2600 },
+      points: [
+        [500, 2300], [900, 2300], [1400, 2300, "jump"], [1900, 2300], [2300, 2300],
+        [2800, 2250], [3050, 2000], [3000, 1720], [2500, 1650], [2050, 1620], [1880, 1420], [2300, 1250], [2900, 1200],
+        [3100, 950], [3000, 650], [2700, 420],
+        [2300, 350], [1900, 350, "loop"], [1300, 350], [900, 350],
+        [500, 450], [350, 800], [480, 1200], [330, 1600], [380, 2000]
+      ],
+      start: [1000, 2300], boosts: [[1160, 2300], [2350, 350], [3040, 820], [400, 1000]],
+      islands: [
+        [1250, 1300, 300, 31, { trees: 8, house: true, pond: true, flowers: 24 }], [2550, 1430, 120, 32, { trees: 3, flowers: 6 }],
+        [2400, 850, 200, 33, { trees: 6, flowers: 14 }], [3300, 2550, 220, 34, { trees: 6, pond: true }],
+        [-100, 300, 200, 35, { trees: 5, house: true }], [1700, 2650, 170, 36, { trees: 4, flowers: 10 }]
+      ]
+    },
+    {
+      id: "zigzag", name: "Zigzag Mountain", emoji: "⛰️", world: { w: 2700, h: 3300 },
+      points: [
+        [400, 3000], [800, 3000], [1150, 3000, "jump"], [1650, 3000], [2050, 3000],
+        [2350, 2820], [2420, 2460], [2050, 2200], [2420, 1900], [2050, 1600], [2420, 1300], [2380, 900], [2200, 550],
+        [1900, 380], [1600, 380, "loop"], [1000, 380], [700, 380],
+        [400, 480], [250, 850], [300, 1300], [750, 1600], [300, 1900], [250, 2400], [250, 2800]
+      ],
+      start: [900, 3000], boosts: [[920, 3000], [1950, 395], [255, 2600], [2320, 1050]],
+      islands: [
+        [1300, 1700, 360, 41, { trees: 10, house: true, pond: true, flowers: 28 }], [1350, 900, 200, 42, { trees: 5, flowers: 12 }],
+        [1300, 2550, 220, 43, { trees: 6, house: true, flowers: 14 }], [2750, 3250, 200, 44, { trees: 5, pond: true }],
+        [-150, 100, 200, 45, { trees: 5 }], [2800, 200, 180, 46, { trees: 4, flowers: 8 }]
+      ]
+    },
+    {
+      id: "islands", name: "Island Hopper", emoji: "🏝️", world: { w: 4000, h: 2100 },
+      points: [
+        [500, 1750], [900, 1750], [1300, 1750, "loop"], [1900, 1750], [2300, 1750],
+        [2800, 1720], [3400, 1650], [3700, 1300], [3550, 900], [3700, 500], [3400, 250],
+        [3000, 250], [2600, 250], [2100, 250, "jump"], [1600, 250], [1200, 250],
+        [800, 300], [500, 500], [950, 700], [1400, 780], [1520, 1000], [1050, 1160], [500, 1250], [350, 1550]
+      ],
+      start: [700, 1750], boosts: [[820, 1750], [2420, 250], [3640, 1100], [370, 1400]],
+      islands: [
+        [2300, 1000, 380, 51, { trees: 10, house: true, pond: true, flowers: 30 }], [1350, 1450, 150, 52, { trees: 4, flowers: 10 }],
+        [3100, 900, 200, 53, { trees: 5, house: true, flowers: 12 }], [4100, 2000, 220, 54, { trees: 6, pond: true }],
+        [-100, 1900, 220, 55, { trees: 5, flowers: 12 }], [1000, -100, 200, 56, { trees: 5 }], [4100, 0, 180, 57, { trees: 4 }]
+      ]
+    }
   ];
-  const START = [1150, 2000];
-  const BOOSTS = [[1290, 2000], [2380, 300], [330, 760], [2960, 1780]];
-  const WORLD = { w: 3400, h: 2300 };
 
   // the smallest speed that makes it over the jump and round the loop
   const MIN_SPEED = { jump: 300, loop: 280 };
@@ -33,7 +106,8 @@
   }
   const smooth = u => u * u * (3 - 2 * u);
 
-  function build(){
+  function build(layout){
+    const POINTS = layout.points, START = layout.start, BOOSTS = layout.boosts;
     // 1. a fine line of raw points, each with what kind of track it is
     const raw = [];
     const n = POINTS.length;
@@ -174,8 +248,19 @@
       return { x, y, angle, i, z: heightAt(i) + (heightAt(i + 1) - heightAt(i)) * u };
     }
 
-    return { samples, N, L, DS, HALF, LOOP_R, zones, wrap, at, heightAt, world: WORLD, start: START };
+    // how long a lap takes a Hard robot: about the time to beat for a super-fast lap
+    let parLap = 0;
+    for (let v = 0, sd = 0, boost = 0; sd < L; parLap += 1 / 60) {
+      const smp = samples[Math.floor(sd / DS) % N];
+      if (smp.boost) boost = 1.4;
+      boost -= 1 / 60;
+      const target = Math.min(smp.safe, boost > 0 ? 540 * 1.35 : 540);
+      v = v < target ? Math.min(target, v + 400 / 60) : Math.max(target, v - 900 / 60);
+      sd += v / 60;
+    }
+
+    return { layout, samples, N, L, DS, HALF, LOOP_R, zones, wrap, at, heightAt, world: layout.world, start: START, parLap };
   }
 
-  window.TurboTrackCourse = { build };
+  window.TurboTrackCourse = { layouts: LAYOUTS, build };
 })();
