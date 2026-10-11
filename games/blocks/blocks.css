@@ -17,13 +17,16 @@
   }
 }
 #blCanvas:focus{ outline: none; }
-/* the picture is small and drawn blocky on purpose: it's stretched up without blurring, like real blocks */
 #blCanvas{
   display: block; width: 100%; aspect-ratio: 16 / 9; height: auto;
   border-radius: 12px; border: 2px solid rgba(255,255,255,0.25);
-  background: #8fc3f0; image-rendering: pixelated; touch-action: none; cursor: crosshair;
+  background: #c7e1fa; touch-action: none; cursor: crosshair;
   user-select: none; -webkit-user-select: none;
 }
+/* the plain backup picture is small, so it's stretched up without blurring */
+#blCanvas.soft{ image-rendering: pixelated; }
+/* a blue wash when your eyes are under water */
+.bl-water{ position: absolute; inset: 0; border-radius: 12px; background: rgba(20,70,190,0.38); pointer-events: none; }
 .bl-panel{ background: rgba(20,45,70,0.62); }
 .bl-panel .game-panel-text{ max-width: 52ch; }
 
@@ -33,24 +36,33 @@
 .bl-cross::before{ left: 0; right: 0; top: 10px; height: 2px; }
 .bl-cross::after{ top: 0; bottom: 0; left: 10px; width: 2px; }
 
-/* the bar of blocks along the bottom */
+/* the name of the block you just picked, fading out */
+.bl-name{
+  position: absolute; left: 50%; bottom: 62px; transform: translateX(-50%);
+  font: 700 15px "Karla", sans-serif; color: #fff; text-shadow: 0 2px 3px #000, 0 0 6px rgba(0,0,0,0.6);
+  opacity: 0; transition: opacity 0.4s; pointer-events: none; white-space: nowrap;
+}
+.bl-name.show{ opacity: 1; transition: none; }
+
+/* the bar of blocks along the bottom: dark slots, and a white frame round the one you hold */
 .bl-hotbar{
   position: absolute; left: 50%; bottom: 8px; transform: translateX(-50%);
-  display: flex; gap: 4px; padding: 4px; border-radius: 8px;
-  background: rgba(0,0,0,0.45);
+  display: flex; gap: 0; padding: 3px; border-radius: 3px;
+  background: rgba(40,40,40,0.72); border: 2px solid rgba(20,20,20,0.85);
 }
 .bl-hotbar:has(~ .bl-panel:not([hidden])){ visibility: hidden; }
 .bl-slot{
-  position: relative; width: 44px; height: 44px; padding: 2px; cursor: pointer;
-  background: rgba(0,0,0,0.5); border: 3px solid rgba(255,255,255,0.25); border-radius: 6px;
+  position: relative; width: 46px; height: 46px; padding: 3px; cursor: pointer;
+  background: rgba(110,110,110,0.32); border: 2px solid rgba(70,70,70,0.9); border-radius: 0;
   touch-action: none;
 }
-.bl-slot canvas{ display: block; width: 100%; height: 100%; image-rendering: pixelated; }
-.bl-slot span{ position: absolute; left: 3px; top: 0; font: 700 10px/1.4 "IBM Plex Mono", monospace; color: #fff; text-shadow: 0 1px 2px #000; }
-.bl-slot.sel{ border-color: #fff; transform: translateY(-3px); }
+.bl-slot canvas{ display: block; width: 100%; height: 100%; }
+.bl-slot span{ position: absolute; right: 3px; bottom: 0; font: 700 10px/1.4 "IBM Plex Mono", monospace; color: #fff; text-shadow: 1px 1px 0 #000; }
+.bl-slot.sel{ border: 3px solid #fff; background: rgba(255,255,255,0.18); z-index: 1; margin: -1px; }
 @media (max-width: 640px), (max-height: 500px){
-  .bl-hotbar{ bottom: 4px; gap: 3px; padding: 3px; }
-  .bl-slot{ width: 34px; height: 34px; border-width: 2px; }
+  .bl-hotbar{ bottom: 4px; padding: 2px; }
+  .bl-slot{ width: 34px; height: 34px; padding: 2px; }
+  .bl-name{ bottom: 46px; font-size: 12px; }
 }
 
 /* eight touch buttons: let them wrap onto a second row on a narrow phone */
