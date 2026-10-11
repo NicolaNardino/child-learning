@@ -2,12 +2,13 @@
    a sandcastle and a crab; the ocean on the right, cut open so you can see under the water: the sandy
    shallows, a colourful coral reef, the deep sea with a shipwreck, and the dark abyss. Above: a sky that
    turns from day to sunset to a starry night, with clouds, gulls and a sailboat on the horizon.
+   The world is much wider than the screen (WORLD), so the game moves a camera along it; the sky stays put.
    Things that never move are painted once onto a hidden canvas; things that move are drawn every frame. */
 (function(){
   "use strict";
-  const W = 960, H = 540, SURFACE = 250, SHORE_X = 318;
+  const W = 960, H = 540, WORLD = 2200, SURFACE = 250, SHORE_X = 318;
   // the zones along the sea floor, left to right
-  const ZONE_X = [[SHORE_X, 470], [470, 650], [650, 810], [810, W]];
+  const ZONE_X = [[SHORE_X, 720], [720, 1180], [1180, 1700], [1700, WORLD]];
 
   function seeded(seed){ return () => { seed = (seed * 16807) % 2147483647; return seed / 2147483647; }; }
   const lerp = (a, b, u) => a + (b - a) * u;
@@ -23,10 +24,10 @@
   // how deep the ground is at x, from the beach out to the abyss
   function seabedY(x){
     if (x < SHORE_X) return sandY(x);
-    if (x < 470) return lerp(SURFACE + 4, 342, smooth((x - SHORE_X) / (470 - SHORE_X)));
-    if (x < 650) return 342 + 14 * Math.sin((x - 470) / 180 * Math.PI);
-    if (x < 810) return lerp(342, 478, smooth((x - 650) / 160));
-    return lerp(478, 610, smooth(Math.min(1, (x - 810) / 70)));
+    if (x < 720) return lerp(SURFACE + 4, 342, smooth((x - SHORE_X) / (720 - SHORE_X)));
+    if (x < 1180) return 342 + 16 * Math.sin((x - 720) / 460 * Math.PI) - 8 * Math.sin((x - 720) / 460 * Math.PI * 3);
+    if (x < 1700) return lerp(342, 478, smooth((x - 1180) / 520)) + 6 * Math.sin(x * 0.02);
+    return lerp(478 + 6 * Math.sin(1700 * 0.02), 610, smooth(Math.min(1, (x - 1700) / 110)));
   }
   const zoneAt = x => ZONE_X.findIndex(([a, b]) => x >= a && x < b);
 
@@ -34,25 +35,27 @@
   let still = null;
   function paintStill(){
     const c = document.createElement("canvas");
-    c.width = W; c.height = H;
+    c.width = WORLD; c.height = H;
     const g = c.getContext("2d");
     const rnd = seeded(42);
+    const Wd = WORLD;
 
     // the ground: the sandy beach, the sandy sea floor, then darker rock going down
-    const floor = g.createLinearGradient(0, 0, W, 0);
-    floor.addColorStop(0, "#f6dfa4"); floor.addColorStop(SHORE_X / W, "#ead190"); floor.addColorStop(0.55, "#c9ae74"); floor.addColorStop(0.72, "#6a6a72"); floor.addColorStop(1, "#1a1a26");
+    const floor = g.createLinearGradient(0, 0, Wd, 0);
+    floor.addColorStop(0, "#f6dfa4"); floor.addColorStop(SHORE_X / Wd, "#ead190"); floor.addColorStop(720 / Wd, "#d8bd80");
+    floor.addColorStop(1180 / Wd, "#c9ae74"); floor.addColorStop(1500 / Wd, "#6a6a72"); floor.addColorStop(1, "#1a1a26");
     g.fillStyle = floor;
     g.beginPath(); g.moveTo(0, H);
-    for (let x = 0; x <= W; x += 3) g.lineTo(x, seabedY(x));
-    g.lineTo(W, H); g.closePath(); g.fill();
+    for (let x = 0; x <= Wd; x += 3) g.lineTo(x, seabedY(x));
+    g.lineTo(Wd, H); g.closePath(); g.fill();
     // sand ripples and pebbles
-    for (let k = 0; k < 900; k++) {
-      const x = SHORE_X + rnd() * (W - SHORE_X), y = seabedY(x) + 3 + rnd() * 60;
-      g.fillStyle = x < 650 ? (rnd() < 0.5 ? "rgba(255,240,200,0.35)" : "rgba(120,90,40,0.25)") : (rnd() < 0.5 ? "rgba(255,255,255,0.08)" : "rgba(0,0,0,0.2)");
+    for (let k = 0; k < 2200; k++) {
+      const x = SHORE_X + rnd() * (Wd - SHORE_X), y = seabedY(x) + 3 + rnd() * 60;
+      g.fillStyle = x < 1180 ? (rnd() < 0.5 ? "rgba(255,240,200,0.35)" : "rgba(120,90,40,0.25)") : (rnd() < 0.5 ? "rgba(255,255,255,0.08)" : "rgba(0,0,0,0.2)");
       g.fillRect(x, y, 1.5 + rnd() * 2, 1.5);
     }
     g.strokeStyle = "rgba(150,120,70,0.35)"; g.lineWidth = 1.5;
-    for (let x = SHORE_X + 10; x < 640; x += 18) { const y = seabedY(x) + 8; g.beginPath(); g.moveTo(x, y); g.quadraticCurveTo(x + 6, y - 4, x + 12, y); g.stroke(); }
+    for (let x = SHORE_X + 10; x < 1170; x += 18) { const y = seabedY(x) + 8; g.beginPath(); g.moveTo(x, y); g.quadraticCurveTo(x + 6, y - 4, x + 12, y); g.stroke(); }
     // rocks
     const rock = (x, r) => {
       const y = seabedY(x);
@@ -61,53 +64,55 @@
       g.fillStyle = gr; g.beginPath(); g.ellipse(x, y + 2, r * 1.3, r * 0.8, 0, Math.PI, 0); g.fill();
       g.fillStyle = "rgba(60,120,60,0.45)"; g.beginPath(); g.ellipse(x - r * 0.3, y - r * 0.55, r * 0.5, r * 0.18, 0, 0, Math.PI * 2); g.fill();
     };
-    [[400, 12], [455, 9], [700, 18], [760, 14], [835, 22], [600, 10]].forEach(([x, r]) => rock(x, r));
+    [[400, 12], [560, 9], [690, 14], [1170, 14], [1260, 18], [1430, 14], [1650, 22], [1880, 18], [2060, 26]].forEach(([x, r]) => rock(x, r));
     // shells and starfish in the shallows
-    for (let k = 0; k < 6; k++) {
-      const x = SHORE_X + 20 + k * 24 + rnd() * 10, y = seabedY(x) + 4;
+    for (let k = 0; k < 14; k++) {
+      const x = SHORE_X + 20 + k * 27 + rnd() * 10, y = seabedY(x) + 4;
       g.fillStyle = ["#ffd0c0", "#fff0d8", "#ffb0a0"][k % 3];
       g.beginPath(); g.arc(x, y, 4, Math.PI, 0); g.fill();
     }
-    star(g, 430, seabedY(430) + 2, 9, "#ff7a3a");
-    star(g, 600, seabedY(600) + 2, 8, "#ff4fb0");
+    star(g, 470, seabedY(470) + 2, 9, "#ff7a3a");
+    star(g, 640, seabedY(640) + 2, 8, "#ff4fb0");
+    star(g, 1010, seabedY(1010) + 2, 8, "#ffd21f");
     // coral reef
     const coralColours = ["#ff6a8a", "#ff9f1c", "#b46bff", "#ffd21f", "#ff4d4d", "#2fd0c0"];
-    for (let k = 0; k < 16; k++) {
-      const x = 478 + k * 10.5 + rnd() * 6, base = seabedY(x) + 3, col = coralColours[k % coralColours.length];
+    for (let k = 0; k < 44; k++) {
+      const x = 728 + k * 10.3 + rnd() * 6, base = seabedY(x) + 3, col = coralColours[k % coralColours.length];
       if (k % 3 === 0) branchCoral(g, x, base, 30 + rnd() * 25, col, rnd);
       else if (k % 3 === 1) { g.fillStyle = col; g.beginPath(); g.ellipse(x, base - 6, 9 + rnd() * 5, 8, 0, Math.PI, 0); g.fill();
         g.strokeStyle = "rgba(0,0,0,0.2)"; g.lineWidth = 1; for (let j = 0; j < 4; j++) { g.beginPath(); g.arc(x, base - 4, 3 + j * 2, Math.PI * 1.1, Math.PI * 1.9); g.stroke(); } }
       else fanCoral(g, x, base, 24 + rnd() * 12, col);
     }
     // a shipwreck and a treasure chest in the deep
-    shipwreck(g, 735, seabedY(735) + 6);
-    chest(g, 690, seabedY(690) + 2);
+    shipwreck(g, 1390, seabedY(1390) + 6);
+    chest(g, 1300, seabedY(1300) + 2);
+    chest(g, 1960, seabedY(1960) + 2);
     // anchor
     g.strokeStyle = "#3a3a44"; g.lineWidth = 4; g.lineCap = "round";
-    const ax = 790, ay = seabedY(ax) - 4;
+    const ax = 1580, ay = seabedY(ax) - 4;
     g.beginPath(); g.moveTo(ax, ay - 30); g.lineTo(ax, ay); g.moveTo(ax - 12, ay - 22); g.lineTo(ax + 12, ay - 22);
     g.moveTo(ax - 14, ay - 8); g.quadraticCurveTo(ax, ay + 6, ax + 14, ay - 8); g.stroke();
     // the abyss: a dark trench with glowing vents
     const trench = g.createLinearGradient(0, 430, 0, H);
     trench.addColorStop(0, "rgba(5,8,20,0)"); trench.addColorStop(1, "rgba(5,8,20,0.9)");
-    g.fillStyle = trench; g.fillRect(780, 400, W - 780, H - 400);
+    g.fillStyle = trench; g.fillRect(1680, 400, Wd - 1680, H - 400);
 
     // the ground seen from the side: darker layers further down, under the beach and the sea floor
     const earth = g.createLinearGradient(0, 0, 0, H);
     earth.addColorStop(0, "rgba(90,60,30,0)"); earth.addColorStop(1, "rgba(90,60,30,0.5)");
     g.fillStyle = earth;
     g.beginPath(); g.moveTo(0, H);
-    for (let x = 0; x <= W; x += 3) g.lineTo(x, seabedY(x) + 26);
-    g.lineTo(W, H); g.closePath(); g.fill();
+    for (let x = 0; x <= Wd; x += 3) g.lineTo(x, seabedY(x) + 26);
+    g.lineTo(Wd, H); g.closePath(); g.fill();
     g.strokeStyle = "rgba(110,80,40,0.25)"; g.lineWidth = 3;
-    [46, 80, 120].forEach(dy => { g.beginPath(); for (let x = 0; x <= W; x += 6) g.lineTo(x, seabedY(x) + dy + Math.sin(x * 0.03) * 4); g.stroke(); });
+    [46, 80, 120].forEach(dy => { g.beginPath(); for (let x = 0; x <= Wd; x += 6) g.lineTo(x, seabedY(x) + dy + Math.sin(x * 0.03) * 4); g.stroke(); });
     // the beach: darker down in the sand, and wet near the water
     const deepSand = g.createLinearGradient(0, 220, 0, H);
     deepSand.addColorStop(0, "rgba(160,110,50,0)"); deepSand.addColorStop(1, "rgba(160,110,50,0.35)");
     g.fillStyle = deepSand;
     g.beginPath(); g.moveTo(0, H);
-    for (let x = 0; x <= W; x += 3) g.lineTo(x, seabedY(x));
-    g.lineTo(W, H); g.closePath(); g.fill();
+    for (let x = 0; x <= Wd; x += 3) g.lineTo(x, seabedY(x));
+    g.lineTo(Wd, H); g.closePath(); g.fill();
     const wet = g.createLinearGradient(SHORE_X - 70, 0, SHORE_X, 0);
     wet.addColorStop(0, "rgba(160,120,60,0)"); wet.addColorStop(1, "rgba(160,120,60,0.35)");
     g.fillStyle = wet;
@@ -115,8 +120,8 @@
     for (let x = SHORE_X - 70; x <= SHORE_X; x += 3) g.lineTo(x, sandY(x));
     g.lineTo(SHORE_X, H); g.closePath(); g.fill();
     // sand grains
-    for (let k = 0; k < 2600; k++) {
-      const x = rnd() * 650, y = seabedY(x) + rnd() * (H - seabedY(x));
+    for (let k = 0; k < 4500; k++) {
+      const x = rnd() * 1180, y = seabedY(x) + rnd() * (H - seabedY(x));
       g.fillStyle = rnd() < 0.5 ? "rgba(255,255,255,0.35)" : "rgba(150,110,50,0.3)";
       g.fillRect(x, y, 1.5, 1.5);
     }
@@ -202,9 +207,9 @@
     });
     return clouds;
   }
-  const KELP = Array.from({ length: 14 }, (_, k) => ({ x: 335 + k * 11 + (k % 3) * 4, h: 40 + (k * 37) % 50, ph: k * 0.7 }))
-    .concat(Array.from({ length: 6 }, (_, k) => ({ x: 655 + k * 24, h: 50 + (k * 23) % 40, ph: k, dark: true })));
-  const bubbles = Array.from({ length: 34 }, (_, k) => ({ x: 330 + (k * 97) % 620, y: SURFACE + (k * 53) % 300, r: 1.5 + (k % 4), v: 14 + (k % 5) * 6 }));
+  const KELP = Array.from({ length: 30 }, (_, k) => ({ x: 335 + k * 12.5 + (k % 3) * 4, h: 40 + (k * 37) % 50, ph: k * 0.7 }))
+    .concat(Array.from({ length: 16 }, (_, k) => ({ x: 1190 + k * 30, h: 50 + (k * 23) % 50, ph: k, dark: true })));
+  const bubbles = Array.from({ length: 90 }, (_, k) => ({ x: 330 + (k * 97) % (WORLD - 340), y: SURFACE + (k * 53) % 300, r: 1.5 + (k % 4), v: 14 + (k % 5) * 6 }));
   const STARS = Array.from({ length: 90 }, (_, k) => ({ x: (k * 137) % W, y: (k * 71) % (SURFACE - 30), r: k % 7 === 0 ? 1.6 : 0.9 }));
 
   // time of day from 0 to 1 (0 = midnight, 0.25 = sunrise, 0.5 = noon, 0.75 = sunset)
@@ -272,15 +277,15 @@
     // under the water: bright near the top and the beach, dark down deep and far out
     const deep = ctx.createLinearGradient(0, SURFACE, 0, H);
     deep.addColorStop(0, mix("#0a2a50", "#2fb0d8", L.dayness)); deep.addColorStop(1, mix("#020818", "#0a3a6a", L.dayness));
-    ctx.fillStyle = deep; ctx.fillRect(SHORE_X - 60, SURFACE, W, H - SURFACE);
-    const far = ctx.createLinearGradient(SHORE_X, 0, W, 0);
-    far.addColorStop(0, "rgba(120,230,230,0.25)"); far.addColorStop(0.5, "rgba(0,0,0,0)"); far.addColorStop(1, "rgba(0,0,20,0.45)");
-    ctx.fillStyle = far; ctx.fillRect(SHORE_X - 60, SURFACE, W, H - SURFACE);
+    ctx.fillStyle = deep; ctx.fillRect(SHORE_X - 60, SURFACE, WORLD, H - SURFACE);
+    const far = ctx.createLinearGradient(SHORE_X, 0, WORLD, 0);
+    far.addColorStop(0, "rgba(120,230,230,0.25)"); far.addColorStop(0.45, "rgba(0,0,0,0)"); far.addColorStop(1, "rgba(0,0,20,0.5)");
+    ctx.fillStyle = far; ctx.fillRect(SHORE_X - 60, SURFACE, WORLD, H - SURFACE);
     // sunbeams through the water
     if (L.dayness > 0.2) {
       ctx.save(); ctx.globalAlpha = 0.12 * L.dayness;
-      for (let k = 0; k < 7; k++) {
-        const x = 360 + k * 85 + Math.sin(t * 0.4 + k) * 20;
+      for (let k = 0; k < 20; k++) {
+        const x = 360 + k * 90 + Math.sin(t * 0.4 + k) * 20;
         const g = ctx.createLinearGradient(0, SURFACE, 0, SURFACE + 220);
         g.addColorStop(0, "#ffffff"); g.addColorStop(1, "rgba(255,255,255,0)");
         ctx.fillStyle = g; ctx.beginPath(); ctx.moveTo(x, SURFACE); ctx.lineTo(x + 26, SURFACE); ctx.lineTo(x + 70, SURFACE + 240); ctx.lineTo(x + 20, SURFACE + 240); ctx.fill();
@@ -290,8 +295,8 @@
     ctx.drawImage(paintStill(), 0, 0);
     // everything under the surface looks a bit blue, sea floor too
     ctx.fillStyle = L.dayness > 0.5 ? "rgba(30,140,190,0.32)" : "rgba(10,40,90,0.42)";
-    ctx.beginPath(); ctx.moveTo(SHORE_X - 2, SURFACE + 2); ctx.lineTo(W, SURFACE + 2);
-    for (let x = W; x >= SHORE_X - 2; x -= 6) ctx.lineTo(x, seabedY(x) + 6);
+    ctx.beginPath(); ctx.moveTo(SHORE_X - 2, SURFACE + 2); ctx.lineTo(WORLD, SURFACE + 2);
+    for (let x = WORLD; x >= SHORE_X - 2; x -= 6) ctx.lineTo(x, seabedY(x) + 6);
     ctx.closePath(); ctx.fill();
     // swaying kelp
     KELP.forEach(k => {
@@ -305,7 +310,7 @@
     });
     // glowing specks in the abyss
     ctx.fillStyle = "#7af0ff";
-    for (let k = 0; k < 14; k++) { ctx.globalAlpha = 0.3 + 0.3 * Math.sin(t * 2 + k); ctx.fillRect(820 + (k * 53) % 130, 470 + (k * 37) % 60 + Math.sin(t + k) * 4, 2, 2); }
+    for (let k = 0; k < 36; k++) { ctx.globalAlpha = 0.3 + 0.3 * Math.sin(t * 2 + k); ctx.fillRect(1720 + (k * 53) % 470, 470 + (k * 37) % 70 + Math.sin(t + k) * 4, 2, 2); }
     ctx.globalAlpha = 1;
     // bubbles rising
     ctx.strokeStyle = "rgba(255,255,255,0.55)"; ctx.lineWidth = 1;
@@ -318,15 +323,15 @@
 
   function drawSurface(ctx, t, L){
     // a see-through band just under the waves
-    ctx.fillStyle = "rgba(255,255,255,0.08)"; ctx.fillRect(SHORE_X, SURFACE, W, 10);
+    ctx.fillStyle = "rgba(255,255,255,0.08)"; ctx.fillRect(SHORE_X, SURFACE, WORLD, 10);
     ctx.strokeStyle = mix("#7ab0d0", "#e8fbff", L.dayness); ctx.lineWidth = 3;
     ctx.beginPath();
-    for (let x = SHORE_X - 6; x <= W; x += 6) { const y = waveY(x, t); if (x === SHORE_X - 6) ctx.moveTo(x, y); else ctx.lineTo(x, y); }
+    for (let x = SHORE_X - 6; x <= WORLD; x += 6) { const y = waveY(x, t); if (x === SHORE_X - 6) ctx.moveTo(x, y); else ctx.lineTo(x, y); }
     ctx.stroke();
     // sparkles on the water
     if (L.dayness > 0.3) {
       ctx.fillStyle = "rgba(255,255,255,0.8)";
-      for (let k = 0; k < 12; k++) { const x = 360 + (k * 61) % 580, a = Math.sin(t * 3 + k * 1.7); if (a > 0.6) ctx.fillRect(x, waveY(x, t) - 1, 4, 1.5); }
+      for (let k = 0; k < 36; k++) { const x = 360 + (k * 61) % (WORLD - 380), a = Math.sin(t * 3 + k * 1.7); if (a > 0.6) ctx.fillRect(x, waveY(x, t) - 1, 4, 1.5); }
     }
     // foam washing up the beach
     const reach = 6 + Math.sin(t * 0.9) * 8;
@@ -378,5 +383,5 @@
     if (a > 0.01) { ctx.fillStyle = `rgba(8,16,48,${a})`; ctx.fillRect(0, 0, W, H); }
   }
 
-  window.FishingScene = { W, H, SURFACE, SHORE_X, ZONE_X, seabedY, sandY, zoneAt, waveY, light, drawSky, drawWater, drawSurface, drawBeachThings, drawNight };
+  window.FishingScene = { W, H, WORLD, SURFACE, SHORE_X, ZONE_X, seabedY, sandY, zoneAt, waveY, light, drawSky, drawWater, drawSurface, drawBeachThings, drawNight };
 })();

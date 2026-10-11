@@ -81,7 +81,7 @@
 
     let open = false, last = 0, clock = 0, state = "menu", holding = false;
     let power = 0, powerT = 0, bob = null, hook = null, target = null, actor = null, timers = {}, reel = null, msg = null;
-    let swimmers = [], splashes = [], chomp = null, dayStart = 0.32;
+    let swimmers = [], splashes = [], chomp = null, dayStart = 0.32, camX = 0;
     const rod = () => RODS.find(r => r.id === F.rod) || RODS[0];
     const dayTime = () => (dayStart + clock / 360) % 1;       // a whole day lasts 6 minutes
 
@@ -94,7 +94,7 @@
       const top = SC.SURFACE + 25, bottom = Math.min(H - 20, SC.seabedY(x) - 14);
       return { fish, x, y: top + Math.random() * Math.max(10, bottom - top), dir: Math.random() < 0.5 ? -1 : 1, v: 12 + Math.random() * 18, zone, w: 26 + Math.random() * 14, ph: Math.random() * 6 };
     }
-    function resetSwimmers(){ swimmers = [0, 0, 1, 1, 1, 2, 2, 3, 3].map(newSwimmer); }
+    function resetSwimmers(){ swimmers = [0, 0, 0, 0, 1, 1, 1, 1, 1, 2, 2, 2, 2, 3, 3, 3].map(newSwimmer); }
 
     function drawFish(fish, x, y, w, dir, alpha){
       const img = FF.picture(fish, 120, 72);
@@ -174,10 +174,19 @@
       if (state === "charging") cast();
     }
 
+    // how far out a cast goes: the further the rod reaches, the further out the ocean you can throw
+    const CAST_X = [720, 1180, 1700, 2170];
+    const landX = p => SC.SHORE_X + 30 + Math.max(0.06, p) * (CAST_X[rod().reach - 1] - SC.SHORE_X - 30);
+    function bobPos(){
+      if (bob.flying) {
+        const u = bob.t, far = Math.min(1, (bob.x - bob.x0) / 900);
+        return { x: bob.x0 + (bob.x - bob.x0) * u, y: bob.y0 + (bob.y - bob.y0) * u - Math.sin(u * Math.PI) * (120 + far * 120) };
+      }
+      const x = state === "reeling" && hook ? hook.x : bob.x;
+      return { x, y: SC.waveY(x, clock) + bob.dip };
+    }
     function cast(){
-      const r = rod();
-      const maxX = [470, 650, 810, 945][r.reach - 1];
-      const x = SC.SHORE_X + 30 + Math.max(0.08, power) * (maxX - SC.SHORE_X - 30);
+      const x = landX(power);
       const from = rodTip();
       bob = { x0: from.x, y0: from.y, x, y: SC.SURFACE, t: 0, flying: true, dip: 0 };
       state = "flying";
@@ -418,7 +427,7 @@
       clock += dt;
       if (state === "charging") { powerT += dt; power = 1 - Math.abs(((powerT / 1.3) % 2) - 1); }
       if (bob && bob.flying) {
-        bob.t += dt / 0.75;
+        bob.t += dt / (0.7 + (bob.x - bob.x0) / 1800);
         if (bob.t >= 1) landed();
       }
       if (hook && (state === "waiting" || state === "bite")) hook.y += (hook.depth - hook.y) * Math.min(1, dt * 2.5);
@@ -453,11 +462,42 @@
       if (chomp && (chomp.t += dt) > 0.9) chomp = null;
       splashes = splashes.filter(s => s.t < 0.8);
       if (msg && (msg.t -= dt) <= 0) msg = null;
+
+      // the camera follows your float out to sea, and comes back to the beach
+      const focus = state === "charging" ? landX(power) : bob ? bobPos().x : ANGLER_X;
+      const want = Math.min(SC.WORLD - W, Math.max(0, focus - W * (state === "charging" ? 0.8 : 0.55)));
+      camX += (want - camX) * Math.min(1, dt * (bob && bob.flying ? 4 : 2.5));
+    }
+
+    // a little map of the whole beach and sea at the top, showing where your float is
+    function drawMap(){
+      const x0 = 16, y0 = 14, w = 240, sc = w / SC.WORLD;
+      ctx.fillStyle = "rgba(0,0,0,0.45)"; roundRect(x0 - 6, y0 - 6, w + 12, 30, 8); ctx.fill();
+      ctx.fillStyle = "#f2d38f"; ctx.fillRect(x0, y0, SC.SHORE_X * sc, 8);
+      ["#5fd0e8", "#2fb0a8", "#1f6aa8", "#14204a"].forEach((c, k) => {
+        const [a, b] = SC.ZONE_X[k];
+        ctx.fillStyle = c; ctx.fillRect(x0 + a * sc, y0, (b - a) * sc, 8);
+      });
+      ctx.strokeStyle = "rgba(255,255,255,0.8)"; ctx.lineWidth = 1;
+      ctx.strokeRect(x0 + camX * sc, y0 - 2, W * sc, 12);
+      ctx.fillStyle = "#ff7a1f"; ctx.beginPath(); ctx.arc(x0 + ANGLER_X * sc, y0 + 4, 3, 0, Math.PI * 2); ctx.fill();
+      if (bob) {
+        const bx = bobPos().x;
+        ctx.fillStyle = "#e8262b"; ctx.beginPath(); ctx.arc(x0 + bx * sc, y0 + 4, 3.5, 0, Math.PI * 2); ctx.fill();
+        ctx.font = "700 11px 'IBM Plex Mono', monospace"; ctx.textAlign = "left"; ctx.fillStyle = "#fff";
+        ctx.fillText(`📏 ${Math.max(0, Math.round((bx - SC.SHORE_X) / 8))} m`, x0, y0 + 20);
+      } else {
+        ctx.font = "700 11px 'IBM Plex Mono', monospace"; ctx.textAlign = "left"; ctx.fillStyle = "rgba(255,255,255,0.8)";
+        ctx.fillText("🏖️ 🪸 🌊 🕳️ farther = rarer fish", x0, y0 + 20);
+      }
     }
 
     function draw(){
       const L = SC.light(dayTime());
       SC.drawSky(ctx, clock, L, dayTime());
+      // everything else is in the wide world, seen through the camera
+      ctx.save();
+      ctx.translate(-Math.round(camX), 0);
       SC.drawWater(ctx, clock, L);
       swimmers.forEach(s => drawFish(s.fish, s.x, s.y + Math.sin(clock * 2 + s.ph) * 3, s.w, s.dir, 0.9));
       if (actor) drawFish(actor.fish, actor.x, actor.y, 34 + Math.min(30, actor.fish.size[1] / 8) * (reel && reel.ate ? 1.4 : 1), actor.dir, 1);
@@ -480,12 +520,7 @@
 
       // the line, the float and the hook
       if (bob) {
-        let bx, by;
-        if (bob.flying) {
-          const u = bob.t;
-          bx = bob.x0 + (bob.x - bob.x0) * u;
-          by = bob.y0 + (bob.y - bob.y0) * u - Math.sin(u * Math.PI) * 120;
-        } else { bx = state === "reeling" && hook ? hook.x : bob.x; by = SC.waveY(bx, clock) + bob.dip; }
+        const { x: bx, y: by } = bobPos();
         ctx.strokeStyle = "rgba(255,255,255,0.75)"; ctx.lineWidth = 1;
         ctx.beginPath(); ctx.moveTo(tip.x, tip.y);
         ctx.quadraticCurveTo((tip.x + bx) / 2, Math.max(tip.y, by) + (state === "reeling" ? -10 : 30), bx, by); ctx.stroke();
@@ -511,8 +546,6 @@
         ctx.beginPath(); ctx.ellipse(s.x, s.y + 2, (s.small ? 8 : s.big ? 30 : 16) * (0.4 + u), 4 * (0.4 + u), 0, 0, Math.PI * 2); ctx.stroke();
         if (!s.small) { ctx.fillStyle = `rgba(255,255,255,${0.8 - u})`; for (let k = -2; k <= 2; k++) { ctx.beginPath(); ctx.arc(s.x + k * 7, s.y - Math.sin(u * Math.PI) * (s.big ? 30 : 16) * (1 - Math.abs(k) * 0.25), 2.5, 0, Math.PI * 2); ctx.fill(); } }
       });
-      SC.drawNight(ctx, L);
-
       // the power bar while charging a cast
       if (state === "charging") {
         const h = hands();
@@ -521,11 +554,14 @@
         g.addColorStop(0, "#4dd66b"); g.addColorStop(0.6, "#ffe14d"); g.addColorStop(1, "#ff4d4d");
         ctx.fillStyle = g; ctx.fillRect(h.x - 67, h.y - 13 - power * 94, 12, power * 94);
         // where it would land
-        const r = rod(), maxX = [470, 650, 810, 945][r.reach - 1];
-        const x = SC.SHORE_X + 30 + Math.max(0.08, power) * (maxX - SC.SHORE_X - 30);
+        const x = landX(power);
         ctx.fillStyle = "rgba(255,255,255,0.7)"; ctx.beginPath(); ctx.moveTo(x, SC.SURFACE - 18); ctx.lineTo(x - 7, SC.SURFACE - 30); ctx.lineTo(x + 7, SC.SURFACE - 30); ctx.fill();
       }
+      ctx.restore();
+      SC.drawNight(ctx, L);
+
       if (state === "reeling" && reel) drawReel();
+      drawMap();
       if (msg) {
         ctx.font = "800 26px 'Bricolage Grotesque', sans-serif"; ctx.textAlign = "center";
         ctx.lineWidth = 6; ctx.strokeStyle = "rgba(0,0,0,0.65)"; ctx.fillStyle = "#fff";
