@@ -1,7 +1,7 @@
-/* Turbo Track: a toy-car race seen from above, on an orange track across a bedroom floor.
+/* Turbo Track: a toy-car race seen from above, on an orange track floating high in the sky.
    Pick your car and its colour, then race three robot cars for 3 laps against the clock.
    Speed boosters, a ramp jump over a gap, a loop-the-loop and sharp turns. Too slow for the
-   jump or the loop and you have to go back and try again! The course itself is in track.js. */
+   jump or the loop and you have to go back and try again! The course is in track.js and the sky in sky.js. */
 (function(){
   "use strict";
   const store = Hub.store;
@@ -134,67 +134,23 @@
   const DECK = trackPath(s => s.deck);
   const LINE = trackPath(s => s.kind === "road" || s.kind === "loop");
 
-  // the floor: wooden planks, a rug in the middle, and some toy blocks
-  let planks = null;
-  function plankPattern(ctx){
-    if (planks) return planks;
+  // shiny orange plastic: a faint speckle, so the track doesn't look flat
+  let plastic = null;
+  function plasticPattern(ctx){
+    if (plastic) return plastic;
     const c = document.createElement("canvas");
-    c.width = 240; c.height = 240;
+    c.width = 128; c.height = 128;
     const g = c.getContext("2d");
-    const tones = ["#c8935a", "#bf8a50", "#d09c62", "#c48f55"];
-    for (let r = 0; r < 4; r++) {
-      g.fillStyle = tones[r];
-      g.fillRect(0, r * 60, 240, 60);
-      g.fillStyle = "rgba(90,50,20,0.35)";
-      g.fillRect(0, r * 60, 240, 2);
-      g.fillRect(((r * 97) % 240), r * 60, 2, 60);
-      g.strokeStyle = "rgba(120,70,30,0.18)";
-      for (let k = 0; k < 3; k++) { g.beginPath(); g.moveTo(0, r * 60 + 14 + k * 15); g.bezierCurveTo(80, r * 60 + 10 + k * 15, 160, r * 60 + 20 + k * 15, 240, r * 60 + 14 + k * 15); g.stroke(); }
+    g.fillStyle = "#ff7a00"; g.fillRect(0, 0, 128, 128);
+    for (let k = 0; k < 900; k++) {
+      g.fillStyle = Math.random() < 0.5 ? "rgba(255,190,90,0.18)" : "rgba(170,60,0,0.14)";
+      g.fillRect(Math.random() * 128, Math.random() * 128, 1 + Math.random() * 2, 1 + Math.random() * 2);
     }
-    planks = ctx.createPattern(c, "repeat");
-    return planks;
+    plastic = ctx.createPattern(c, "repeat");
+    return plastic;
   }
-  const TOYS = [
-    { x: 1700, y: 1150, kind: "rug" },
-    { x: 2350, y: 900, kind: "block", c: "#e8262b", letter: "A", r: 0.3 },
-    { x: 2450, y: 1000, kind: "block", c: "#1f6bff", letter: "B", r: -0.2 },
-    { x: 2300, y: 1050, kind: "block", c: "#ffd21f", letter: "C", r: 0.1 },
-    { x: 180, y: 250, kind: "ball" },
-    { x: 3250, y: 2150, kind: "block", c: "#6be03a", letter: "D", r: 0.4 },
-    { x: 1600, y: 2200, kind: "book" },
-    { x: 3250, y: 300, kind: "ball" }
-  ];
-  function drawFloorThings(ctx){
-    TOYS.forEach(t => {
-      ctx.save();
-      ctx.translate(t.x, t.y);
-      if (t.kind === "rug") {
-        ["#3b5bdb", "#f8f0e3", "#e8262b", "#f8f0e3", "#3b5bdb"].forEach((c, i) => {
-          ctx.fillStyle = c; ctx.beginPath(); ctx.ellipse(0, 0, 520 - i * 90, 300 - i * 52, 0, 0, Math.PI * 2); ctx.fill();
-        });
-      } else if (t.kind === "block") {
-        ctx.rotate(t.r);
-        ctx.fillStyle = "rgba(0,0,0,0.25)"; ctx.fillRect(-28, -22, 60, 60);
-        ctx.fillStyle = t.c; ctx.fillRect(-32, -32, 64, 64);
-        ctx.strokeStyle = "rgba(0,0,0,0.3)"; ctx.lineWidth = 3; ctx.strokeRect(-32, -32, 64, 64);
-        ctx.fillStyle = "#fff"; ctx.font = "800 40px 'Bricolage Grotesque', sans-serif"; ctx.textAlign = "center"; ctx.textBaseline = "middle";
-        ctx.fillText(t.letter, 0, 2);
-      } else if (t.kind === "ball") {
-        ctx.fillStyle = "rgba(0,0,0,0.25)"; ctx.beginPath(); ctx.ellipse(10, 14, 54, 46, 0, 0, Math.PI * 2); ctx.fill();
-        ["#e8262b", "#ffd21f", "#1f6bff", "#6be03a"].forEach((c, i) => {
-          ctx.fillStyle = c; ctx.beginPath(); ctx.moveTo(0, 0); ctx.arc(0, 0, 55, i * Math.PI / 2, (i + 1) * Math.PI / 2); ctx.fill();
-        });
-      } else if (t.kind === "book") {
-        ctx.rotate(-0.15);
-        ctx.fillStyle = "rgba(0,0,0,0.25)"; ctx.fillRect(-110, -60, 230, 140);
-        ctx.fillStyle = "#7a3b8f"; ctx.fillRect(-118, -72, 230, 140);
-        ctx.fillStyle = "#f8f0e3"; ctx.fillRect(-118, 56, 230, 10);
-        ctx.fillStyle = "#ffd21f"; ctx.font = "800 30px 'Bricolage Grotesque', sans-serif"; ctx.textAlign = "center";
-        ctx.fillText("RACING", -3, 10);
-      }
-      ctx.restore();
-    });
-  }
+  // where the track pieces clip together, every 40 samples (not on the ramp or over the gap)
+  const JOINTS = samples.map((s, i) => i).filter(i => i % 40 === 20 && (samples[i].kind === "road" || samples[i].kind === "loop"));
 
   function mount(host){
     host.innerHTML = `
@@ -294,6 +250,7 @@
     }
 
     /* ---------------- the race ---------------- */
+    let clock = 0;
     let open = false, state = "garage"; // garage · countdown · racing · done
     let last = 0, raceT = 0, countT = 0, cars = [], me = null, sparks = [], msg = null;
     const keys = { left: false, right: false, gas: false, brake: false };
@@ -527,24 +484,22 @@
         camX = focus.x + Math.cos(focus.angle) * Math.min(160, Math.abs(focus.v) * 0.3);
         camY = focus.y + Math.sin(focus.angle) * Math.min(160, Math.abs(focus.v) * 0.3);
       }
+
+      // the sky far below, then the track floating above it
+      ctx.setTransform(1, 0, 0, 1, 0, 0);
+      TurboTrackSky.drawBelow(ctx, { x: camX, y: camY }, ZOOM, W, H, clock);
       ctx.setTransform(ZOOM, 0, 0, ZOOM, W / 2 - camX * ZOOM, H / 2 - camY * ZOOM);
-      const view = { x: camX - W / 2 / ZOOM, y: camY - H / 2 / ZOOM, w: W / ZOOM, h: H / ZOOM };
 
-      ctx.fillStyle = plankPattern(ctx);
-      ctx.fillRect(view.x, view.y, view.w, view.h);
-      drawFloorThings(ctx);
-
-      // the track: shadow, dark edges, orange road
       ctx.lineJoin = "round"; ctx.lineCap = "butt";
-      ctx.save(); ctx.translate(8, 10); ctx.strokeStyle = "rgba(40,20,0,0.3)"; ctx.lineWidth = HALF * 2 + 14; ctx.stroke(ROAD); ctx.restore();
-      ctx.strokeStyle = "#b84a00"; ctx.lineWidth = HALF * 2 + 12; ctx.stroke(ROAD);
-      ctx.strokeStyle = "#ff7a00"; ctx.lineWidth = HALF * 2; ctx.stroke(ROAD);
-      ctx.strokeStyle = "rgba(255,200,120,0.55)"; ctx.lineWidth = 3; ctx.setLineDash([26, 22]); ctx.stroke(LINE); ctx.setLineDash([]);
+      ctx.save(); ctx.translate(34, 46); ctx.strokeStyle = "rgba(30,60,110,0.2)"; ctx.lineWidth = HALF * 2 + 14; ctx.stroke(ROAD); ctx.restore();
+      drawRoad(ROAD);
+      ctx.strokeStyle = "rgba(255,225,170,0.6)"; ctx.lineWidth = 3; ctx.setLineDash([26, 22]); ctx.stroke(LINE); ctx.setLineDash([]);
+      drawJoints(false);
       drawSpecials();
       // the loop's top crosses over the road, so it's drawn again on top
-      ctx.save(); ctx.translate(14, 18); ctx.strokeStyle = "rgba(40,20,0,0.35)"; ctx.lineWidth = HALF * 2 + 14; ctx.stroke(DECK); ctx.restore();
-      ctx.strokeStyle = "#b84a00"; ctx.lineWidth = HALF * 2 + 12; ctx.stroke(DECK);
-      ctx.strokeStyle = "#ff8f1f"; ctx.lineWidth = HALF * 2; ctx.stroke(DECK);
+      ctx.save(); ctx.translate(16, 22); ctx.strokeStyle = "rgba(40,20,0,0.35)"; ctx.lineWidth = HALF * 2 + 14; ctx.stroke(DECK); ctx.restore();
+      drawRoad(DECK);
+      drawJoints(true);
 
       // cars: low ones first, so cars up the loop or in the air go on top
       cars.slice().sort((a, b) => a.z - b.z).forEach(c => {
@@ -568,8 +523,10 @@
         }
       });
       sparks.forEach(p => { ctx.fillStyle = p.t > 0.2 ? "#fff3a0" : "#ff9f1c"; ctx.fillRect(p.x - 3, p.y - 3, 6, 6); });
+      drawBanner();
 
       ctx.setTransform(1, 0, 0, 1, 0, 0);
+      TurboTrackSky.drawAbove(ctx, { x: camX, y: camY }, ZOOM, W, H, clock);
       drawMinimap();
       if (state === "countdown") drawLights();
       if (msg) {
@@ -585,12 +542,61 @@
       }
     }
 
+    // one stretch of track: dark outer edge, a light raised rail each side, speckled orange plastic, a soft shine
+    function drawRoad(path){
+      ctx.strokeStyle = "#a84200"; ctx.lineWidth = HALF * 2 + 12; ctx.stroke(path);
+      ctx.strokeStyle = "#ffab55"; ctx.lineWidth = HALF * 2 + 4; ctx.stroke(path);
+      ctx.strokeStyle = "#d85f00"; ctx.lineWidth = HALF * 2 - 2; ctx.stroke(path);
+      ctx.strokeStyle = plasticPattern(ctx); ctx.lineWidth = HALF * 2 - 6; ctx.stroke(path);
+      ctx.strokeStyle = "rgba(255,255,255,0.08)"; ctx.lineWidth = HALF * 0.9; ctx.stroke(path);
+    }
+
+    // the blue clips joining the track pieces, and the thin seam between them
+    function drawJoints(deck){
+      JOINTS.forEach(i => {
+        const s = samples[i];
+        if (!!s.deck !== deck) return;
+        ctx.save(); ctx.translate(s.x, s.y); ctx.rotate(s.angle);
+        ctx.fillStyle = "rgba(120,40,0,0.35)"; ctx.fillRect(-1, -HALF + 2, 2, HALF * 2 - 4);
+        [-1, 1].forEach(side => {
+          ctx.fillStyle = "#2f5fd8"; ctx.fillRect(-9, side * (HALF + 2) - 5, 18, 10);
+          ctx.fillStyle = "#6f9bff"; ctx.fillRect(-9, side * (HALF + 2) - 5, 18, 3);
+        });
+        ctx.restore();
+      });
+    }
+
+    // the START banner over the line, held up by two posts
+    function drawBanner(){
+      const s = samples[0];
+      ctx.save(); ctx.translate(s.x, s.y); ctx.rotate(s.angle);
+      ctx.fillStyle = "rgba(0,0,0,0.25)"; ctx.fillRect(12, -HALF - 6, 20, HALF * 2 + 12); // its shadow on the track
+      [-1, 1].forEach(side => {
+        ctx.fillStyle = "#555b66"; ctx.beginPath(); ctx.arc(0, side * (HALF + 20), 11, 0, Math.PI * 2); ctx.fill();
+        ctx.fillStyle = "#9aa3b2"; ctx.beginPath(); ctx.arc(-3, side * (HALF + 20) - 3, 5, 0, Math.PI * 2); ctx.fill();
+      });
+      ctx.translate(-4, -6);
+      ctx.fillStyle = "#1c2230"; roundRect(ctx, -12, -HALF - 24, 24, HALF * 2 + 48, 5); ctx.fill();
+      for (let k = 0; k < 2; k++) for (let r = 0; r < 22; r++) {
+        ctx.fillStyle = (r + k) % 2 ? "#fff" : "#1c2230";
+        ctx.fillRect(-10 + k * 16, -HALF - 22 + r * (HALF * 2 + 44) / 22, 4, (HALF * 2 + 44) / 22);
+      }
+      ctx.rotate(Math.PI / 2);
+      ctx.fillStyle = "#ffe14d"; ctx.font = "800 15px 'Bricolage Grotesque', sans-serif"; ctx.textAlign = "center"; ctx.textBaseline = "middle";
+      ctx.fillText("★ START ★", 0, 1);
+      ctx.restore();
+    }
+
     // boosters, the ramp and landing, and the checkered start line
     function drawSpecials(){
+      const glow = 0.65 + 0.35 * Math.sin(clock * 8);
       for (let i = 0; i < N; i++) {
         const s = samples[i];
         if (s.boost && i % 3 === 0) {
           ctx.save(); ctx.translate(s.x, s.y); ctx.rotate(s.angle);
+          ctx.globalAlpha = glow;
+          ctx.fillStyle = "rgba(255,255,255,0.35)"; ctx.fillRect(-20, -HALF + 4, 34, HALF * 2 - 8);
+          ctx.globalAlpha = 1;
           ctx.fillStyle = (i / 3) % 2 ? "#ffe14d" : "#20d0e0";
           ctx.beginPath(); ctx.moveTo(-6, -50); ctx.lineTo(12, 0); ctx.lineTo(-6, 50); ctx.lineTo(-18, 50); ctx.lineTo(0, 0); ctx.lineTo(-18, -50); ctx.closePath(); ctx.fill();
           ctx.restore();
@@ -659,6 +665,7 @@
     function loop(now){
       if (!open) return;
       const dt = Math.min(1 / 30, (now - last) / 1000 || 0);
+      clock = now / 1000;
       last = now;
       step(dt);
       draw();

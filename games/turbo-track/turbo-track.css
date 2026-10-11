@@ -13,7 +13,7 @@
 #ttCanvas{
   display: block; width: 100%; aspect-ratio: 16 / 9; height: auto;
   border-radius: 12px; border: 2px solid rgba(255,255,255,0.25);
-  background: #c8935a; touch-action: none;
+  background: #a9dbff; touch-action: none;
 }
 .tt-panel{ background: rgba(20,12,4,0.72); overflow-y: auto; justify-content: safe center; }
 .tt-garage{ display: flex; flex-direction: column; align-items: center; gap: 8px; }
