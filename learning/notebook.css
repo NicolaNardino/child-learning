@@ -1,4 +1,5 @@
-/* Fast Math: header, number-line topics, practice card, ledger, Time Trial and the race. */
+/* Learning notebook: the practice page every Learning subject shares. Header, topic line, practice card,
+   answer buttons, ledger, Time Trial and the race. */
 /* ---------- header ---------- */
 header{ display: flex; flex-direction: column; gap: 10px; }
 .wordmark{ display: flex; align-items: baseline; gap: 10px; flex-wrap: wrap; }
@@ -98,6 +99,41 @@ nav.line{
 .feedback.incorrect .verdict{ color: var(--bad); }
 .feedback .explain{ font-size: 14px; color: var(--ink); line-height: 1.5; }
 .feedback .explain .mono{ font-weight: 600; }
+
+/* word questions: a friendlier font, smaller for whole sentences */
+.problem.wordy{ font-family: "Bricolage Grotesque", system-ui, sans-serif; font-size: clamp(24px, 5vw, 32px); line-height: 1.25; }
+.problem.wordy.long{ font-size: clamp(19px, 4vw, 24px); }
+.problem .sub{ display: block; margin-top: 8px; font: 500 15px "Karla", system-ui, sans-serif; color: var(--ink-soft); }
+.problem mark{ background: none; color: var(--accent); border-bottom: 3px solid var(--accent); padding: 0 2px; }
+.say-btn{ align-self: center; margin-top: -8px; }
+
+/* answer buttons instead of typing */
+.choices{ display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 10px; }
+.choices.wide{ grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); }
+.choice{
+  display: flex; align-items: center; gap: 10px;
+  background: var(--paper); color: var(--ink);
+  border: 2px solid var(--line-strong); border-radius: 8px;
+  padding: 12px 14px; cursor: pointer; text-align: left;
+  font: 600 17px "Karla", system-ui, sans-serif;
+}
+.choice:hover:not(:disabled){ border-color: var(--accent); }
+.choice:disabled{ cursor: default; opacity: 0.6; }
+.choice .choice-n{ font-size: 12px; color: var(--ink-soft); border: 1.5px solid var(--line-strong); border-radius: 5px; padding: 1px 6px; }
+.choice.right{ opacity: 1; border-color: var(--good); background: var(--good-bg); }
+.choice.wrong{ opacity: 1; border-color: var(--bad); background: var(--bad-bg); }
+
+/* extra letters for typing German: ä ö ü ß */
+.letter-keys{ display: flex; gap: 8px; flex-wrap: wrap; margin-top: -8px; }
+.letter-keys .btn{ font-size: 16px; min-width: 42px; }
+
+/* explanations: der / die / das colours and verb tables */
+.explain .der{ color: #5aa0ff; font-weight: 700; }
+.explain .die{ color: #ff6b81; font-weight: 700; }
+.explain .das{ color: #4fcf7a; font-weight: 700; }
+.explain table.verb{ border-collapse: collapse; margin-top: 6px; font-size: 13.5px; }
+.explain table.verb td{ padding: 2px 14px 2px 0; }
+.explain table.verb tr.hit td{ color: var(--good); font-weight: 700; }
 
 .card-foot{ display: flex; justify-content: space-between; align-items: center; gap: 10px; flex-wrap: wrap; }
 

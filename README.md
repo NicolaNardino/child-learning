@@ -12,6 +12,13 @@ There's nothing to install and no build step. Just open `index.html` in a browse
   - ⏱️ **Time Trial**: answer 16 questions in 2 minutes and earn a rating, from *Keep practicing* up to *Outstanding!*
   - 🏁 **Race to the finish**: every right answer moves your car forward, while Robo 🤖 drives on its own. Pick Robo's speed (🐢 Easy, 🚗 Medium, 🚀 Hard) and get 10 right before Robo crosses the line!
   - 🔥 Streaks, accuracy and 🎊 confetti for every right answer.
+- 🧙 **Word Wizard**: English practice, with a tip for every answer.
+  - Five topics: 📚 Word Meanings, 🔁 Same & Opposite, 🐝 Spelling (pick it, or hear it 🔊 and type it), 🧩 Word Types (nouns, verbs, adjectives and more) and ✏️ Grammar (their/there/they're, plurals, tricky verbs…).
+- 🥨 **Deutsch Dash**: German for English speakers. Tap 🔊 Listen to hear the German.
+  - Five topics: 🍎 Words, 🔢 Numbers, 🎩 der / die / das, 💬 Phrases and 🏃 Verbs (with the whole verb table in every answer).
+  - Buttons for ä ö ü ß, or just type ae, oe, ue, ss.
+
+Every Learning subject has the same three levels, ⏱️ Time Trial, 🏁 race against Robo, streaks and trophies. Word questions have answer buttons you can tap, or press 1–4.
 
 ## 🎮 Games
 
@@ -30,7 +37,10 @@ core/
   core.css                 the shared look: theme, buttons, effects, trophies, launcher
   core.js                  saved progress, trophies, confetti, the app list and screen switching (window.Hub)
 learning/
-  math/                    Fast Math (math.css, math.js)
+  notebook.js, .css        the practice page every subject shares: topics, levels, answers, Time Trial, race, trophies
+  math/                    Fast Math
+  english/                 Word Wizard
+  german/                  Deutsch Dash
 games/
   game-frame.css           the full-screen frame every game sits in
   robot-tag/               Robot Tag
@@ -76,5 +86,7 @@ Progress is saved in this browser's `localStorage` under one key, shared by ever
    ```
 
 3. Add its `<link>` and `<script>` lines to `index.html`, next to the other apps.
+
+A new Learning subject is even simpler: it only brings its topics and calls `Notebook.register({...})` (see the top of `learning/notebook.js`), and it gets levels, worked answers, the Time Trial, the race and trophies for free.
 
 The app shows up in its section's list, and its trophies go on that section's shelf. Call `Hub.checkBadges()` after progress changes to award new trophies. Games can reuse the `game-screen` frame from `games/game-frame.css`, and call `Hub.leave()` from their Exit button.
