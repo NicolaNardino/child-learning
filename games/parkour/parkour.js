@@ -363,30 +363,278 @@
       return [x0, y0, x1, y1];
     }
 
-    /* ----- the sky ----- */
-    const CLOUDS = Array.from({ length: 9 }, (_, i) => ({ ang: i * 0.7, y: 18 + (i * 37) % 60, w: 50 + (i * 23) % 50 }));
-    const BELOW = Array.from({ length: 12 }, (_, i) => ({ ang: i * 0.53, y: HORIZON + 40 + (i * 53) % 260, w: 90 + (i * 41) % 90 }));
+    /* ----- the sky: everything behind the blocks ----- */
+    // a seeded random, so the sky looks the same every run
+    function skySeed(seed){ return () => (seed = (seed * 16807) % 2147483647) / 2147483647; }
+    const SUN_ANG = 0.95;
+    // puffy clouds in two layers: the near ones are bigger and slide past the far ones as you turn
+    const CLOUDS = (() => {
+      const rnd = skySeed(23), list = [];
+      for (let i = 0; i < 17; i++) {
+        const near = i % 3 === 0;
+        list.push({
+          ang: i * 0.37 + rnd() * 0.3,
+          y: 8 + rnd() * (near ? 150 : 90),
+          w: (near ? 64 : 34) + rnd() * 44,
+          drift: near ? 0.015 : 0.006,
+          // a few blobs stuck together make a lumpier cloud than one ellipse
+          lobes: Array.from({ length: 4 + Math.floor(rnd() * 3) }, () => [rnd() * 2 - 1, rnd(), 0.34 + rnd() * 0.4])
+        });
+      }
+      return list.sort((a, b) => a.w - b.w); // small ones first, so the big ones sit in front
+    })();
+    // the sea of cloud below: bunched up thick around the mountains, thinning out further down
+    const BANKS = (() => {
+      const rnd = skySeed(29), list = [];
+      for (let i = 0; i < 30; i++) {
+        const t = rnd();
+        list.push({
+          ang: i * 0.21 + rnd() * 0.2,
+          y: HORIZON + 86 + t * t * 330,
+          w: 70 + t * 150 + rnd() * 60,
+          a: 0.5 - t * 0.28,
+          lobes: Array.from({ length: 3 + Math.floor(rnd() * 3) }, () => [rnd() * 2 - 1, rnd() * 2 - 1, 0.3 + rnd() * 0.5])
+        });
+      }
+      return list.sort((a, b) => a.y - b.y); // the ones up near the mountains are farthest, so they go first
+    })();
+    // thin streaks of cloud, just to give the empty air some texture
+    const WISPS = Array.from({ length: 14 }, (_, i) => ({ ang: i * 0.45, y: HORIZON + 60 + (i * 71) % 400, w: 110 + (i * 37) % 170, a: 0.05 + (i % 4) * 0.02 }));
+    const BIRDS = Array.from({ length: 8 }, (_, i) => ({ ang: i * 0.81, y: 46 + (i * 43) % 130, s: 5 + (i % 3) * 2.5, sp: 0.018 + (i % 4) * 0.005 }));
+    const BALLOONS = [
+      { ang: 2.0, y: 150, s: 30, cols: ["#ff5a5a", "#ffe14d"] },
+      { ang: 4.5, y: 92,  s: 20, cols: ["#2fcf4f", "#2f7bff"] }
+    ];
+    // little islands floating out in the distance, each with a tree on top
+    const ISLES = [
+      { ang: 1.35, y: HORIZON + 150, s: 46 },
+      { ang: 3.10, y: HORIZON + 96,  s: 26 },
+      { ang: 5.00, y: HORIZON + 190, s: 112, fall: true },
+      { ang: 6.05, y: HORIZON + 128, s: 34 }
+    ];
+
     function skyX(ang){
       const d = ((ang - cam.a) % (Math.PI * 2) + Math.PI * 3) % (Math.PI * 2) - Math.PI;
       return Math.abs(d) < 1.3 ? W / 2 + Math.tan(d) * FOCAL : null;
     }
+    // a zig-zag wave: sharp tops and V-shaped valleys, far more mountain-like than a sine
+    function zig(t){ const u = ((t / Math.PI) % 2 + 2) % 2; return 1 - 2 * Math.abs(u - 1); }
+    // jagged peaks standing up out of the cloud sea; layer 1 is the far, paler range
+    const FAR_BASE = HORIZON + 71, NEAR_BASE = HORIZON + 113;
+    function ridgeY(ang, layer){
+      return layer
+        ? FAR_BASE  - (14 + 16 * zig(ang * 17 + 1.7) + 11 * zig(ang * 41 + 0.6) + 6 * zig(ang * 93 + 2.2))
+        : NEAR_BASE - (16 + 21 * zig(ang * 13 + 0.4) + 14 * zig(ang * 33 + 1.9) + 8 * zig(ang * 71 + 0.9));
+    }
+    // walk a ridge across the screen, so it slides past properly as you turn
+    function sweep(layer, yAt){
+      ctx.beginPath();
+      for (let x = 0; x <= W; x += 3) {
+        const y = yAt(ridgeY(cam.a + Math.atan((x - W / 2) / FOCAL), layer));
+        x ? ctx.lineTo(x, y) : ctx.moveTo(x, y);
+      }
+    }
+    function drawRidge(layer, colour, fade, line, snowY, fadeY){
+      // the bottom of the range fades out instead of stopping in a straight line
+      const g = ctx.createLinearGradient(0, HORIZON, 0, fadeY);
+      g.addColorStop(0, colour); g.addColorStop(0.55, colour); g.addColorStop(1, fade);
+      ctx.fillStyle = g;
+      sweep(layer, y => y);
+      ctx.lineTo(W, fadeY); ctx.lineTo(0, fadeY); ctx.closePath(); ctx.fill();
+      // snow, but only on the very tops that poke above the snow line
+      ctx.fillStyle = "rgba(255,255,255,0.92)";
+      sweep(layer, y => Math.min(snowY, y));
+      ctx.lineTo(W, snowY); ctx.lineTo(0, snowY); ctx.closePath(); ctx.fill();
+      // the faintest line along the ridge, just to keep the peaks crisp against the sky
+      ctx.strokeStyle = line; ctx.lineWidth = 1;
+      sweep(layer, y => y); ctx.stroke();
+    }
+    function drawPuffy(c){
+      const x = skyX(c.ang + clock * c.drift);
+      if (x === null) return;
+      const bob = Math.sin(clock * 0.4 + c.ang) * 2;
+      // the shaded underside first, then the bright top on top of it
+      [[6, "rgba(170,202,238,0.8)"], [0, "rgba(255,255,255,0.93)"]].forEach(([drop, col]) => {
+        ctx.fillStyle = col;
+        ctx.beginPath();
+        c.lobes.forEach(([ox, oy, r]) => ctx.ellipse(x + ox * c.w * 0.5, c.y + bob + drop - oy * c.w * 0.26, r * c.w * 0.5, r * c.w * 0.3, 0, 0, Math.PI * 2));
+        ctx.fill();
+      });
+    }
+    function drawBank(c){
+      const x = skyX(c.ang - clock * 0.006);
+      if (x === null) return;
+      const y = c.y + Math.sin(clock * 0.3 + c.ang) * 3;
+      ctx.fillStyle = `rgba(255,255,255,${c.a * 0.6})`;
+      ctx.beginPath();
+      c.lobes.forEach(([ox, oy, r]) => ctx.ellipse(x + ox * c.w * 0.55, y + oy * 7, r * c.w * 0.6, r * c.w * 0.16, 0, 0, Math.PI * 2));
+      ctx.fill();
+      // a brighter lip along the top, like the sun catching the cloud
+      ctx.fillStyle = `rgba(255,255,255,${Math.min(0.85, c.a + 0.22)})`;
+      ctx.beginPath();
+      c.lobes.forEach(([ox, oy, r]) => ctx.ellipse(x + ox * c.w * 0.55, y + oy * 7 - r * c.w * 0.07, r * c.w * 0.5, r * c.w * 0.08, 0, 0, Math.PI * 2));
+      ctx.fill();
+    }
+    // water pouring off the edge of an island and falling away into the haze
+    function fallPath(x, y, w, len){
+      ctx.beginPath();
+      ctx.moveTo(x - w * 0.5, y); ctx.lineTo(x + w * 0.5, y);
+      ctx.lineTo(x + w * 0.95, y + len); ctx.lineTo(x - w * 0.95, y + len);
+      ctx.closePath();
+    }
+    function drawFall(x, y, s){
+      const w = s * 0.4, len = s * 4.6;
+      const g = ctx.createLinearGradient(0, y, 0, y + len);
+      g.addColorStop(0, "rgba(255,255,255,0.98)");
+      g.addColorStop(0.35, "rgba(176,226,255,0.92)");
+      g.addColorStop(1, "rgba(176,226,255,0)"); // it never lands, it just fades into the air
+      ctx.fillStyle = g;
+      fallPath(x, y, w, len); ctx.fill();
+      // streaks running down the water, so you can see it moving
+      ctx.save();
+      fallPath(x, y, w, len); ctx.clip();
+      const alpha = ctx.globalAlpha;
+      ctx.fillStyle = "#ffffff";
+      for (let i = 0; i < 7; i++) {
+        const t = (clock * 0.5 + i / 7) % 1;
+        ctx.globalAlpha = alpha * (1 - t) * 0.7;
+        ctx.fillRect(x - w * (0.42 - i % 3 * 0.12), y + t * len, w * 0.2, s * 0.3);
+      }
+      ctx.restore();
+      // spray where the water breaks up on the way down
+      ctx.fillStyle = "rgba(255,255,255,0.45)";
+      for (let i = 0; i < 4; i++) {
+        const t = 0.55 + i * 0.12, r = s * (0.14 + t * 0.16);
+        ctx.beginPath();
+        ctx.ellipse(x + Math.sin(clock * 1.4 + i * 2) * s * 0.07, y + t * len, r, r * 0.5, 0, 0, Math.PI * 2);
+        ctx.fill();
+      }
+    }
+    function drawIsle(o){
+      const x = skyX(o.ang + clock * 0.002);
+      if (x === null) return;
+      const y = o.y + Math.sin(clock * 0.5 + o.ang) * 4, s = o.s;
+      ctx.globalAlpha = 0.45 + s / 170; // the little ones are further off, so they're fainter
+      // a chunk of rock hanging down to a point
+      ctx.fillStyle = "#6e6377";
+      ctx.beginPath();
+      ctx.moveTo(x - s * 0.5, y); ctx.lineTo(x + s * 0.5, y);
+      ctx.lineTo(x + s * 0.2, y + s * 0.52); ctx.lineTo(x - s * 0.05, y + s * 0.88); ctx.lineTo(x - s * 0.32, y + s * 0.44);
+      ctx.closePath(); ctx.fill();
+      ctx.fillStyle = "rgba(0,0,0,0.18)"; // shaded right-hand side
+      ctx.beginPath();
+      ctx.moveTo(x + s * 0.08, y); ctx.lineTo(x + s * 0.5, y); ctx.lineTo(x + s * 0.2, y + s * 0.52); ctx.lineTo(x - s * 0.05, y + s * 0.88);
+      ctx.closePath(); ctx.fill();
+      if (o.fall) drawFall(x - s * 0.4, y - s * 0.04, s);
+      // grass on top, and a little tree
+      ctx.fillStyle = "#3fae56";
+      ctx.beginPath(); ctx.ellipse(x, y, s * 0.5, s * 0.14, 0, 0, Math.PI * 2); ctx.fill();
+      ctx.fillStyle = "#5ccb72";
+      ctx.beginPath(); ctx.ellipse(x - s * 0.08, y - s * 0.04, s * 0.33, s * 0.08, 0, 0, Math.PI * 2); ctx.fill();
+      if (o.fall) {
+        ctx.fillStyle = "#bfeaff";
+        ctx.beginPath(); ctx.ellipse(x - s * 0.32, y - s * 0.05, s * 0.2, s * 0.06, 0, 0, Math.PI * 2); ctx.fill();
+        ctx.fillStyle = "rgba(255,255,255,0.8)";
+        ctx.beginPath(); ctx.ellipse(x - s * 0.32, y - s * 0.08, s * 0.14, s * 0.035, 0, 0, Math.PI * 2); ctx.fill();
+      }
+      ctx.fillStyle = "#5a4030"; ctx.fillRect(x + s * 0.15, y - s * 0.26, s * 0.05, s * 0.26);
+      ctx.fillStyle = "#2f8f44";
+      ctx.beginPath(); ctx.arc(x + s * 0.175, y - s * 0.33, s * 0.14, 0, Math.PI * 2); ctx.fill();
+      ctx.globalAlpha = 1;
+    }
+    function drawBird(b){
+      const x = skyX(b.ang + clock * b.sp);
+      if (x === null) return;
+      const y = b.y + Math.sin(clock * 0.8 + b.ang) * 4, flap = Math.sin(clock * 7 + b.ang * 3) * b.s * 0.55;
+      ctx.beginPath();
+      ctx.moveTo(x - b.s, y - flap);
+      ctx.quadraticCurveTo(x - b.s * 0.4, y + 1.5, x, y);
+      ctx.quadraticCurveTo(x + b.s * 0.4, y + 1.5, x + b.s, y - flap);
+      ctx.stroke();
+    }
+    function drawBalloon(b){
+      const x = skyX(b.ang + clock * 0.003);
+      if (x === null) return;
+      const y = b.y + Math.sin(clock * 0.6 + b.ang) * 7, s = b.s;
+      ctx.fillStyle = b.cols[0];
+      ctx.beginPath(); ctx.ellipse(x, y, s * 0.58, s * 0.7, 0, 0, Math.PI * 2); ctx.fill();
+      ctx.fillStyle = b.cols[1]; // a stripe down the middle
+      ctx.beginPath(); ctx.ellipse(x, y, s * 0.2, s * 0.7, 0, 0, Math.PI * 2); ctx.fill();
+      ctx.fillStyle = "rgba(0,0,0,0.18)";
+      ctx.beginPath(); ctx.ellipse(x, y + s * 0.34, s * 0.5, s * 0.3, 0, 0, Math.PI); ctx.fill();
+      ctx.strokeStyle = "rgba(60,50,40,0.8)"; ctx.lineWidth = 1;
+      ctx.beginPath();
+      ctx.moveTo(x - s * 0.22, y + s * 0.62); ctx.lineTo(x - s * 0.14, y + s * 0.92);
+      ctx.moveTo(x + s * 0.22, y + s * 0.62); ctx.lineTo(x + s * 0.14, y + s * 0.92);
+      ctx.stroke();
+      ctx.fillStyle = "#8a5a32"; ctx.fillRect(x - s * 0.16, y + s * 0.9, s * 0.32, s * 0.24);
+    }
     function drawSky(){
+      // more colour bands than a plain gradient, so the air has some depth to it
+      const hz = Math.min(0.9, Math.max(0.04, HORIZON / H));
       const g = ctx.createLinearGradient(0, 0, 0, H);
-      g.addColorStop(0, "#3d8bff"); g.addColorStop(Math.min(0.9, Math.max(0.05, HORIZON / H)), "#bfe0ff"); g.addColorStop(1, "#7fb6f0");
+      g.addColorStop(0, "#1b63d8");
+      g.addColorStop(hz * 0.5, "#4a93f0");
+      g.addColorStop(hz, "#cce6ff");
+      g.addColorStop(Math.min(0.99, hz + 0.07), "#e7f3ff");
+      g.addColorStop(0.5, "#9cc7ef");
+      g.addColorStop(1, "#5e9bdd");
       ctx.fillStyle = g; ctx.fillRect(0, 0, W, H);
-      ctx.fillStyle = "rgba(255,255,255,0.85)";
-      CLOUDS.forEach(c => {
-        const x = skyX(c.ang + clock * 0.01);
+
+      // the sun, with rays and a wide glow around it
+      const sx = skyX(SUN_ANG);
+      if (sx !== null) {
+        ctx.save();
+        ctx.translate(sx, 44);
+        ctx.fillStyle = "rgba(255,246,190,0.13)";
+        for (let i = 0; i < 10; i++) {
+          ctx.rotate(Math.PI / 5 + 0.02 * Math.sin(clock * 0.5 + i));
+          ctx.beginPath(); ctx.moveTo(0, 0); ctx.lineTo(-13, -230); ctx.lineTo(13, -230); ctx.closePath(); ctx.fill();
+        }
+        ctx.restore();
+        const glow = ctx.createRadialGradient(sx, 44, 8, sx, 44, 190);
+        glow.addColorStop(0, "rgba(255,248,206,0.9)"); glow.addColorStop(0.3, "rgba(255,240,170,0.28)"); glow.addColorStop(1, "rgba(255,240,170,0)");
+        ctx.fillStyle = glow; ctx.beginPath(); ctx.arc(sx, 44, 190, 0, Math.PI * 2); ctx.fill();
+        ctx.fillStyle = "#fffce8"; ctx.beginPath(); ctx.arc(sx, 44, 24, 0, Math.PI * 2); ctx.fill();
+      }
+
+      // far clouds go behind the mountains
+      CLOUDS.forEach(c => { if (c.drift < 0.01) drawPuffy(c); });
+
+      // two mountain ranges, standing up out of the cloud sea far below the course
+      drawRidge(1, "#8fa9cd", "rgba(143,169,205,0)", "rgba(234,244,255,0.45)", HORIZON + 48, HORIZON + 160);
+      drawRidge(0, "#55719e", "rgba(85,113,158,0)", "rgba(200,221,247,0.3)", HORIZON + 81, HORIZON + 250);
+
+      // islands drifting out there, then the cloud sea rolling in over everything's feet
+      ISLES.forEach(drawIsle);
+      BANKS.forEach(drawBank);
+
+      // thin streaks in the open air below
+      ctx.fillStyle = "#fff";
+      WISPS.forEach(w => {
+        const x = skyX(w.ang - clock * 0.004);
         if (x === null) return;
-        ctx.beginPath(); ctx.ellipse(x, c.y, c.w, c.w * 0.25, 0, 0, Math.PI * 2); ctx.ellipse(x + c.w * 0.3, c.y - 8, c.w * 0.45, c.w * 0.22, 0, 0, Math.PI * 2); ctx.fill();
+        ctx.globalAlpha = w.a;
+        ctx.beginPath(); ctx.ellipse(x, w.y + Math.sin(clock * 0.2 + w.ang) * 2, w.w, w.w * 0.035, 0, 0, Math.PI * 2); ctx.fill();
       });
-      // a sea of clouds far below you
-      ctx.fillStyle = "rgba(255,255,255,0.35)";
-      BELOW.forEach(c => {
-        const x = skyX(c.ang - clock * 0.006);
-        if (x === null) return;
-        ctx.beginPath(); ctx.ellipse(x, c.y, c.w, c.w * 0.22, 0, 0, Math.PI * 2); ctx.fill();
-      });
+      ctx.globalAlpha = 1;
+
+      // near clouds float in front of the mountains
+      CLOUDS.forEach(c => { if (c.drift >= 0.01) drawPuffy(c); });
+
+      // hot air balloons, and birds doing laps
+      BALLOONS.forEach(drawBalloon);
+      ctx.strokeStyle = "rgba(40,55,80,0.65)"; ctx.lineWidth = 1.6; ctx.lineCap = "round";
+      BIRDS.forEach(drawBird);
+      ctx.lineCap = "butt";
+
+      // a band of haze on the horizon, and the air going thicker toward the bottom
+      const haze = ctx.createLinearGradient(0, HORIZON - 16, 0, HORIZON + 60);
+      haze.addColorStop(0, "rgba(255,255,255,0)"); haze.addColorStop(0.4, "rgba(240,249,255,0.4)"); haze.addColorStop(1, "rgba(240,249,255,0)");
+      ctx.fillStyle = haze; ctx.fillRect(0, HORIZON - 16, W, 76);
+      const deep = ctx.createLinearGradient(0, H * 0.6, 0, H);
+      deep.addColorStop(0, "rgba(90,150,210,0)"); deep.addColorStop(1, "rgba(70,130,200,0.35)");
+      ctx.fillStyle = deep; ctx.fillRect(0, H * 0.6, W, H * 0.4);
     }
 
     let shadowOn = null; // the block your shadow lands on
