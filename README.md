@@ -20,6 +20,7 @@ There's nothing to install and no build step. Just open `index.html` in a browse
   - Sechs Themen: 🗺️ Kantone, ⛰️ Geografie, 🏰 Geschichte (Pfahlbauer, Römer, Ritter, 1291, Morgarten), 🫀 Mensch & Körper, 🦊 Tiere & Pflanzen und 🧲 Natur & Technik.
 - 🎵 **Musik Maestro**: Musik für die 5. Klasse, mit Noten auf einem echten Notensystem und Tönen zum Anhören.
   - Sechs Themen: 🎼 Notennamen (mit h!), ⏱️ Notenwerte und Pausen, 📏 Takt, 🎻 Instrumente, 🔤 Musikwörter und Komponisten, und 👂 ein Hör-Quiz (hoch oder tief, Dur oder Moll, schnell oder langsam).
+- ⌨️ **Tipp-Meister**: 10-Finger-Schreiben auf der Schweizer Tastatur (QWERTZ), wie bei Typewriter. 80 Lektionen: Grundreihe, alle Buchstaben, Grossbuchstaben, Zahlen und Zeichen, dann Sätze und Texte über Zug, Baar, Tiere, Wilhelm Tell und mehr. Die nächste Taste leuchtet in der Farbe ihres Fingers; Anschläge pro Minute, Fehler und bis zu 3 Sterne pro Lektion. Jede Lektion kann man direkt wählen.
 
 Every Learning subject has the same three levels, ⏱️ Time Trial, 🏁 race against Robo, streaks and trophies. Word questions have answer buttons you can tap, or press the number keys.
 
@@ -49,6 +50,7 @@ learning/
   english/                 Word Wizard
   german/                  Deutsch Dash
   nmg/                     NMG Entdecker
+  typing/                  Tipp-Meister (its own page, not the notebook)
   musik/                   Musik Maestro (draws notes as SVG and plays tones with Web Audio)
 games/
   game-frame.css           the full-screen frame every game sits in

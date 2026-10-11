@@ -1,0 +1,52 @@
+/* Tipp-Meister: the lesson grid, the text to copy, and the Swiss keyboard with a colour for every finger. */
+.tp{ --f0: #ff6b81; --f1: #ffb347; --f2: #ffe14d; --f3: #6be03a; --f4: #4dd6c8; --f5: #4da6ff; --f6: #b46bff; --f7: #ff6bd6; --f8: #c8ccd4; }
+.tp-lessons{ display: flex; flex-direction: column; gap: 8px; }
+.tp-lessons-head{ display: flex; justify-content: space-between; align-items: baseline; gap: 10px; }
+.tp-lessons-head h2{ font-size: 16px; font-weight: 700; }
+.tp-grid{ display: grid; grid-template-columns: repeat(auto-fill, minmax(42px, 1fr)); gap: 5px; }
+.tp-num{
+  display: flex; flex-direction: column; align-items: center; gap: 0; padding: 4px 0 2px;
+  background: var(--paper-raised); color: var(--ink-soft); border: 1.5px solid var(--line-strong); border-radius: 7px; cursor: pointer;
+  font: 700 13px "IBM Plex Mono", monospace;
+}
+.tp-num small{ font-size: 8.5px; color: var(--accent); height: 10px; letter-spacing: -0.5px; }
+.tp-num.done{ color: var(--ink); border-color: var(--good); }
+.tp-num.on{ background: var(--accent); color: var(--accent-ink); border-color: var(--accent); }
+.tp-num.on small{ color: var(--accent-ink); }
+.tp-head{ display: flex; justify-content: space-between; align-items: baseline; gap: 10px; flex-wrap: wrap; }
+.tp-stats{ display: flex; gap: 14px; font-size: 14px; color: var(--ink-soft); }
+.tp-text{
+  position: relative; font-size: clamp(19px, 3.2vw, 25px); line-height: 1.7; letter-spacing: 0.02em;
+  padding: 14px 16px; max-height: 9.5em; overflow-y: auto; border-radius: 8px; cursor: text;
+  background: var(--paper); border: 2px solid var(--line-strong); color: var(--ink-soft); white-space: pre-wrap; word-break: break-word;
+}
+.tp-text:focus-within, .tp-page:focus-within .tp-text{ border-color: var(--accent); }
+.tp-text span.ok{ color: var(--good); }
+.tp-text span.bad{ color: var(--bad); text-decoration: underline wavy; }
+.tp-text span.cur{ background: var(--accent); color: var(--accent-ink); border-radius: 3px; box-shadow: 0 0 0 2px var(--accent); }
+.tp-text span.sp.cur{ background: var(--accent); }
+.tp-text.shake{ animation: tp-shake 0.25s; }
+@keyframes tp-shake{ 0%,100%{ transform: none; } 30%{ transform: translateX(-5px); } 70%{ transform: translateX(5px); } }
+.tp-input{ position: absolute; opacity: 0; width: 1px; height: 1px; pointer-events: none; }
+.tp-page{ position: relative; }
+.tp-hint{ min-height: 22px; font-size: 15px; text-align: center; }
+.f0-text{ color: var(--f0); font-weight: 700; } .f1-text{ color: var(--f1); font-weight: 700; } .f2-text{ color: var(--f2); font-weight: 700; }
+.f3-text{ color: var(--f3); font-weight: 700; } .f4-text{ color: var(--f4); font-weight: 700; } .f5-text{ color: var(--f5); font-weight: 700; }
+.f6-text{ color: var(--f6); font-weight: 700; } .f7-text{ color: var(--f7); font-weight: 700; } .f8-text{ color: var(--f8); font-weight: 700; }
+.tp-kb{ display: flex; flex-direction: column; gap: 4px; padding: 8px; border-radius: 10px; background: var(--paper); user-select: none; }
+.tp-row{ display: flex; gap: 4px; }
+.tp-key{
+  flex: 1 1 0; min-width: 0; height: clamp(26px, 5vw, 40px); border-radius: 6px; position: relative;
+  display: flex; flex-direction: column; align-items: center; justify-content: center;
+  font: 600 clamp(10px, 1.8vw, 15px) "IBM Plex Mono", monospace; color: #1a1a1a;
+  border-bottom: 3px solid rgba(0,0,0,0.25); opacity: 0.55;
+}
+.tp-key small{ font-size: 0.7em; line-height: 1; opacity: 0.8; }
+.tp-key.f0{ background: var(--f0); } .tp-key.f1{ background: var(--f1); } .tp-key.f2{ background: var(--f2); } .tp-key.f3{ background: var(--f3); }
+.tp-key.f4{ background: var(--f4); } .tp-key.f5{ background: var(--f5); } .tp-key.f6{ background: var(--f6); } .tp-key.f7{ background: var(--f7); } .tp-key.f8{ background: var(--f8); }
+.tp-key.bump::after{ content: ""; position: absolute; bottom: 5px; width: 30%; height: 2px; background: rgba(0,0,0,0.45); border-radius: 2px; }
+.tp-key.next{ opacity: 1; outline: 3px solid #fff; transform: translateY(-2px); box-shadow: 0 0 14px 3px rgba(255,255,255,0.55); z-index: 1; }
+.tp-result{ display: flex; flex-direction: column; align-items: center; gap: 8px; padding: 12px; border-radius: 10px; background: var(--paper); text-align: center; }
+.tp-stars{ font-size: 40px; color: var(--accent); letter-spacing: 6px; }
+.tp-result-text{ font-size: 14px; line-height: 1.5; }
+.tp-actions{ display: flex; gap: 10px; flex-wrap: wrap; justify-content: center; }
