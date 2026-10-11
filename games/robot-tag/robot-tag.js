@@ -150,7 +150,7 @@
 
     function resetTag(){
       player = makeBody(TW / 2 - 11, SOLIDS[0].y - 40, 22, 30);
-      player.jumps = 1; player.coyote = 0; player.wallLock = 0; player.face = 1;
+      player.jumps = 1; player.coyote = 0; player.wallLock = 0; player.face = 1; player.lastSpot = null;
       robots = [];
       tagTime = 0;
       // the first robot starts up on the far left ledge
@@ -178,6 +178,7 @@
       }
       if (!tagKeys.jump && p.vy < -200) p.vy = -200; // let go early for a small hop
       if (tagKeys.down && p.on && !SOLIDS.includes(p.on)) p.dropT = 0.25;
+      if (p.onGround) p.lastSpot = spotAt(p.on, p.x + p.w / 2);
 
       // slide slowly down walls you're pushing into
       if (!p.onGround && p.vy > 120 && ((p.wallL && input < 0) || (p.wallR && input > 0))) p.vy = 120;
@@ -262,10 +263,13 @@
     }
     const ROBOT_MOVES = buildRobotMoves();
 
-    // the spot you're standing on, or the one you'll land on if you're in the air
+    // the spot you're standing on, or the one you'll land on if you're in the air.
+    // While you're jumping up from a ledge it's still that ledge, so hopping about doesn't fool the robots.
     function spotUnder(b){
       const cx = b.x + b.w / 2, feet = b.y + b.h;
       if (b.onGround) return spotAt(b.on, cx);
+      const ledge = b.lastSpot;
+      if (ledge && feet <= ledge.y + 4 && cx >= ledge.x - 40 && cx <= ledge.x + ledge.w + 40) return ledge;
       let best = null;
       SPOTS.forEach(s => {
         if (cx < s.x || cx > s.x + s.w || s.y < feet - 1) return;
@@ -274,8 +278,9 @@
       return best;
     }
 
-    // shortest chain of moves from where the robot stands to you (at gx on goal); returns the first move
-    function planRoute(from, x, goal, gx){
+    // shortest chain of moves from where the robot stands to you (at gx on goal); returns the first move.
+    // Moves other robots are already making cost extra, so they come at you different ways.
+    function planRoute(from, x, goal, gx, taken){
       const done = new Set(), cost = new Map([[from, 0]]), at = new Map([[from, x]]), first = new Map([[from, null]]);
       while (true) {
         let s = null;
@@ -284,7 +289,8 @@
         if (s === goal) return first.get(s);
         done.add(s);
         ROBOT_MOVES.get(s).forEach(m => {
-          const c = cost.get(s) + Math.abs(at.get(s) - m.sx) + 60 + (m.to === goal ? Math.abs(m.lx - gx) : 0);
+          const c = cost.get(s) + Math.abs(at.get(s) - m.sx) + 60 + (m.to === goal ? Math.abs(m.lx - gx) : 0)
+            + (s === from && taken.has(m) ? 150 : 0);
           if (done.has(m.to) || (cost.has(m.to) && cost.get(m.to) <= c)) return;
           cost.set(m.to, c); at.set(m.to, m.lx); first.set(m.to, first.get(s) || m);
         });
@@ -293,13 +299,16 @@
 
     function updateRobot(r, dt){
       const speed = ROBOT_SPEED * speedMult();
-      const rx = r.x + r.w / 2, px = player.x + player.w / 2;
+      const rx = r.x + r.w / 2;
+      // aim a little ahead of where you're running, not just where you are right now
+      const px = Math.min(TW, Math.max(0, player.x + player.w / 2 + player.vx * 0.25));
       let targetX = px, wantJump = false, chasing = true;
       r.jumpCd = Math.max(0, r.jumpCd - dt);
 
       if (r.onGround) {
         const here = spotAt(r.on, rx), goal = spotUnder(player);
-        r.move = goal && goal !== here ? planRoute(here, rx, goal, px) : null;
+        const taken = new Set(robots.filter(o => o !== r && o.move).map(o => o.move));
+        r.move = goal && goal !== here ? planRoute(here, rx, goal, px, taken) : null;
         const m = r.move;
         if (m) {
           chasing = false;
