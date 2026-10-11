@@ -1,0 +1,47 @@
+/* Turbo Track: a wide race view, and the garage where you pick your car. */
+#ttOverlay .game-box{
+  width: min(100%, calc((100vh - 110px) * 16 / 9));
+  width: min(100%, calc((100dvh - 110px) * 16 / 9));
+}
+@media (pointer: coarse){
+  #ttOverlay .game-box{
+    width: min(100%, calc((100vh - 170px) * 16 / 9));
+    width: min(100%, calc((100dvh - 170px) * 16 / 9));
+  }
+}
+#ttCanvas:focus{ outline: none; }
+#ttCanvas{
+  display: block; width: 100%; aspect-ratio: 16 / 9; height: auto;
+  border-radius: 12px; border: 2px solid rgba(255,255,255,0.25);
+  background: #c8935a; touch-action: none;
+}
+.tt-panel{ background: rgba(20,12,4,0.72); overflow-y: auto; justify-content: safe center; }
+.tt-garage{ display: flex; flex-direction: column; align-items: center; gap: 8px; }
+.tt-preview{ width: 220px; height: 110px; background: rgba(255,255,255,0.1); border-radius: 14px; }
+.tt-models, .tt-colours{ display: flex; flex-wrap: wrap; gap: 6px; justify-content: center; }
+.tt-models .btn.ghost{ color: #fff; border-color: rgba(255,255,255,0.4); }
+.tt-models .btn[aria-pressed="true"]{ background: #ff7a00; border-color: #ff7a00; color: #1a0d00; }
+.tt-stats{ font: 600 13px "IBM Plex Mono", monospace; color: #ffd9a8; white-space: pre; }
+.tt-swatch{
+  width: 30px; height: 30px; border-radius: 50%; cursor: pointer;
+  border: 3px solid rgba(255,255,255,0.35);
+}
+.tt-swatch[aria-pressed="true"]{ border-color: #fff; transform: scale(1.18); box-shadow: 0 0 0 2px #ff7a00; }
+.tt-rainbow{ background: conic-gradient(#ff4d4d, #ff9f1c, #ffe14d, #4dd66b, #4da6ff, #b46bff, #ff4d4d); }
+.tt-gold{ background: radial-gradient(circle at 35% 30%, #fff1a8, #e0b232 55%, #8a6512); }
+.tt-robots{ display: flex; align-items: center; gap: 8px; flex-wrap: wrap; justify-content: center; font-weight: 700; }
+.tt-robots .segmented button{ color: #fff; }
+.tt-results{ display: flex; flex-direction: column; gap: 4px; font: 600 15px "IBM Plex Mono", monospace; }
+.tt-row{ padding: 3px 12px; border-radius: 6px; background: rgba(255,255,255,0.08); text-align: left; white-space: pre; }
+.tt-row.me{ background: #ff7a00; color: #1a0d00; }
+.tt-actions{ display: flex; gap: 10px; flex-wrap: wrap; justify-content: center; }
+.tt-actions .btn.ghost{ color: #fff; border-color: rgba(255,255,255,0.4); }
+@media (max-height: 500px){
+  .tt-preview, #ttPanelText{ display: none; }
+}
+@media (max-width: 640px), (max-height: 500px){
+  .tt-preview{ width: 150px; height: 75px; }
+  .tt-swatch{ width: 24px; height: 24px; }
+  .tt-garage{ gap: 5px; }
+  .tt-models .btn{ padding: 4px 8px; font-size: 11.5px; }
+}
