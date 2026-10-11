@@ -31,6 +31,8 @@ Every Learning subject has the same three levels, ⏱️ Time Trial, 🏁 race a
 - 🧟 **Zombie Blaster**: a 3D-style shooter in a moonlit graveyard. Point the mouse and click to blast goo. Waves get bigger, with speedy runners from wave 2 and big brutes from wave 3. Clear a wave to win back a heart.
 - 🧗 **Parkour Run**: a 3D obby high in the sky. Jump across orange, yellow, blue, green and black blocks that climb up and drop down: rainbow steps, a kill brick run, skinny beams, a spiral tower and a big drop. Touch a red kill brick or fall off and you go back to your last 🚩 checkpoint. Reach the 🏆 as fast as you can!
 
+- ⛏️ **Block World**: a Minecraft-style sandbox. Walk, jump and 🕊️ fly around a world of hills, beaches and trees made of textured blocks, dig blocks out with a left click and build with a right click. Pick from 8 blocks (grass, dirt, stone, log, leaves, planks, sand and brick) in the bar at the bottom, or with the number keys. The world is drawn by shooting a ray through every pixel, so there's no 3D library, and it speeds up or slows down by itself to suit your computer. Your builds are saved, and you can start a 🌱 new world any time.
+
 - 🏎️ **Turbo Track**: a toy-car race seen from above, on an orange toy track floating high in the sky, with clouds, floating islands, hot-air balloons and birds far below. Pick your car (Muscle, Formula, Shark, Monster or Bubble) and its colour, even 🌈 rainbow or gold, then race three robot cars (🐢 Easy, 🚗 Medium or 🚀 Hard) for 3 laps against the clock. Hit the ⚡ speed boosters, fly off the ramp over the gap, go round the 🌀 loop-the-loop, and brake for the sharp turns. Too slow for the jump or the loop and you have to go back and try again! Every race is on a random track out of five: ☁️ Sky Loop, 🏜️ Cloud Canyon, 🌈 Rainbow Hairpins, ⛰️ Zigzag Mountain and 🏝️ Island Hopper.
 
 - 🎣 **Fishing Beach**: stand on the beach and fish in a wide ocean, seen from the side with the sea cut open (the camera follows your float far out to sea): the sandy Shallows, a Coral Reef, the Deep Sea with a shipwreck, and the dark Abyss. One button does it all: hold to power up your cast, press when the float dips, then hold to keep the green bar on the fish. There are **500 different fish** (25 kinds × 20 versions, from Common to Mythic, some only at night) to collect in the 📖 Fish Book, and **8 rods** to unlock by catching special fish. Watch out: sometimes a bigger fish swims in and eats the fish on your hook, and then you have to reel in the big one! Day turns to sunset and a starry night every 6 minutes.
@@ -59,6 +61,7 @@ games/
   zombie-blaster/          Zombie Blaster
   parkour/                 Parkour Run
   fishing/                 Fishing Beach (fish.js has the 500 fish, scene.js draws the beach and sea, fishing.js is the game)
+  blocks/                  Block World (world.js has the block textures and the terrain, blocks.js is the game)
   turbo-track/             Turbo Track (track.js has the five tracks and builds them, sky.js draws the sky, turbo-track.js is the race)
 ```
 
