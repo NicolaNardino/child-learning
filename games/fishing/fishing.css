@@ -1,0 +1,50 @@
+/* Fishing Beach: a wide view of the beach and the sea, and the panels for a catch, the fish book and the rods. */
+#fsOverlay .game-box{
+  width: min(100%, calc((100vh - 110px) * 16 / 9));
+  width: min(100%, calc((100dvh - 110px) * 16 / 9));
+}
+@media (pointer: coarse){
+  #fsOverlay .game-box{
+    width: min(100%, calc((100vh - 170px) * 16 / 9));
+    width: min(100%, calc((100dvh - 170px) * 16 / 9));
+  }
+}
+#fsCanvas:focus{ outline: none; }
+#fsCanvas{
+  display: block; width: 100%; aspect-ratio: 16 / 9; height: auto;
+  border-radius: 12px; border: 2px solid rgba(255,255,255,0.25);
+  background: #2fb0d8; touch-action: none; user-select: none; -webkit-user-select: none;
+}
+.fs-panel{ background: rgba(4,20,40,0.78); overflow-y: auto; justify-content: safe center; }
+.fs-panel .game-panel-text{ max-width: 60ch; }
+.fs-catch-pic{ width: 300px; max-width: 80%; height: auto; }
+.fs-unlock{ color: #ffe14d; }
+.fs-tabs{ display: flex; flex-wrap: wrap; gap: 6px; justify-content: center; }
+.fs-tabs .btn.ghost, .fs-rods .btn{ color: #fff; border-color: rgba(255,255,255,0.4); }
+.fs-tabs .btn[aria-pressed="true"]{ background: #20a0d0; border-color: #20a0d0; }
+.fs-book{
+  display: grid; grid-template-columns: repeat(auto-fill, minmax(96px, 1fr)); gap: 6px;
+  width: 100%; max-height: 52%; overflow-y: auto; padding: 4px;
+}
+.fs-cell{
+  display: flex; flex-direction: column; align-items: center; gap: 2px; padding: 4px;
+  border: 2px solid rgba(255,255,255,0.15); border-radius: 8px; background: rgba(255,255,255,0.06);
+}
+.fs-cell canvas{ width: 90px; height: 54px; }
+.fs-cell.missing{ opacity: 0.75; }
+.fs-name{ font-size: 10.5px; font-weight: 700; line-height: 1.15; text-align: center; color: rgba(255,255,255,0.6); }
+.fs-rods{ display: flex; flex-direction: column; gap: 6px; width: min(100%, 560px); max-height: 56%; overflow-y: auto; }
+.fs-rod{ display: flex; align-items: center; gap: 10px; padding: 6px 10px; border-radius: 8px; background: rgba(255,255,255,0.08); text-align: left; }
+.fs-rod.on{ outline: 2px solid #4dd66b; }
+.fs-rod.locked{ opacity: 0.7; }
+.fs-rod-swatch{ width: 12px; height: 40px; border-radius: 6px; flex: none; border: 1px solid rgba(0,0,0,0.4); }
+.fs-rod-swatch.rainbow{ background: linear-gradient(#ff4d4d, #ffe14d, #4dd66b, #4da6ff, #b46bff); }
+.fs-rod-info{ display: flex; flex-direction: column; gap: 1px; flex: 1; font-size: 12.5px; }
+.fs-rod-info .mono{ font-size: 11px; color: #bfe6ff; }
+.fs-need{ font-size: 11.5px; color: #ffd9a8; }
+.fs-hold{ min-width: 160px; font-size: 20px; }
+@media (max-width: 640px), (max-height: 500px){
+  .fs-catch-pic{ width: 170px; }
+  .fs-book{ grid-template-columns: repeat(auto-fill, minmax(76px, 1fr)); }
+  .fs-cell canvas{ width: 70px; height: 42px; }
+}
