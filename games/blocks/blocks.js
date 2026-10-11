@@ -6,7 +6,7 @@
   "use strict";
   const store = Hub.store;
   const BW = window.BlockWorld;
-  const { WW, WH, WD, world, at, ID, K, TEX, FACE, KIND, IS_SOLID, HOTBAR, BLOCKS, generate, spawnPoint, skyState } = BW;
+  const { WW, WH, WD, world, at, ID, K, TEX, FACE, KIND, IS_SOLID, HOTBAR, BLOCKS, generate, spawnPoint, skyState, TORCH_DIR, wallTorch, IS_OPAQUE } = BW;
   const CYCLE = 360;              // a whole day and night takes 6 minutes
   const SLOTS = HOTBAR.length;
   // the times the clock button jumps to
@@ -53,7 +53,7 @@
             <button class="btn ghost small" id="blNewBtn" type="button">🌱 New world</button>
           </div>
         </div>
-        <div class="game-help">W A S D to move · mouse or ← → ↑ ↓ to look · Space to jump or swim up · left click to dig · right click to build · 1–9, 0 or the mouse wheel to pick a block · F to fly (Space up, Shift down) · T for another time of day</div>
+        <div class="game-help">W A S D to move · mouse or ← → ↑ ↓ to look · Space to jump or swim up · left click to dig · right click to build · 1–9, 0, – or the mouse wheel to pick a block · F to fly (Space up, Shift down) · T for another time of day</div>
         <div class="game-touch bl-touch">
           <button class="btn ghost" data-bkey="left" type="button" aria-label="Step left">◀</button>
           <button class="btn ghost" data-bkey="forward" type="button" aria-label="Walk forward">▲</button>
@@ -100,7 +100,9 @@
     let yaw = 0, pitch = 0, sel = 0, mineT = 0, saveT = 0, swing = 0, nameT = 0;
     let dayT = typeof store.blockTime === "number" ? store.blockTime : 0.1;  // 0 sunrise, 0.25 noon, 0.5 sunset, 0.75 midnight
     let target = null;
-    const bits = []; // the flying bits of a dug block
+    const bits = []; // the flying bits of a dug block, and the flames
+    const torches = new Set(); // where the torches are, for the flames
+    const isTorch = id => KIND[id] === K.TORCH;
     const keys = { forward: false, back: false, left: false, right: false, jump: false, down: false, mine: false, lookL: false, lookR: false, lookU: false, lookD: false };
 
     /* ---------------- the world around you ---------------- */
@@ -147,6 +149,7 @@
       const i = at(x, y, z);
       world[i] = id;
       store.blockEdits[i] = id;
+      if (isTorch(id)) torches.add(i); else torches.delete(i);
       renderer.updateBlock(x, y, z);
     }
     function inPlayer(x, y, z){
@@ -166,12 +169,29 @@
         });
       }
     }
+    // is this torch still stuck to something? (a standing one needs a block under it, a hanging one a block behind it)
+    function torchSupported(x, y, z, id){
+      const d = TORCH_DIR[id];
+      const sx = d ? x + d[0] : x, sy = d ? y : y - 1, sz = d ? z + d[1] : z;
+      const sid = idAt(sx, sy, sz);
+      return IS_SOLID[sid] === 1 && IS_OPAQUE[sid] === 1;
+    }
+    // after a block goes, any torch it was holding up falls off
+    function dropTorchesAround(x, y, z){
+      for (const [dx, dy, dz] of [[0, 1, 0], [1, 0, 0], [-1, 0, 0], [0, 0, 1], [0, 0, -1]]) {
+        const tx = x + dx, ty = y + dy, tz = z + dz, id = idAt(tx, ty, tz);
+        if (!isTorch(id) || torchSupported(tx, ty, tz, id)) continue;
+        setBlock(tx, ty, tz, 0);
+        debris(tx, ty, tz, id);
+      }
+    }
     function dig(){
       const t = aim();
       if (!t || t.y === 0) return; // the very bottom layer can't be dug
       const id = world[at(t.x, t.y, t.z)];
       setBlock(t.x, t.y, t.z, 0);
       debris(t.x, t.y, t.z, id);
+      dropTorchesAround(t.x, t.y, t.z);
       swing = 0.001;
       store.blocksBroken = (store.blocksBroken || 0) + 1;
       Hub.checkBadges(); saveSoon();
@@ -179,18 +199,47 @@
     function build(){
       const t = aim();
       if (!t) return;
-      // pointing at a flower: the new block takes its place
-      const x = KIND[world[at(t.x, t.y, t.z)]] === K.PLANT ? t.x : t.x + t.nx;
-      const y = KIND[world[at(t.x, t.y, t.z)]] === K.PLANT ? t.y : t.y + t.ny;
-      const z = KIND[world[at(t.x, t.y, t.z)]] === K.PLANT ? t.z : t.z + t.nz;
+      const hit = world[at(t.x, t.y, t.z)];
+      // pointing at a flower or a torch: the new block takes its place
+      const replace = KIND[hit] === K.PLANT || isTorch(hit);
+      const x = replace ? t.x : t.x + t.nx, y = replace ? t.y : t.y + t.ny, z = replace ? t.z : t.z + t.nz;
       if (x < 0 || x >= WW || y < 0 || y >= WH || z < 0 || z >= WD) return;
       const there = world[at(x, y, z)];
-      if (there && KIND[there] !== K.PLANT && KIND[there] !== K.WATER) return;
+      if (there && KIND[there] !== K.PLANT && KIND[there] !== K.WATER && !isTorch(there)) return;
       if (inPlayer(x, y, z)) return;
-      setBlock(x, y, z, HOTBAR[sel]);
+      let id = HOTBAR[sel];
+      if (id === ID.TORCH) {
+        // a torch goes on top of a block (standing) or on the side of one (hanging), but not under one
+        if (replace || t.ny === 1) id = ID.TORCH;
+        else if (t.ny === 0) id = wallTorch(-t.nx, -t.nz);
+        else return;
+        if (!torchSupported(x, y, z, id)) return;
+      }
+      setBlock(x, y, z, id);
       swing = 0.001;
       store.blocksPlaced = (store.blocksPlaced || 0) + 1;
       Hub.checkBadges(); saveSoon();
+    }
+
+    // little flames rising off every torch near you
+    let flameT = 0;
+    function flames(dt){
+      flameT += dt;
+      if (flameT < 0.09) return;
+      flameT = 0;
+      for (const i of torches) {
+        if (bits.length > 600) break;
+        const x = i % WW, z = Math.floor(i / WW) % WD, y = Math.floor(i / (WW * WD));
+        if (Math.abs(x + 0.5 - p.x) > 18 || Math.abs(z + 0.5 - p.z) > 18 || Math.abs(y - p.y) > 18) continue;
+        const d = TORCH_DIR[world[i]];
+        const hot = Math.random() < 0.5;
+        bits.push({
+          x: x + 0.5 + (d ? d[0] * 0.12 : 0) + (Math.random() - 0.5) * 0.07, y: y + (d ? 0.8 : 0.64), z: z + 0.5 + (d ? d[1] * 0.12 : 0) + (Math.random() - 0.5) * 0.07,
+          vx: (Math.random() - 0.5) * 0.18, vy: 0.5 + Math.random() * 0.5, vz: (Math.random() - 0.5) * 0.18, grav: -0.3,
+          r: 1, g: hot ? 0.9 : 0.55, b: hot ? 0.45 : 0.12,
+          size: -(0.035 + Math.random() * 0.03), life: 0.3 + Math.random() * 0.3   // a negative size means it glows by itself
+        });
+      }
     }
 
     /* ---------------- moving ---------------- */
@@ -243,6 +292,11 @@
       const g = c.getContext("2d");
       g.imageSmoothingEnabled = false;
       const tile = k => FACE[id * 3 + k];
+      if (isTorch(id)) { // a torch is drawn as itself, big, with a little dark edge so it shows on any slot
+        const t = tile(0), sx = (t % 6) * 16, sy = Math.floor(t / 6) * 16;
+        g.drawImage(atlas, sx + 3, sy + 3, 10, 13, 12, 6, 40, 52);
+        return c;
+      }
       // each face is the 16 × 16 texture squashed into a diamond or a slanted square
       const faces = [
         { k: 1, m: [1.75, -0.875, 1.75, 0.875, 4, 18], dark: 0,    poly: [[32, 4], [60, 18], [32, 32], [4, 18]] },
@@ -274,7 +328,7 @@
       const btn = document.createElement("button");
       btn.type = "button"; btn.className = "bl-slot"; btn.title = BLOCKS[id].name; btn.setAttribute("aria-label", BLOCKS[id].name);
       const num = document.createElement("span");
-      num.textContent = String(i + 1);
+      num.textContent = i < 9 ? String(i + 1) : i === 9 ? "0" : "–";
       btn.append(icon(id), num);
       btn.addEventListener("pointerdown", e => { e.preventDefault(); select(i); });
       hotbar.appendChild(btn);
@@ -320,6 +374,8 @@
       if (!store.blockEdits) store.blockEdits = {};
       if (loadedSeed === store.blockSeed) return;
       generate(store.blockSeed, store.blockEdits);
+      torches.clear();
+      Object.keys(store.blockEdits).forEach(k => { if (isTorch(world[+k])) torches.add(+k); });
       renderer.rebuildAll();
       loadedSeed = store.blockSeed;
       const s = store.blockPos;
@@ -383,10 +439,11 @@
       if (running) { step(dt); dayT = (dayT + dt / CYCLE) % 1; }
       for (let i = bits.length - 1; i >= 0; i--) {
         const b = bits[i];
-        b.vy -= 16 * dt; b.x += b.vx * dt; b.y += b.vy * dt; b.z += b.vz * dt; b.life -= dt;
+        b.vy -= (b.grav === undefined ? 16 : b.grav) * dt; b.x += b.vx * dt; b.y += b.vy * dt; b.z += b.vz * dt; b.life -= dt;
         if (b.life <= 0) bits.splice(i, 1);
       }
       if (swing > 0) { swing += dt / 0.26; if (swing >= 1) swing = 0; }
+      if (running) flames(dt);
       if (nameT > 0 && (nameT -= dt) <= 0) nameEl.classList.remove("show");
       if (gpu) { // draw at the screen's real size, so every block texture is sharp
         const w = Math.min(1920, Math.round(canvas.clientWidth * Math.min(window.devicePixelRatio || 1, 2)));
@@ -423,6 +480,7 @@
       if (!running) return;
       if (e.code === "KeyF") { if (!e.repeat) toggleFly(); return; }
       if (e.code === "KeyT") { if (!e.repeat) nextTime(); return; }
+      if (e.code === "Minus") { select(10); return; }
       const digit = /^Digit([0-9])$/.exec(e.code);
       if (digit) { select((+digit[1] + 9) % 10); return; }
       const k = KEYMAP[e.code];

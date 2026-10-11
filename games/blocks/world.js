@@ -9,8 +9,8 @@
   const at = (x, y, z) => (y * WD + z) * WW + x;
 
   // block ids. 1 to 8 are the original blocks (saved builds use these numbers, so they never change)
-  const ID = { GRASS: 1, DIRT: 2, STONE: 3, LOG: 4, LEAVES: 5, PLANKS: 6, SAND: 7, BRICK: 8, COBBLE: 9, GLASS: 10, WATER: 11, TALLGRASS: 12, POPPY: 13, DANDELION: 14, GLOWSTONE: 15 };
-  const K = { SOLID: 0, CUTOUT: 1, WATER: 2, PLANT: 3 }; // see-through holes, water, or a flower you walk through
+  const ID = { GRASS: 1, DIRT: 2, STONE: 3, LOG: 4, LEAVES: 5, PLANKS: 6, SAND: 7, BRICK: 8, COBBLE: 9, GLASS: 10, WATER: 11, TALLGRASS: 12, POPPY: 13, DANDELION: 14, GLOWSTONE: 15, TORCH: 16, TORCH_PX: 17, TORCH_NX: 18, TORCH_PZ: 19, TORCH_NZ: 20 };
+  const K = { SOLID: 0, CUTOUT: 1, WATER: 2, PLANT: 3, TORCH: 4 }; // see-through holes, water, a flower you walk through, or a torch
 
   /* ---------------- noise ---------------- */
   function hash2(x, z, s){
@@ -141,11 +141,18 @@
   const poppy = flower(214, 40, 40), dandelion = flower(250, 214, 40);
   const GLOW_PAL = [[255, 222, 132], [246, 196, 96], [255, 238, 172], [228, 172, 78], [250, 210, 112]];
   const glow = make((x, y) => hash2(x, y, 132) < 0.08 ? pack(206, 134, 52) : paint(GLOW_PAL, grain(x, y, 131)));
+  const torch = make((x, y) => {
+    if (x < 7 || x > 8 || y < 6) return pack(0, 0, 0, 0);
+    if (y === 6) return x === 7 ? pack(255, 246, 170) : pack(255, 226, 120);   // the flame
+    if (y === 7) return x === 7 ? pack(255, 202, 74) : pack(255, 170, 44);
+    const f = 0.9 + 0.2 * hash2(x, y, 141);                                      // the wooden stick
+    return x === 7 ? pack(142 * f, 106 * f, 62 * f) : pack(112 * f, 82 * f, 46 * f);
+  });
   const white = make(() => pack(255, 255, 255));
   const ocean = make(() => pack(52, 108, 214));
 
-  const TEX = [dirt, grassTop, grassSide, stone, cobble, logSide, logTop, leaves, planks, sand, brick, glass, water, tallGrass, poppy, dandelion, white, ocean, glow];
-  const T = { DIRT: 0, GRASS_TOP: 1, GRASS_SIDE: 2, STONE: 3, COBBLE: 4, LOG_SIDE: 5, LOG_TOP: 6, LEAVES: 7, PLANKS: 8, SAND: 9, BRICK: 10, GLASS: 11, WATER: 12, TALLGRASS: 13, POPPY: 14, DANDELION: 15, WHITE: 16, OCEAN: 17, GLOW: 18 };
+  const TEX = [dirt, grassTop, grassSide, stone, cobble, logSide, logTop, leaves, planks, sand, brick, glass, water, tallGrass, poppy, dandelion, white, ocean, glow, torch];
+  const T = { DIRT: 0, GRASS_TOP: 1, GRASS_SIDE: 2, STONE: 3, COBBLE: 4, LOG_SIDE: 5, LOG_TOP: 6, LEAVES: 7, PLANKS: 8, SAND: 9, BRICK: 10, GLASS: 11, WATER: 12, TALLGRASS: 13, POPPY: 14, DANDELION: 15, WHITE: 16, OCEAN: 17, GLOW: 18, TORCH: 19 };
   const TILE_COLS = 6, TILE_ROWS = 4;
 
   // all the textures side by side in one picture (raw bytes, for the graphics card)
@@ -195,9 +202,17 @@
   def(ID.DANDELION, "Dandelion", T.DANDELION, T.DANDELION, T.DANDELION, K.PLANT, 0);
   def(ID.GLOWSTONE, "Glowstone", T.GLOW, T.GLOW, T.GLOW, K.SOLID, 1);
   EMIT[ID.GLOWSTONE] = 15;
+  // which way a hanging torch's wall is: [dx, dz] from the torch to the block it's stuck on (null for a standing one)
+  const TORCH_DIR = new Array(256).fill(null);
+  [[ID.TORCH, null], [ID.TORCH_PX, [1, 0]], [ID.TORCH_NX, [-1, 0]], [ID.TORCH_PZ, [0, 1]], [ID.TORCH_NZ, [0, -1]]].forEach(([id, dir]) => {
+    def(id, "Torch", T.TORCH, T.TORCH, T.TORCH, K.TORCH, 0);
+    EMIT[id] = 14;
+    TORCH_DIR[id] = dir;
+  });
+  const wallTorch = (dx, dz) => dx > 0 ? ID.TORCH_PX : dx < 0 ? ID.TORCH_NX : dz > 0 ? ID.TORCH_PZ : ID.TORCH_NZ;
 
   // what's on the hotbar, left to right
-  const HOTBAR = [ID.GRASS, ID.DIRT, ID.COBBLE, ID.PLANKS, ID.LOG, ID.LEAVES, ID.SAND, ID.BRICK, ID.GLASS, ID.GLOWSTONE];
+  const HOTBAR = [ID.GRASS, ID.DIRT, ID.COBBLE, ID.PLANKS, ID.LOG, ID.LEAVES, ID.SAND, ID.BRICK, ID.GLASS, ID.TORCH, ID.GLOWSTONE];
 
   /* ---------------- terrain: an island of hills and mountains with lakes, beaches, trees and flowers ---------------- */
   // the highest block you could stand on in a column
@@ -287,5 +302,5 @@
     };
   }
 
-  window.BlockWorld = { WW, WH, WD, SEA, world, at, ID, K, TEX, T, TILE_COLS, TILE_ROWS, BLOCKS, FACE, KIND, IS_SOLID, IS_OPAQUE, EMIT, HOTBAR, skyState, atlasData, atlasCanvas, generate, heightAt, spawnPoint, hash2 };
+  window.BlockWorld = { WW, WH, WD, SEA, world, at, ID, K, TEX, T, TILE_COLS, TILE_ROWS, BLOCKS, FACE, KIND, IS_SOLID, IS_OPAQUE, EMIT, TORCH_DIR, wallTorch, HOTBAR, skyState, atlasData, atlasCanvas, generate, heightAt, spawnPoint, hash2 };
 })();

@@ -65,7 +65,7 @@
 .bl-slot.sel{ border: 3px solid #fff; background: rgba(255,255,255,0.18); z-index: 1; margin: -1px; }
 @media (max-width: 640px), (max-height: 500px){
   .bl-hotbar{ bottom: 4px; padding: 2px; }
-  .bl-slot{ width: 32px; height: 32px; padding: 2px; }
+  .bl-slot{ width: min(32px, calc((100vw - 64px) / 11)); height: min(32px, calc((100vw - 64px) / 11)); padding: 2px; }
   .bl-name{ bottom: 46px; font-size: 12px; }
 }
 

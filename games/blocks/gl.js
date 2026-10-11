@@ -8,7 +8,7 @@
 (function(){
   "use strict";
   const BW = window.BlockWorld;
-  const { WW, WH, WD, SEA, world, at, ID, K, T, TILE_COLS, TILE_ROWS, BLOCKS, FACE, KIND, IS_OPAQUE, EMIT, atlasData } = BW;
+  const { WW, WH, WD, SEA, world, at, ID, K, T, TILE_COLS, TILE_ROWS, BLOCKS, FACE, KIND, IS_OPAQUE, EMIT, TORCH_DIR, atlasData } = BW;
   const CH = 16, NCX = WW / CH, NCZ = WD / CH;
   const FOV = 70 * Math.PI / 180;
   const AO = [0.5, 0.68, 0.84, 1];          // how bright a corner is with 3, 2, 1 or 0 blocks crowding it
@@ -96,9 +96,9 @@
   const LINE_FS = PREC + `uniform vec4 uColor; void main(){ gl_FragColor = uColor; }`;
   const PART_VS = `
     attribute vec3 aPos; attribute vec3 aColor; attribute float aSize;
-    uniform mat4 uVP; uniform float uScale; varying vec3 vColor;
-    void main(){ gl_Position = uVP * vec4(aPos, 1.0); vColor = aColor; gl_PointSize = max(2.0, aSize * uScale / gl_Position.w); }`;
-  const PART_FS = PREC + `varying vec3 vColor; uniform vec3 uLight; void main(){ gl_FragColor = vec4(vColor * max(uLight, vec3(0.3)), 1.0); }`;
+    uniform mat4 uVP; uniform float uScale; varying vec3 vColor; varying float vGlow;
+    void main(){ gl_Position = uVP * vec4(aPos, 1.0); vColor = aColor; vGlow = aSize < 0.0 ? 1.0 : 0.0; gl_PointSize = max(2.0, abs(aSize) * uScale / gl_Position.w); }`;
+  const PART_FS = PREC + `varying vec3 vColor; varying float vGlow; uniform vec3 uLight; void main(){ gl_FragColor = vec4(vColor * mix(max(uLight, vec3(0.3)), vec3(1.0), vGlow), 1.0); }`;
 
   /* ---------------- little matrix helpers (16 numbers, column by column) ---------------- */
   function perspective(fovY, aspect, near, far){
@@ -202,6 +202,27 @@
     }
   }
 
+  // a torch: a post 2 pixels wide and 10 tall with a flame on top. One hanging on a wall leans out from it.
+  function addTorch(out, x, y, z, id){
+    const wall = TORCH_DIR[id], w = 1 / 16, H = 10 / 16, tile = T.TORCH;
+    const col = (tile % TILE_COLS) * 16, row = Math.floor(tile / TILE_COLS) * 16;
+    const U = px => (col + px) / AW, V = py => (row + py) / AH;
+    // a point on the torch, h up from its foot, offset from its middle line
+    const pt = (h, ox, oz) => {
+      let cx = 0.5, cz = 0.5, cy = h;
+      if (wall) { const k = 0.38 - 0.414 * h; cx += wall[0] * k; cz += wall[1] * k; cy = h + 0.22; }
+      return [x + cx + ox, y + cy, z + cz + oz];
+    };
+    const c = [[-w, -w], [w, -w], [w, w], [-w, w]];
+    for (let i = 0; i < 4; i++) {
+      const a = c[i], b = c[(i + 1) % 4];
+      const v0 = pt(0, a[0], a[1]), v1 = pt(0, b[0], b[1]), v2 = pt(H, b[0], b[1]), v3 = pt(H, a[0], a[1]);
+      pushQuad(out, [[...v0, U(7.05), V(15.95), 1, 1], [...v1, U(8.95), V(15.95), 1, 1], [...v2, U(8.95), V(6.05), 1, 1], [...v3, U(7.05), V(6.05), 1, 1]], false);
+    }
+    const t = [pt(H, c[0][0], c[0][1]), pt(H, c[1][0], c[1][1]), pt(H, c[2][0], c[2][1]), pt(H, c[3][0], c[3][1])];
+    pushQuad(out, [[...t[0], U(7.05), V(6.05), 1, 1], [...t[1], U(8.95), V(6.05), 1, 1], [...t[2], U(8.95), V(7.95), 1, 1], [...t[3], U(7.05), V(7.95), 1, 1]], false);
+  }
+
   function createGL(canvas){
     let gl = null;
     try { gl = canvas.getContext("webgl", { antialias: true, alpha: false, powerPreference: "high-performance" }); } catch (e) {}
@@ -260,6 +281,7 @@
         if (!id) continue;
         const kind = KIND[id];
         if (kind === K.PLANT) { addCross(solid, x, y, z, FACE[id * 3]); continue; }
+        if (kind === K.TORCH) { addTorch(solid, x, y, z, id); continue; }
         if (kind === K.WATER) { addWater(water, x, y, z); continue; }
         for (const F of FACES) {
           const nid = idAt(x + F.n[0], y + F.n[1], z + F.n[2]);
@@ -350,11 +372,19 @@
 
     /* ----- the block in your hand ----- */
     const heldBuf = gl.createBuffer();
-    let heldN = 0, heldId = 0;
+    let heldN = 0, heldId = 0, heldScale = 0.3;
     function setSelected(id){
       if (id === heldId) return;
       heldId = id;
       const out = [];
+      if (KIND[id] === K.TORCH) {
+        addTorch(out, 0, 0, 0, BW.ID.TORCH);
+        for (let i = 0; i < out.length; i += 7) { out[i] -= 0.5; out[i + 1] -= 0.3; out[i + 2] -= 0.5; }
+        heldScale = 0.62;
+        upload(heldBuf, out); heldN = out.length / 7;
+        return;
+      }
+      heldScale = 0.3;
       FACES.forEach(F => {
         const tile = FACE[id * 3 + F.kind];
         const light = F.kind === 1 ? 1 : F.kind === 2 ? 0.5 : (F.n[0] !== 0 ? 0.62 : 0.82);
@@ -486,7 +516,7 @@
         const s = v.swing > 0 ? Math.sin(v.swing * Math.PI) : 0;
         const bob = Math.sin(v.time * 1.7) * 0.006;
         let m = translate(0.56, -0.58 + bob - 0.2 * s, -1.0 - 0.26 * s);
-        m = mul(m, rotY(0.55)); m = mul(m, rotX(-0.1 - 0.95 * s)); m = mul(m, scaling(0.3));
+        m = mul(m, rotY(0.55)); m = mul(m, rotX(-0.1 - 0.95 * s)); m = mul(m, scaling(heldScale));
         gl.uniformMatrix4fv(main.u.uVP, false, mul(proj, m));
         gl.uniform1f(main.u.uAlpha, 1); gl.uniform1f(main.u.uWave, 0);   // solid again, with holes where there should be holes
         gl.uniform3f(main.u.uLight, Math.max(sk.light[0], 0.45), Math.max(sk.light[1], 0.45), Math.max(sk.light[2], 0.5));
