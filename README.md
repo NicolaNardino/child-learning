@@ -12,13 +12,12 @@ There's nothing to install and no build step. Just open `index.html` in a browse
   - ⏱️ **Time Trial**: answer 16 questions in 2 minutes and earn a rating, from *Keep practicing* up to *Outstanding!*
   - 🏁 **Race to the finish**: every right answer moves your car forward, while Robo 🤖 drives on its own. Pick Robo's speed (🐢 Easy, 🚗 Medium, 🚀 Hard) and get 10 right before Robo crosses the line!
   - 🔥 Streaks, accuracy and 🎊 confetti for every right answer.
-- 🧙 **Word Wizard**: English practice, with a tip for every answer.
-  - Five topics: 📚 Word Meanings, 🔁 Same & Opposite, 🐝 Spelling (pick it, or hear it 🔊 and type it), 🧩 Word Types (nouns, verbs, adjectives and more) and ✏️ Grammar (their/there/they're, plurals, tricky verbs…).
-- 🥨 **Deutsch Dash**: German for English speakers. Tap 🔊 Listen to hear the German.
-  - Five topics: 🍎 Words, 🔢 Numbers, 🎩 der / die / das, 💬 Phrases and 🏃 Verbs (with the whole verb table in every answer).
-  - Buttons for ä ö ü ß, or just type ae, oe, ue, ss.
+- 🧙 **Word Wizard**: school English for 5th grade in Switzerland, at the level of *Young World 3* (Lehrplan 21), with British spelling.
+  - Five topics: 📚 Words (English ↔ German: school, free time, town and traffic), ↔️ Opposites, 🐝 Spelling (pick it, or hear it 🔊 and type it), 🏃 Verbs (present simple, present continuous, past simple) and ✏️ Grammar (be / have got, prepositions, question words, comparing).
+- 🥨 **Deutsch Dash**: Deutsch für die 5. Klasse, passend zu *Die Sprachstarken 5*, mit Schweizer Rechtschreibung (ss statt ß, «Anführungszeichen»).
+  - Sechs Themen: 🧩 Wortarten (Nomen, Verb, Adjektiv, Pronomen, Partikel), 🎯 Die 4 Fälle, 🏃 Verben (Präteritum, Perfekt), ✍️ Rechtschreibung (Doppelkonsonanten, ss, ck/tz, das/dass), 💬 Satzzeichen (direkte Rede, Kommas) und 🧱 Morpheme.
 
-Every Learning subject has the same three levels, ⏱️ Time Trial, 🏁 race against Robo, streaks and trophies. Word questions have answer buttons you can tap, or press 1–4.
+Every Learning subject has the same three levels, ⏱️ Time Trial, 🏁 race against Robo, streaks and trophies. Word questions have answer buttons you can tap, or press the number keys.
 
 ## 🎮 Games
 

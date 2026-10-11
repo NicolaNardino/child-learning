@@ -5,10 +5,12 @@
    Notebook.register({
      id, title, icon, blurb,       like Hub.register
      unit, tagline, nameFallback   the header: "/// a maths practice notebook", the line under it, who it's for
+     taglineFor                    optional: the word before the name, "for" unless it's another language
      subject                       "maths", "English"... for the reset question
      data                          the object progress is saved in, inside Hub.store
      badgePrefix, badgeNames       trophy ids must be unique across apps; names can be swapped per subject
      wordy                         true for word questions, so they're not shown in the number font
+     verdicts                      optional { right: "Richtig!", wrong: "Nicht ganz – richtig ist" } for another language
      topics: [{ id, label, icon, title, levelDesc: { warmup, practice, challenge }, hint, inputMode,
                 modes (optional [{ id, label }]), generate(level, mode) -> a question }]
    })
@@ -137,6 +139,7 @@
   function mount(host, cfg, d, BADGES){
     const TOPICS = cfg.topics;
     const store = Hub.store;
+    const verdicts = cfg.verdicts || { right: "Correct!", wrong: "Not quite — the answer is" };
     const card = p => `
           <div class="problem ${cfg.wordy ? "wordy" : "mono"}" data-ref="${p}problem" aria-live="polite"></div>
           <button class="btn ghost small say-btn" data-ref="${p}say" type="button" hidden>🔊 Listen</button>
@@ -155,7 +158,7 @@
           <h1 data-ref="title"></h1>
           <span class="unit mono" data-ref="unit"></span>
         </div>
-        <p class="tagline"><span data-ref="tagline"></span> — for <span data-ref="kidName"></span>.</p>
+        <p class="tagline"><span data-ref="tagline"></span> — <span data-ref="taglineFor"></span> <span data-ref="kidName"></span>.</p>
       </header>
 
       <nav class="line" aria-label="Topic" data-ref="topicNav">
@@ -242,6 +245,7 @@
     $.title.textContent = cfg.title;
     $.unit.textContent = cfg.unit;
     $.tagline.textContent = cfg.tagline;
+    $.taglineFor.textContent = cfg.taglineFor || "for";
 
     let currentTopicId = d.topic;
     let currentLevel = d.level;
@@ -253,7 +257,8 @@
     function topicNow(){ return TOPICS.find(t => t.id === currentTopicId); }
     function currentModeFor(topic){
       if (!topic.modes) return null;
-      return d.modes[topic.id] || topic.modes[0].id;
+      const saved = d.modes[topic.id];
+      return topic.modes.some(m => m.id === saved) ? saved : topic.modes[0].id;
     }
 
     /* ---------------- a question card: the practice page and the Time Trial each have one ---------------- */
@@ -451,12 +456,12 @@
         d.streak++; if (d.streak > d.best) d.best = d.streak;
         if (currentLevel === "challenge") d.challengeCorrect++;
         $.feedback.className = "feedback show correct";
-        $.verdict.textContent = "Correct!";
+        $.verdict.textContent = verdicts.right;
         Hub.confettiBurst(currentProblem.choices ? practice.choices : practice.check);
       } else {
         d.streak = 0;
         $.feedback.className = "feedback show incorrect";
-        $.verdict.textContent = `Not quite — the answer is ${currentProblem.answerDisplay}.`;
+        $.verdict.textContent = `${verdicts.wrong} ${currentProblem.answerDisplay}.`;
       }
       $.explain.innerHTML = currentProblem.explain();
       lock(practice, val);
@@ -569,7 +574,7 @@
       trialIndex++;
       if (correct) {
         trialCorrect++;
-        $.trialQuickFeedback.textContent = "✓ Correct";
+        $.trialQuickFeedback.textContent = "✓ " + verdicts.right.replace(/!$/, "");
         $.trialQuickFeedback.className = "trial-quick correct";
         Hub.confettiBurst(trial.prob.choices ? trial.choices : trial.check);
       } else {

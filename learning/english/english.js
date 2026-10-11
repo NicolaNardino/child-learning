@@ -1,179 +1,145 @@
-/* Word Wizard: English for 5th graders. Word meanings, same & opposite words, spelling,
-   word types and grammar, at three levels, with a worked answer every time. */
+/* Word Wizard: school English for 5th grade in Switzerland (Lehrplan 21, the Young World 3 level,
+   about A1–A2). Words with their German, opposites, spelling, verbs and grammar, at three levels,
+   with a tip for every answer. British spelling, like the Swiss school books. */
 (function(){
   "use strict";
   const { pick, typed, sample, choice } = Notebook;
   const say = text => ({ text, lang: "en-GB" });
 
-  /* ---------------- word meanings: [word, meaning, example] ---------------- */
-  const MEANINGS = {
+  /* ---------------- words: [English (others that count after /), German] ---------------- */
+  const WORDS = {
+    warmup: [ // school
+      ["classroom", "das Klassenzimmer"], ["timetable", "der Stundenplan"], ["break", "die Pause"],
+      ["gym", "die Turnhalle"], ["playground", "der Pausenplatz"], ["teachers' room", "das Lehrerzimmer"],
+      ["pencil case", "das Etui"], ["rubber/eraser", "der Radiergummi"], ["ruler", "das Lineal"],
+      ["scissors", "die Schere"], ["glue", "der Leim"], ["exercise book", "das Heft"],
+      ["homework", "die Hausaufgaben"], ["history", "Geschichte"], ["geography", "Geografie"],
+      ["maths/math", "Mathematik"], ["music", "Musik"], ["changing room", "die Garderobe"]
+    ],
+    practice: [ // free time, food, clothes, weather
+      ["ride a bike", "Velo fahren"], ["play the guitar", "Gitarre spielen"], ["go swimming", "schwimmen gehen"],
+      ["read comics", "Comics lesen"], ["breakfast", "das Frühstück"], ["lunch", "das Mittagessen"],
+      ["cheese", "der Käse"], ["strawberry", "die Erdbeere"], ["bread", "das Brot"],
+      ["jumper/sweater", "der Pullover"], ["jacket", "die Jacke"], ["trousers/pants", "die Hose"],
+      ["shoes", "die Schuhe"], ["sunny", "sonnig"], ["rainy", "regnerisch"], ["windy", "windig"],
+      ["cloudy", "bewölkt"], ["snowy", "verschneit"]
+    ],
+    challenge: [ // town, traffic and emergencies
+      ["traffic lights", "die Ampel"], ["zebra crossing", "der Fussgängerstreifen"], ["pavement/sidewalk", "das Trottoir"],
+      ["ambulance", "der Krankenwagen"], ["hospital", "das Spital"], ["accident", "der Unfall"],
+      ["injured", "verletzt"], ["dangerous", "gefährlich"], ["careful", "vorsichtig"],
+      ["get help", "Hilfe holen"], ["turn left", "links abbiegen"], ["go straight on", "geradeaus gehen"],
+      ["railway station/train station", "der Bahnhof"], ["bridge", "die Brücke"], ["police station", "der Polizeiposten"],
+      ["fire engine", "das Feuerwehrauto"], ["helmet", "der Helm"], ["corner", "die Ecke"]
+    ]
+  };
+  const first = w => w[0].split("/")[0];
+
+  function wordQuestion(level, mode){
+    const list = WORDS[level];
+    const w = choice(list);
+    const others = sample(list.filter(o => o !== w), 3);
+    const explain = `<b>${first(w)}</b> = ${w[1]}` + (w[0].includes("/") ? `<br>💡 You can also say: ${w[0].split("/").slice(1).join(", ")}` : "");
+    if (mode === "de2en" && level === "challenge") {
+      return typed({
+        prompt: `What's „${w[1]}“ in English?`, answers: w[0].split("/"), answerDisplay: first(w),
+        say: say(first(w)), sayAfter: true, hint: "Type it in English.", explain
+      });
+    }
+    return mode === "de2en"
+      ? pick({ prompt: `What's „${w[1]}“ in English?`, say: say(first(w)), sayAfter: true,
+               answer: first(w), options: [first(w), ...others.map(first)], explain })
+      : pick({ prompt: `What does “${first(w)}” mean?`, say: say(first(w)),
+               answer: w[1], options: [w[1], ...others.map(o => o[1])], explain });
+  }
+
+  /* ---------------- opposites: [word, opposite] ---------------- */
+  const OPPOSITES = {
     warmup: [
-      ["brave", "not scared to do something hard", "The brave firefighter ran into the smoke."],
-      ["tiny", "very, very small", "A tiny ant crawled across my hand."],
-      ["shout", "say something very loudly", "Please don't shout in the library."],
-      ["gloomy", "dark and sad", "It was a gloomy, rainy day."],
-      ["giggle", "laugh in a quiet, silly way", "The baby started to giggle."],
-      ["swift", "very fast", "The swift cheetah caught up in seconds."],
-      ["chilly", "a bit cold", "Take a jacket, it's chilly outside."],
-      ["damp", "a little bit wet", "My socks were still damp."],
-      ["gentle", "soft and kind, not rough", "Be gentle with the kitten."],
-      ["weary", "very tired", "After the long hike we were weary."],
-      ["grin", "a big smile", "He had a huge grin on his face."],
-      ["sniff", "smell something with short breaths", "The dog sniffed my bag."],
-      ["tumble", "fall over and roll", "The puppy tumbled down the hill."],
-      ["clever", "smart and quick at learning", "The clever crow used a stick as a tool."],
-      ["hurry", "move quickly because there isn't much time", "Hurry, the bus is coming!"]
+      ["big", "small"], ["hot", "cold"], ["fast", "slow"], ["happy", "sad"], ["old", "new"],
+      ["long", "short"], ["open", "closed"], ["full", "empty"], ["up", "down"], ["day", "night"],
+      ["black", "white"], ["good", "bad"]
     ],
     practice: [
-      ["ancient", "very, very old", "The pyramids are ancient."],
-      ["curious", "wanting to know or learn about something", "The curious cat peeked into the box."],
-      ["delicious", "tasting really good", "Grandma's soup is delicious."],
-      ["fragile", "easy to break", "Careful, that glass vase is fragile."],
-      ["generous", "happy to share and give things", "It was generous of you to share your sweets."],
-      ["hesitate", "stop for a moment because you're not sure", "She hesitated before diving in."],
-      ["journey", "a long trip from one place to another", "The journey to the mountains took all day."],
-      ["vanish", "disappear suddenly", "The magician made the coin vanish."],
-      ["shiver", "shake because you're cold", "We shivered at the bus stop."],
-      ["annoyed", "a little bit angry", "I was annoyed when my brother hid my book."],
-      ["cautious", "careful to stay away from danger", "Be cautious when you cross the road."],
-      ["exhausted", "extremely tired", "After the race I was exhausted."],
-      ["predict", "say what you think will happen next", "Can you predict the end of the story?"],
-      ["observe", "watch something carefully", "We observed the caterpillar every day."],
-      ["rescue", "save someone from danger", "The lifeguard rescued the swimmer."]
+      ["cheap", "expensive"], ["early", "late"], ["heavy", "light"], ["clean", "dirty"], ["wet", "dry"],
+      ["easy", "difficult"], ["quiet", "loud"], ["strong", "weak"], ["rich", "poor"], ["near", "far"],
+      ["always", "never"], ["first", "last"]
     ],
     challenge: [
-      ["enormous", "very, very big", "An enormous whale swam past the boat."],
-      ["reluctant", "not wanting to do something", "He was reluctant to tidy his room."],
-      ["abundant", "more than enough; lots and lots", "Apples are abundant in autumn."],
-      ["peculiar", "strange or unusual", "There was a peculiar smell in the kitchen."],
-      ["persuade", "get someone to agree by giving good reasons", "I persuaded Dad to let us stay up late."],
-      ["meticulous", "very careful about every little detail", "She made a meticulous model of the castle."],
-      ["triumph", "a big win or success", "Winning the cup was a triumph for the team."],
-      ["elated", "extremely happy", "We were elated when the puppy came home."],
-      ["scarce", "hard to find; there isn't much of it", "Water is scarce in the desert."],
-      ["vivid", "very bright and clear", "The painting had vivid colours."],
-      ["tranquil", "calm and peaceful", "The lake was tranquil in the morning."],
-      ["ominous", "making you feel something bad will happen", "Ominous clouds filled the sky."],
-      ["inevitable", "sure to happen; it can't be stopped", "With so much rain, a flood was inevitable."],
-      ["feeble", "very weak", "The baby bird gave a feeble chirp."],
-      ["conceal", "hide something", "He concealed the present behind his back."]
+      ["buy", "sell"], ["win", "lose"], ["remember", "forget"], ["arrive", "leave"], ["push", "pull"],
+      ["start", "finish"], ["ask", "answer"], ["give", "take"], ["laugh", "cry"], ["safe", "dangerous"],
+      ["careful", "careless"], ["inside", "outside"]
     ]
   };
 
-  function meaningQuestion(level){
-    const list = MEANINGS[level];
-    const [word, meaning, example] = choice(list);
-    const wrong = sample(list.filter(w => w[0] !== word), 3).map(w => w[1]);
+  function oppositeQuestion(level){
+    const list = OPPOSITES[level];
+    const p = choice(list);
+    const flip = Math.random() < 0.5;
+    const word = flip ? p[1] : p[0], answer = flip ? p[0] : p[1];
+    const others = sample(list.filter(o => o !== p), 3).map(o => o[Math.random() < 0.5 ? 0 : 1]);
     return pick({
-      prompt: `What does “${word}” mean?`,
-      answer: meaning, options: [meaning, ...wrong],
+      promptHtml: `What's the <mark>opposite</mark> of “${word}”?`, prompt: `What's the opposite of “${word}”?`,
       say: say(word),
-      explain: `<b>${word}</b> means <i>${meaning}</i>.<br>Example: “${example}”`
+      answer, options: [answer, ...others],
+      explain: `<b>${word}</b> ↔ <b>${answer}</b>`
     });
   }
 
-  /* ---------------- same & opposite: [word, same, opposite] ---------------- */
-  const PAIRS = {
-    warmup: [
-      ["happy", "glad", "sad"], ["big", "large", "small"], ["fast", "quick", "slow"],
-      ["start", "begin", "finish"], ["cold", "chilly", "hot"], ["easy", "simple", "hard"],
-      ["loud", "noisy", "quiet"], ["shut", "close", "open"], ["smart", "clever", "foolish"],
-      ["rich", "wealthy", "poor"], ["shout", "yell", "whisper"], ["laugh", "chuckle", "cry"]
-    ],
-    practice: [
-      ["brave", "fearless", "cowardly"], ["ancient", "old", "modern"], ["difficult", "tricky", "easy"],
-      ["huge", "gigantic", "tiny"], ["strong", "powerful", "weak"], ["polite", "respectful", "rude"],
-      ["tidy", "neat", "messy"], ["brief", "short", "long"], ["shiny", "gleaming", "dull"],
-      ["arrive", "come", "leave"], ["generous", "giving", "selfish"], ["remember", "recall", "forget"],
-      ["accept", "take", "refuse"], ["victory", "win", "defeat"]
-    ],
-    challenge: [
-      ["enormous", "massive", "minuscule"], ["courageous", "heroic", "timid"], ["fortunate", "lucky", "unlucky"],
-      ["furious", "enraged", "serene"], ["abundant", "plentiful", "scarce"], ["hostile", "unfriendly", "welcoming"],
-      ["transparent", "clear", "opaque"], ["expand", "enlarge", "shrink"], ["conceal", "hide", "reveal"],
-      ["humble", "modest", "boastful"], ["frequent", "regular", "rare"], ["swift", "rapid", "sluggish"],
-      ["ascend", "climb", "descend"], ["genuine", "real", "fake"], ["praise", "compliment", "criticise"]
-    ]
-  };
-
-  function pairQuestion(level, mode){
-    const list = PAIRS[level];
-    const [word, same, opp] = choice(list);
-    const askSame = mode === "same" || (mode === "mix" && Math.random() < 0.5);
-    const answer = askSame ? same : opp, trap = askSame ? opp : same;
-    // the other choices are words that mean the same as other words, so only one fits
-    const others = sample(list.filter(w => w[0] !== word), 2).map(w => w[1]);
-    return pick({
-      promptHtml: askSame
-        ? `Which word means the <mark>same</mark> as “${word}”?`
-        : `Which word means the <mark>opposite</mark> of “${word}”?`,
-      answer, options: [answer, trap, ...others],
-      explain: `<b>${word}</b> and <b>${same}</b> mean the same thing (they're <i>synonyms</i>).<br>` +
-        `<b>${word}</b> and <b>${opp}</b> mean opposite things (they're <i>antonyms</i>).`
-    });
-  }
-
-  /* ---------------- spelling: [word, [wrong spellings], meaning, tip] ---------------- */
+  /* ---------------- spelling: [word, [wrong spellings], German, tip] ---------------- */
   const SPELLING = {
     warmup: [
-      ["because", ["becuase", "becaus"], "for the reason that", "<b>B</b>ig <b>E</b>lephants <b>C</b>an <b>A</b>lways <b>U</b>nderstand <b>S</b>mall <b>E</b>lephants."],
-      ["friend", ["freind", "frend"], "someone you like and trust", "A fri<b>end</b> is there to the <b>end</b>."],
-      ["said", ["sed", "siad"], "spoke these words", "It's s<b>ai</b>d, with an <b>ai</b> in the middle."],
-      ["people", ["peeple", "poeple"], "more than one person", "p<b>eo</b>ple: the <b>e</b> comes before the <b>o</b>."],
-      ["beautiful", ["beutiful", "beautifull"], "very lovely to look at", "<b>B</b>ig <b>E</b>lephants <b>A</b>re <b>U</b>gly: b-e-a-u, and only one <b>l</b> at the end."],
-      ["again", ["agian", "agen"], "one more time", "<b>a</b> + <b>gain</b>."],
-      ["school", ["skool", "shcool"], "where you go to learn", "It starts with <b>sch</b>, like <b>sch</b>edule."],
-      ["different", ["diffrent", "differant"], "not the same", "Say it slowly: dif-<b>fer</b>-<b>ent</b>."],
-      ["answer", ["anser", "answr"], "what you say back to a question", "There's a silent <b>w</b>: ans<b>w</b>er."],
-      ["tomorrow", ["tommorow", "tomorow"], "the day after today", "One <b>m</b>, two <b>r</b>s: to-mo-<b>rr</b>ow."],
-      ["Wednesday", ["Wensday", "Wednsday"], "the day after Tuesday", "Say it like it's spelled: <b>Wed</b>-<b>nes</b>-day."],
-      ["February", ["Febuary", "Febraury"], "the second month of the year", "Don't forget the first <b>r</b>: Feb-<b>r</b>u-ary."],
-      ["library", ["libary", "liberry"], "a place full of books to borrow", "There are two <b>r</b>s: li-<b>br</b>a-<b>r</b>y."],
-      ["enough", ["enuff", "enogh"], "as much as you need", "The <i>uff</i> sound is spelled <b>ough</b>, like in <i>tough</i>."]
+      ["because", ["becuase", "becaus"], "weil", "<b>B</b>ig <b>E</b>lephants <b>C</b>an <b>A</b>lways <b>U</b>nderstand <b>S</b>mall <b>E</b>lephants."],
+      ["friend", ["freind", "frend"], "der Freund", "A fri<b>end</b> is there to the <b>end</b>."],
+      ["school", ["skool", "shcool"], "die Schule", "It starts with <b>sch</b>, like in German, but you say “sk”."],
+      ["Wednesday", ["Wensday", "Wednsday"], "Mittwoch", "Say it like it's spelled: <b>Wed</b>-<b>nes</b>-day."],
+      ["Thursday", ["Thirsday", "Thurstay"], "Donnerstag", "<b>Thur</b>s-day: think of <i>Thor</i>, the god of thunder (Donner)!"],
+      ["February", ["Febuary", "Febraury"], "Februar", "Don't forget the first <b>r</b>: Feb-<b>r</b>u-ary."],
+      ["people", ["peeple", "poeple"], "die Leute", "p<b>eo</b>ple: the <b>e</b> comes before the <b>o</b>."],
+      ["beautiful", ["beutiful", "beautifull"], "schön", "<b>B</b>ig <b>E</b>lephants <b>A</b>re <b>U</b>gly: b-e-a-u, and only one <b>l</b> at the end."],
+      ["tomorrow", ["tommorow", "tomorow"], "morgen", "One <b>m</b>, two <b>r</b>s: to-mo-<b>rr</b>ow."],
+      ["birthday", ["birtday", "bierthday"], "der Geburtstag", "<b>birth</b> (Geburt) + <b>day</b> (Tag)."],
+      ["brother", ["bruther", "brohter"], "der Bruder", "b-r-<b>o</b>-t-h-e-r: it's an <b>o</b>, but you say “u”."],
+      ["write", ["rite", "writte"], "schreiben", "There's a silent <b>w</b> at the start: <b>w</b>rite."]
     ],
     practice: [
-      ["necessary", ["neccessary", "necesary"], "needed; you must have it", "One <b>C</b>ollar, two <b>S</b>leeves: one <b>c</b>, two <b>s</b>."],
-      ["separate", ["seperate", "separete"], "apart; not together", "There's <b>a rat</b> in sep<b>arat</b>e."],
-      ["definitely", ["definately", "definitly"], "for sure", "It has <b>finite</b> inside: de<b>finite</b>ly."],
-      ["believe", ["beleive", "belive"], "think something is true", "Never be<b>lie</b>ve a <b>lie</b>."],
-      ["receive", ["recieve", "receve"], "get something that's given to you", "<b>i</b> before <b>e</b>, except after <b>c</b>: re<b>cei</b>ve."],
-      ["surprise", ["suprise", "surprize"], "something you didn't expect", "Two <b>r</b>s: su<b>r</b>p<b>r</b>ise, and it ends in <b>-ise</b>."],
-      ["calendar", ["calender", "calandar"], "a chart of the days and months", "It ends in <b>-dar</b>, not <i>-der</i>."],
-      ["island", ["iland", "ilsand"], "land with water all around it", "An island <b>is land</b>."],
-      ["environment", ["enviroment", "envirnment"], "the world around us: air, land, water and nature", "There's <b>iron</b> in env<b>iron</b>ment."],
-      ["restaurant", ["resturant", "restaraunt"], "a place where you buy and eat meals", "Say it slowly: rest-<b>au</b>-rant."],
-      ["address", ["adress", "addres"], "where someone lives", "Two <b>d</b>s and two <b>s</b>es: a<b>dd</b>re<b>ss</b>."],
-      ["tongue", ["tounge", "tung"], "the part of your mouth you taste with", "It's t-<b>on</b>-g-u-e: the <b>o</b> comes before the <b>u</b>."],
-      ["weird", ["wierd", "weerd"], "very strange", "weird is weird: it breaks the <i>i before e</i> rule!"],
-      ["piece", ["peice", "piese"], "one part of something", "A <b>pie</b>ce of <b>pie</b>."],
-      ["disappear", ["dissapear", "disapear"], "go out of sight", "It's <b>dis</b> + <b>appear</b>: one <b>s</b>, two <b>p</b>s."]
+      ["forty", ["fourty", "forthy"], "vierzig", "four has a <b>u</b>, but f<b>o</b>rty doesn't!"],
+      ["ninety", ["ninty", "nintey"], "neunzig", "nine + ty: keep the <b>e</b>: nin<b>e</b>ty."],
+      ["eighth", ["eigth", "eightth"], "achte(r)", "eight + h: eigh<b>th</b>."],
+      ["twelfth", ["twelvth", "twelth"], "zwölfte(r)", "The <b>v</b> turns into an <b>f</b>: twel<b>f</b>th."],
+      ["science", ["sience", "scince"], "die Naturwissenschaft", "There's a <b>c</b> after the s: <b>sc</b>ience."],
+      ["geography", ["geografy", "geograpy"], "Geografie", "The “f” sound is spelled <b>ph</b>: geogra<b>ph</b>y."],
+      ["language", ["langauge", "languige"], "die Sprache", "lang-<b>ua</b>-ge: the <b>u</b> comes before the <b>a</b>."],
+      ["breakfast", ["brekfast", "breackfast"], "das Frühstück", "You <b>break</b> your <b>fast</b> (the night without food)."],
+      ["sandwich", ["sandwitch", "sendwich"], "das Sandwich", "No <i>t</i>: a sandwich isn't a witch!"],
+      ["trousers", ["trowsers", "trausers"], "die Hose", "t-r-<b>ou</b>-s-e-r-s, like <b>ou</b>t."],
+      ["favourite", ["favorit", "favourit"], "Lieblings-", "British spelling: fav-<b>our</b>-it<b>e</b>, with an e at the end."],
+      ["colour", ["coulor", "colur"], "die Farbe", "British spelling: col-<b>our</b>."]
     ],
     challenge: [
-      ["accommodate", ["accomodate", "acommodate", "accommadate"], "have enough room for", "It's big enough for two <b>c</b>s and two <b>m</b>s."],
-      ["embarrass", ["embarass", "embarras", "embarrasse"], "make someone feel silly or shy", "You go <b>r</b>eally <b>r</b>ed and <b>s</b>mile <b>s</b>hyly: two <b>r</b>s, two <b>s</b>es."],
-      ["rhythm", ["rythm", "rhythym", "rhytm"], "a beat in music that repeats", "<b>R</b>hythm <b>H</b>elps <b>Y</b>our <b>T</b>wo <b>H</b>ips <b>M</b>ove."],
-      ["conscious", ["concious", "consious", "conscous"], "awake and knowing what's going on", "It has <b>sci</b> in the middle: con<b>sci</b>ous."],
-      ["occasionally", ["ocasionally", "occasionaly", "occassionally"], "now and then; not often", "Two <b>c</b>s, one <b>s</b>, two <b>l</b>s."],
-      ["mischievous", ["mischievious", "mischevious", "mischivous"], "a little bit naughty in a playful way", "There's no <i>i</i> before the <b>ous</b>: mischie-<b>vous</b>."],
-      ["pronunciation", ["pronounciation", "pronunsiation", "pronunciasion"], "the way you say a word", "The verb is <i>pronounce</i>, but the noun drops the <b>o</b>: pro<b>nun</b>ciation."],
-      ["millennium", ["millenium", "milennium", "milenium"], "a thousand years", "Two <b>l</b>s and two <b>n</b>s: mi<b>ll</b>e<b>nn</b>ium."],
-      ["privilege", ["priviledge", "privelege", "privilige"], "a special right or treat", "There's no <i>d</i>, and it's pr<b>i</b>v<b>i</b>l<b>e</b>ge."],
-      ["guarantee", ["garantee", "guarentee", "gaurantee"], "a promise that something will happen", "<b>gu</b> at the start, like <b>gu</b>ard."],
-      ["parallel", ["paralel", "parrallel", "paralell"], "lines that never meet", "The two <b>l</b>s in the middle are parallel, like the lines: pa-ra-<b>ll</b>-el."],
-      ["recommend", ["reccomend", "recomend", "reccommend"], "say that something is good", "It's <b>re</b> + <b>commend</b>: one <b>c</b>, two <b>m</b>s."],
-      ["foreign", ["foriegn", "forein", "foreighn"], "from another country", "It's for-<b>eign</b>, like a king's r<b>eign</b>."],
-      ["vacuum", ["vaccum", "vacume", "vacum"], "a space with nothing in it; also a cleaner that sucks up dust", "One <b>c</b>, two <b>u</b>s: va<b>c</b>u<b>u</b>m."]
+      ["Switzerland", ["Swizerland", "Switzerlend"], "die Schweiz", "<b>Switz</b> + <b>er</b> + <b>land</b>."],
+      ["mountain", ["mountin", "montain"], "der Berg", "m-<b>ou</b>-n-t-<b>ai</b>-n: two vowel pairs."],
+      ["weather", ["wether", "wheather"], "das Wetter", "w-<b>ea</b>-ther, like h<b>ea</b>d."],
+      ["dangerous", ["dangerus", "dengerous"], "gefährlich", "<b>danger</b> + <b>ous</b>."],
+      ["ambulance", ["ambulence", "ambulanse"], "der Krankenwagen", "It ends in <b>-ance</b>."],
+      ["accident", ["acident", "accidant"], "der Unfall", "Two <b>c</b>s: a<b>cc</b>ident."],
+      ["hospital", ["hospitel", "hosptial"], "das Spital", "hos-pi-<b>tal</b>."],
+      ["careful", ["carefull", "carful"], "vorsichtig", "<b>care</b> + <b>ful</b>: <i>-ful</i> has only one <b>l</b>."],
+      ["interesting", ["intresting", "interessting"], "interessant", "Only one <b>s</b>, not two like German <i>interessant</i>: inter<b>e</b><b>s</b>ting."],
+      ["address", ["adress", "addres"], "die Adresse", "Two <b>d</b>s and two <b>s</b>es: a<b>dd</b>re<b>ss</b>. German has only one d!"],
+      ["different", ["diffrent", "differant"], "verschieden", "Say it slowly: dif-<b>fer</b>-<b>ent</b>."],
+      ["neighbour", ["neighbur", "naighbour"], "der Nachbar", "British spelling: n-<b>eigh</b>-b-<b>our</b>."]
     ]
   };
 
   function spellingQuestion(level, mode){
-    const [word, wrongs, meaning, tip] = choice(SPELLING[level]);
-    const explain = `<b>${word}</b> means <i>${meaning}</i>.<br>💡 ${tip}`;
+    const [word, wrongs, german, tip] = choice(SPELLING[level]);
+    const explain = `<b>${word}</b> = ${german}<br>💡 ${tip}`;
     if (mode === "type") {
       const hidden = word[0] + " _".repeat(word.length - 1);
       return typed({
-        promptHtml: `Spell the word that means “${meaning}”<span class="sub">🔊 Tap Listen to hear it · ${hidden} (${word.length} letters)</span>`,
-        prompt: `Spell the word that means “${meaning}”`,
+        promptHtml: `Spell the English word for „${german}“<span class="sub">🔊 Tap Listen to hear it · ${hidden} (${word.length} letters)</span>`,
+        prompt: `Spell the English word for „${german}“`,
         answers: [word], say: say(word),
         hint: "Tap 🔊 Listen to hear the word, then type it.",
         explain
@@ -181,167 +147,154 @@
     }
     return pick({
       prompt: "Which spelling is right?",
-      answer: word, options: [word, ...wrongs.slice(0, level === "challenge" ? 3 : 2)],
+      answer: word, options: [word, ...wrongs],
       say: say(word), sayAfter: true,
       explain
     });
   }
 
-  /* ---------------- word types: words in {braces|type} can be asked about ---------------- */
-  const TYPES = {
-    noun: ["a noun", "a <i>person, place, thing or idea</i>"],
-    verb: ["a verb", "an <i>action</i> word, or a <i>being</i> word like <i>is</i> and <i>was</i>"],
-    adj:  ["an adjective", "a word that <i>describes a noun</i>: what kind, which one or how many"],
-    adv:  ["an adverb", "a word that tells <i>how, when or where</i> something happens. Lots of them end in <b>-ly</b>"],
-    pron: ["a pronoun", "a word that <i>takes the place of a noun</i>, like he, she, it, we and they"],
-    prep: ["a preposition", "a word that shows <i>where or when</i>, like on, under, behind and after"],
-    conj: ["a conjunction", "a word that <i>joins</i> words or ideas, like and, but, or and because"]
-  };
-  const TYPE_NAMES = { noun: "noun", verb: "verb", adj: "adjective", adv: "adverb", pron: "pronoun", prep: "preposition", conj: "conjunction" };
-  const TYPE_LEVELS = {
-    warmup: ["noun", "verb", "adj"],
-    practice: ["noun", "verb", "adj", "adv"],
-    challenge: ["noun", "verb", "adj", "adv", "pron", "prep", "conj"]
-  };
-  const TYPE_SENTENCES = [
-    "The {hungry|adj} {cat|noun} {ate|verb} {quickly|adv}.",
-    "{She|pron} {found|verb} a {shiny|adj} {coin|noun} {under|prep} the {sofa|noun}.",
-    "My {little|adj} {brother|noun} {sings|verb} {loudly|adv} {in|prep} the {bath|noun}.",
-    "We {played|verb} {football|noun} {and|conj} {they|pron} {watched|verb}.",
-    "The {old|adj} {castle|noun} {stood|verb} {on|prep} a {steep|adj} {hill|noun}.",
-    "{He|pron} {ran|verb} {fast|adv} {because|conj} he was {late|adj}.",
-    "Five {ducks|noun} {swam|verb} {slowly|adv} {across|prep} the {pond|noun}.",
-    "The {teacher|noun} {smiled|verb} {happily|adv} {at|prep} {us|pron}.",
-    "{It|pron} {rained|verb} all {day|noun}, {but|conj} we {had|verb} {fun|noun}.",
-    "A {giant|adj} {wave|noun} {crashed|verb} {onto|prep} the {beach|noun}.",
-    "{They|pron} {climbed|verb} the {tall|adj} {tree|noun} {carefully|adv}.",
-    "The {puppy|noun} {chewed|verb} my {new|adj} {shoe|noun}.",
-    "{Yesterday|adv} we {visited|verb} {Grandma|noun}.",
-    "The {spaceship|noun} {zoomed|verb} {past|prep} the {bright|adj} {moon|noun}.",
-    "{I|pron} {like|verb} {apples|noun} {or|conj} {pears|noun}.",
-    "{Suddenly|adv}, the {lights|noun} {flickered|verb}.",
-    "The {clever|adj} {fox|noun} {hid|verb} {behind|prep} a {rock|noun}.",
-    "{We|pron} {laughed|verb} {and|conj} {cheered|verb} {loudly|adv}."
-  ];
-
-  function wordTypeQuestion(level){
-    const allowed = TYPE_LEVELS[level];
-    const tag = /\{([^|}]+)\|(\w+)\}/g;
-    const asks = [];
-    TYPE_SENTENCES.forEach((s, si) => {
-      let ti = 0;
-      s.replace(tag, (m, word, type) => { if (allowed.includes(type)) asks.push({ si, ti, word, type }); ti++; return m; });
-    });
-    const q = choice(asks);
-    let ti = 0;
-    const sentence = TYPE_SENTENCES[q.si].replace(tag, (m, word) => ti++ === q.ti ? `<mark>${word}</mark>` : word);
-    const answer = TYPE_NAMES[q.type];
-    // warm-up and practice always show the same buttons in the same order; challenge picks 4 of the 7
-    const options = level === "challenge"
-      ? [answer, ...sample(allowed.filter(t => t !== q.type), 3).map(t => TYPE_NAMES[t])]
-      : allowed.map(t => TYPE_NAMES[t]);
-    const [name, what] = TYPES[q.type];
-    return pick({
-      promptHtml: `${sentence}<span class="sub">What kind of word is “${q.word}”?</span>`,
-      prompt: sentence.replace(/<[^>]+>/g, ""),
-      answer, options,
-      keepOrder: level !== "challenge",
-      explain: `<b>${q.word}</b> is ${name}. That's ${what}.`
-    });
-  }
-  /* ---------------- grammar: [sentence with ___, answer, [wrong], why] ---------------- */
-  const GRAMMAR = {
-    warmup: [
-      ["I saw two ___ in the field.", "sheep", ["sheeps", "sheepes"], "<i>Sheep</i> stays the same: one sheep, two sheep."],
-      ["There are three ___ in the box.", "mice", ["mouses", "mices"], "One mouse, two <b>mice</b>."],
-      ["She ate ___ apple.", "an", ["a"], "Use <b>an</b> before a vowel sound: <i>an apple, an egg</i>."],
-      ["He is ___ good friend.", "a", ["an"], "Use <b>a</b> before a consonant sound: <i>a good friend</i>."],
-      ["Yesterday I ___ to the park.", "went", ["goed", "go"], "<i>Go</i> is irregular: today I go, yesterday I <b>went</b>."],
-      ["My two ___ are sore after the race.", "feet", ["foots", "feets"], "One foot, two <b>feet</b>."],
-      ["The ___ are playing outside.", "children", ["childs", "childrens"], "One child, two <b>children</b>."],
-      ["We ___ a movie last night.", "watched", ["watch", "watches"], "<i>Last night</i> is in the past, so add <b>-ed</b>: watched."],
-      ["She ___ her lunch an hour ago.", "ate", ["eated", "eat"], "<i>Eat</i> is irregular: today I eat, yesterday I <b>ate</b>."],
-      ["There ___ lots of cars on the road.", "are", ["is"], "<i>Lots of cars</i> is more than one, so use <b>are</b>."],
-      ["I packed two ___ for the trip.", "boxes", ["boxs", "boxies"], "Words ending in <b>x</b> add <b>-es</b>: box → boxes."],
-      ["Look at those cute ___!", "babies", ["babys", "babyes"], "Consonant + <b>y</b>: change the y to <b>i</b> and add <b>-es</b>: baby → babies."]
+  /* ---------------- verbs and grammar: [sentence with ___ and a (clue), answer, [wrong], tip] ---------------- */
+  const VERBS = {
+    warmup: [ // present simple
+      ["My sister ___ tennis every Monday. (play)", "plays", ["play", "playing"], "he / she / it: add <b>-s</b>. My sister plays."],
+      ["I ___ to school by bus. (go)", "go", ["goes", "going"], "With I, you, we and they there's no -s: I go."],
+      ["Tom ___ his teeth every morning. (brush)", "brushes", ["brushs", "brush"], "After <b>sh, ch, s, x</b> add <b>-es</b>: brushes."],
+      ["She ___ TV after school. (watch)", "watches", ["watchs", "watch"], "After <b>ch</b> add <b>-es</b>: watches."],
+      ["We ___ in Baar. (live)", "live", ["lives", "living"], "With we there's no -s: we live."],
+      ["Mia ___ English at school. (learn)", "learns", ["learn", "learnes"], "he / she / it: add <b>-s</b>. Mia learns."],
+      ["My dad ___ in Zug. (work)", "works", ["work", "workes"], "he / she / it: add <b>-s</b>. My dad works."],
+      ["Lea ___ hard for her tests. (study)", "studies", ["studys", "study"], "Consonant + <b>y</b>: change y to <b>i</b> and add <b>-es</b>: studies."],
+      ["___ you like pizza?", "Do", ["Does", "Are"], "Questions with I, you, we, they start with <b>Do</b>."],
+      ["___ your brother play football?", "Does", ["Do", "Is"], "Questions with he, she, it start with <b>Does</b>."],
+      ["He ___ like spiders.", "doesn't", ["don't", "isn't"], "he / she / it: <b>doesn't</b> + verb."],
+      ["I ___ have a pet.", "don't", ["doesn't", "am not"], "I / you / we / they: <b>don't</b> + verb."]
     ],
-    practice: [
-      ["___ going to the beach today.", "They're", ["Their", "There"], "<b>They're</b> is short for <i>they are</i>."],
-      ["The kids forgot ___ bags.", "their", ["there", "they're"], "<b>Their</b> means <i>belonging to them</i>."],
-      ["Put the box over ___.", "there", ["their", "they're"], "<b>There</b> is a place. It has <i>here</i> inside it: t<b>here</b>."],
-      ["The cat licked ___ paw.", "its", ["it's"], "<b>Its</b> means <i>belonging to it</i>, with no apostrophe."],
-      ["___ raining outside.", "It's", ["Its"], "<b>It's</b> is short for <i>it is</i>."],
-      ["Is this ___ coat?", "your", ["you're"], "<b>Your</b> means <i>belonging to you</i>."],
-      ["___ my best friend!", "You're", ["Your"], "<b>You're</b> is short for <i>you are</i>."],
-      ["Can I come ___?", "too", ["to", "two"], "<b>Too</b> means <i>also</i> (or <i>very</i>): it has an extra <b>o</b>."],
-      ["We ___ late for school.", "were", ["was"], "Use <b>were</b> with <i>we, you</i> and <i>they</i>."],
-      ["She ___ happy to see us.", "was", ["were"], "Use <b>was</b> with <i>I, he, she</i> and <i>it</i>."],
-      ["He played really ___.", "well", ["good"], "<b>Well</b> tells <i>how</i> you do something. <i>Good</i> describes a thing: a good game."],
-      ["This pizza is ___ than that one.", "better", ["gooder", "more good"], "good → <b>better</b> → best."],
-      ["That was the ___ day ever!", "best", ["goodest", "most good"], "good → better → <b>best</b>."],
-      ["Mia and ___ went to the shop.", "I", ["me"], "Take away <i>Mia and</i>: “<b>I</b> went to the shop” sounds right."],
-      ["Grandma gave sweets to Leo and ___.", "me", ["I"], "Take away <i>Leo and</i>: “gave sweets to <b>me</b>” sounds right."]
+    practice: [ // present continuous and present simple
+      ["Look! The dog ___ in the garden. (run)", "is running", ["runs", "are running"], "<i>Look!</i> means it's happening now: <b>is + -ing</b>. Run → ru<b>nn</b>ing."],
+      ["Listen! Somebody ___ the piano. (play)", "is playing", ["plays", "are playing"], "<i>Listen!</i> means it's happening now: <b>is playing</b>."],
+      ["We ___ a test right now. (write)", "are writing", ["is writing", "are writeing"], "<i>right now</i>: <b>are + -ing</b>. Write loses its e: writing."],
+      ["I ___ my homework at the moment. (do)", "am doing", ["is doing", "do"], "<i>at the moment</i>: <b>am + -ing</b> with I."],
+      ["My mum always ___ coffee in the morning. (drink)", "drinks", ["is drinking", "drink"], "<i>always</i> means a habit: present simple, drinks."],
+      ["It ___ now. Take an umbrella! (rain)", "is raining", ["rains", "raining"], "<i>now</i>: <b>is raining</b>."],
+      ["Every Saturday we ___ football. (play)", "play", ["are playing", "plays"], "<i>Every Saturday</i> is a habit: present simple, we play."],
+      ["Why ___ you laughing?", "are", ["do", "is"], "laughing (-ing) needs <b>am / is / are</b>: Why are you laughing?"],
+      ["She ___ right now. (swim)", "is swimming", ["swims", "is swiming"], "<i>right now</i>: is + -ing. Swim → swi<b>mm</b>ing."],
+      ["Look! The children ___ in the snow. (play)", "are playing", ["is playing", "play"], "<i>The children</i> is plural: <b>are playing</b>."],
+      ["He usually ___ his bike to school. (ride)", "rides", ["is riding", "ride"], "<i>usually</i> means a habit: present simple, rides."],
+      ["What ___ you doing?", "are", ["do", "is"], "doing (-ing) needs <b>are</b> with you."]
     ],
-    challenge: [
-      ["If I ___ you, I'd say sorry.", "were", ["was", "am"], "For <i>if</i> wishes and pretend ideas, use <b>were</b>: <i>If I were a bird…</i>"],
-      ["There are ___ cookies than yesterday.", "fewer", ["less"], "Use <b>fewer</b> for things you can count, like cookies."],
-      ["I have ___ time than you.", "less", ["fewer"], "Use <b>less</b> for things you can't count, like time or water."],
-      ["She ___ already left when we arrived.", "had", ["has", "have"], "Something that happened <i>before</i> another past thing uses <b>had</b>."],
-      ["He ___ his homework yesterday.", "did", ["done", "doed"], "<i>Done</i> needs a helper (<i>has done</i>). On its own in the past: <b>did</b>."],
-      ["Between you and ___, it was boring.", "me", ["I"], "After words like <i>between, to, with</i>, use <b>me</b>."],
-      ["She ran ___ than her brother.", "faster", ["more fast", "fastest"], "Short words add <b>-er</b> to compare two things: fast → <b>faster</b>."],
-      ["This is the ___ book in the library.", "most interesting", ["interestingest", "more interesting"], "Long words use <b>most</b> for the top of a group: the <b>most interesting</b>."],
-      ["We should ___ gone earlier.", "have", ["of"], "It's <b>should have</b>. It only <i>sounds</i> like “should of”."],
-      ["The ___ toys were everywhere.", "children's", ["childrens'", "childrens"], "<i>Children</i> doesn't end in s, so add <b>'s</b>: children's."],
-      ["Both ___ tails were wagging.", "dogs'", ["dog's", "dogs"], "More than one dog, so the apostrophe goes <b>after</b> the s: dogs'."],
-      ["I ___ seen that film twice.", "have", ["has", "of"], "Use <b>have</b> with <i>I, you, we</i> and <i>they</i>."],
-      ["Everyone ___ their own lunch.", "brought", ["brung", "bringed"], "<i>Bring</i> is irregular: today I bring, yesterday I <b>brought</b>."],
-      ["The balloon ___ up into the sky.", "rose", ["rised", "raised"], "<i>Rise</i> is irregular: today it rises, yesterday it <b>rose</b>."]
+    challenge: [ // past simple
+      ["Yesterday we ___ to the zoo. (go)", "went", ["goed", "go"], "go is irregular: go → <b>went</b>."],
+      ["Last week I ___ my grandma. (visit)", "visited", ["visit", "visitted"], "Regular verbs add <b>-ed</b>: visited."],
+      ["She ___ a big pizza last night. (eat)", "ate", ["eated", "eats"], "eat is irregular: eat → <b>ate</b>."],
+      ["We ___ a great film on Saturday. (see)", "saw", ["seed", "seen"], "see is irregular: see → <b>saw</b>."],
+      ["Our team ___ the match 3–1. (win)", "won", ["winned", "win"], "win is irregular: win → <b>won</b>."],
+      ["I ___ my keys yesterday. (lose)", "lost", ["losed", "lose"], "lose is irregular: lose → <b>lost</b>."],
+      ["He ___ a letter to his friend. (write)", "wrote", ["writed", "written"], "write is irregular: write → <b>wrote</b>."],
+      ["The children ___ tired after the trip. (be)", "were", ["was", "are"], "be in the past: I / he / she / it <b>was</b>, we / you / they <b>were</b>."],
+      ["It ___ very cold yesterday. (be)", "was", ["were", "is"], "it → <b>was</b>."],
+      ["___ you go to the party on Friday?", "Did", ["Do", "Were"], "Questions in the past start with <b>Did</b>."],
+      ["She didn't ___ the bus this morning. (catch)", "catch", ["caught", "catched"], "After <b>didn't</b> use the normal verb: didn't catch."],
+      ["The ambulance ___ very quickly. (come)", "came", ["comed", "come"], "come is irregular: come → <b>came</b>."],
+      ["I ___ in bed because I was ill. (stay)", "stayed", ["stay", "staied"], "Vowel + y just adds <b>-ed</b>: stayed."],
+      ["We ___ a lot of photos in the mountains. (take)", "took", ["taked", "taken"], "take is irregular: take → <b>took</b>."]
     ]
   };
 
-  function grammarQuestion(level){
-    const [sentence, answer, wrong, why] = choice(GRAMMAR[level]);
+  const GRAMMAR = {
+    warmup: [ // be, have got, there is/are, a/an, plurals
+      ["I ___ eleven years old.", "am", ["is", "are"], "I <b>am</b>, you <b>are</b>, he / she / it <b>is</b>."],
+      ["My friends ___ in the garden.", "are", ["is", "am"], "<i>My friends</i> is plural: they <b>are</b>."],
+      ["She ___ got a new bike.", "has", ["have", "is"], "he / she / it <b>has got</b>."],
+      ["We ___ got a cat.", "have", ["has", "are"], "I / you / we / they <b>have got</b>."],
+      ["There ___ a cat on the sofa.", "is", ["are", "am"], "One thing: <b>there is</b>."],
+      ["There ___ three books on the table.", "are", ["is", "be"], "More than one: <b>there are</b>."],
+      ["I've got ___ umbrella.", "an", ["a"], "Use <b>an</b> before a vowel sound: an umbrella, an apple."],
+      ["She's got ___ dog.", "a", ["an"], "Use <b>a</b> before a consonant sound: a dog."],
+      ["Two ___ are playing outside.", "children", ["childs", "childrens"], "One child, two <b>children</b>."],
+      ["I can see three ___.", "mice", ["mouses", "mices"], "One mouse, two <b>mice</b>."],
+      ["My ___ are cold.", "feet", ["foots", "feets"], "One foot, two <b>feet</b>."],
+      ["He ___ my best friend.", "is", ["are", "am"], "he / she / it <b>is</b>."]
+    ],
+    practice: [ // prepositions, question words, his/her, can
+      ["The ball is ___ the box. (inside it)", "in", ["on", "under"], "<b>in</b> = inside."],
+      ["The lamp is ___ the table. (on top of it)", "on", ["in", "under"], "<b>on</b> = on top of."],
+      ["My shoes are ___ the bed. (below it)", "under", ["on", "in"], "<b>under</b> = below."],
+      ["The bank is ___ the school and the shop.", "between", ["next", "under"], "<b>between</b> = in the middle of two things."],
+      ["My house is ___ to the park.", "next", ["between", "in"], "<b>next to</b> = right beside."],
+      ["___ do you live? – In Baar.", "Where", ["What", "When"], "<b>Where</b> asks about a place."],
+      ["___ is that boy? – That's my brother.", "Who", ["What", "Where"], "<b>Who</b> asks about a person."],
+      ["___ pets have you got? – Two.", "How many", ["How much", "What"], "<b>How many</b> asks for a number."],
+      ["___ are you sad? – Because I lost my ball.", "Why", ["What", "Where"], "<b>Why</b> asks for a reason. The answer starts with <i>because</i>."],
+      ["___ is your birthday? – In May.", "When", ["Where", "Who"], "<b>When</b> asks about a time."],
+      ["This is Anna. ___ bag is red.", "Her", ["His", "She"], "For a girl or woman: <b>her</b> bag."],
+      ["This is Tom. ___ dog is brown.", "His", ["Her", "He"], "For a boy or man: <b>his</b> dog."],
+      ["I ___ swim very well.", "can", ["cans", "can to"], "<b>can</b> never changes and has no <i>to</i>: I can swim."],
+      ["She ___ play the piano. She never learned it.", "can't", ["can", "cans"], "<b>can't</b> = can not."]
+    ],
+    challenge: [ // comparing, some/any, much/many
+      ["An elephant is ___ than a mouse.", "bigger", ["more big", "biggest"], "Short words: add <b>-er</b>. Big → bi<b>gg</b>er."],
+      ["The Matterhorn is ___ than the Rigi.", "higher", ["more high", "highest"], "Short words: add <b>-er</b>: higher."],
+      ["This film is ___ than the book.", "more exciting", ["excitinger", "most exciting"], "Long words: use <b>more</b>: more exciting."],
+      ["My test was ___ than last time.", "better", ["gooder", "best"], "good → <b>better</b> → best."],
+      ["That was the ___ test ever!", "worst", ["baddest", "worse"], "bad → worse → <b>worst</b>."],
+      ["Today is the ___ day of the year.", "hottest", ["hotest", "most hot"], "hot → hotter → the ho<b>tt</b>est."],
+      ["She is the ___ girl in our class.", "tallest", ["most tall", "taller"], "The top of a group: <b>the -est</b>."],
+      ["Zug is ___ than Zürich.", "smaller", ["more small", "smallest"], "Comparing two things: <b>-er than</b>."],
+      ["There isn't ___ juice left.", "any", ["some", "many"], "In negative sentences use <b>any</b>."],
+      ["I'd like ___ apples, please.", "some", ["any", "much"], "When you ask for things politely, use <b>some</b>."],
+      ["How ___ money have you got?", "much", ["many"], "Things you can't count (money, water): <b>much</b>."],
+      ["How ___ brothers have you got?", "many", ["much"], "Things you can count: <b>many</b>."],
+      ["This is the ___ book in the library.", "most interesting", ["interestingest", "more interesting"], "Long words, top of a group: <b>the most</b>."],
+      ["Lucerne is ___ from Baar than Zug.", "farther", ["more far", "farest"], "far → <b>farther</b> (or further) → farthest."]
+    ]
+  };
+
+  function gapQuestion(list){
+    const [sentence, answer, wrong, tip] = choice(list);
+    const clue = sentence.match(/ \(([^)]+)\)$/);
+    const shown = clue ? sentence.slice(0, clue.index) : sentence;
     return pick({
-      prompt: sentence,
+      promptHtml: clue ? `${shown}<span class="sub">(${clue[1]})</span>` : shown, prompt: shown,
       answer, options: [answer, ...wrong],
-      explain: `“${sentence.replace("___", "<b>" + answer + "</b>")}”<br>💡 ${why}`
+      say: say(shown.replace("___", answer)), sayAfter: true,
+      explain: `“${shown.replace("___", "<b>" + answer + "</b>")}”<br>💡 ${tip}`
     });
   }
 
   /* ---------------- topics ---------------- */
   const TOPICS = [
     {
-      id: "meanings", label: "Word Meanings", icon: "📚", title: "What does it mean?",
-      levelDesc: { warmup: "Everyday words", practice: "5th-grade words", challenge: "Big brainy words" },
-      hint: "Tap the meaning that fits, or press 1–4.",
-      generate: meaningQuestion
+      id: "words", label: "Words", icon: "📚", title: "Vocabulary",
+      levelDesc: { warmup: "At school", practice: "Free time, food, clothes and weather", challenge: "Town, traffic and emergencies" },
+      hint: "Tap the answer, or press 1–4.",
+      modes: [{ id: "en2de", label: "🇬🇧 → 🇨🇭" }, { id: "de2en", label: "🇨🇭 → 🇬🇧" }],
+      generate: wordQuestion
     },
     {
-      id: "pairs", label: "Same & Opposite", icon: "🔁", title: "Synonyms & antonyms",
-      levelDesc: { warmup: "Easy word pairs", practice: "Trickier pairs", challenge: "Big brainy pairs" },
-      hint: "Synonyms mean the same. Antonyms mean the opposite.",
-      modes: [{ id: "mix", label: "Mix" }, { id: "same", label: "Same only" }, { id: "opposite", label: "Opposite only" }],
-      generate: pairQuestion
+      id: "opposites", label: "Opposites", icon: "↔️", title: "Find the opposite",
+      levelDesc: { warmup: "Easy opposites", practice: "Describing words", challenge: "Doing words and more" },
+      hint: "Opposites are as different as can be: hot ↔ cold.",
+      generate: oppositeQuestion
     },
     {
       id: "spelling", label: "Spelling", icon: "🐝", title: "Spell it right",
-      levelDesc: { warmup: "Words people often get wrong", practice: "Tricky 5th-grade words", challenge: "Super-tricky words" },
+      levelDesc: { warmup: "Days, months and everyday words", practice: "Numbers, school subjects and food", challenge: "Town, travel and tricky words" },
       hint: "Look closely at every letter!",
       modes: [{ id: "pick", label: "Pick it" }, { id: "type", label: "Type it 🔊" }],
       generate: spellingQuestion
     },
     {
-      id: "types", label: "Word Types", icon: "🧩", title: "Nouns, verbs and more",
-      levelDesc: { warmup: "Nouns, verbs and adjectives", practice: "…plus adverbs", challenge: "…plus pronouns, prepositions and conjunctions" },
-      hint: "Look at what the word is doing in the sentence.",
-      generate: wordTypeQuestion
+      id: "verbs", label: "Verbs", icon: "🏃", title: "Verbs and tenses",
+      levelDesc: { warmup: "Present simple: he plays, do / does", practice: "Present continuous: is playing", challenge: "Past simple: went, saw, did" },
+      hint: "Look for signal words: every day, now, yesterday…",
+      generate: level => gapQuestion(VERBS[level])
     },
     {
       id: "grammar", label: "Grammar", icon: "✏️", title: "Pick the right word",
-      levelDesc: { warmup: "Plurals, a/an and the past", practice: "their/there/they're, its/it's and more", challenge: "fewer/less, apostrophes and tricky verbs" },
-      hint: "Read the whole sentence out loud in your head.",
-      generate: grammarQuestion
+      levelDesc: { warmup: "am / is / are, have got, there is, a / an", practice: "in / on / under, question words, his / her, can", challenge: "Comparing: bigger, the best, much / many" },
+      hint: "Read the whole sentence in your head.",
+      generate: level => gapQuestion(GRAMMAR[level])
     }
   ];
 
@@ -350,9 +303,9 @@
 
   Notebook.register({
     id: "english", title: "Word Wizard", icon: "🧙",
-    blurb: "English: word meanings, spelling, word types and grammar, with a tip every time.",
+    blurb: "School English for 5th grade, like Young World: words, spelling, verbs and grammar.",
     unit: "/// an English practice notebook",
-    tagline: "Five English topics, endless fresh questions, and a tip for every answer",
+    tagline: "5th-grade school English, like in Young World, with a tip for every answer",
     nameFallback: "your word wizard",
     subject: "English",
     wordy: true,

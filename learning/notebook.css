@@ -123,17 +123,14 @@ nav.line{
 .choice.right{ opacity: 1; border-color: var(--good); background: var(--good-bg); }
 .choice.wrong{ opacity: 1; border-color: var(--bad); background: var(--bad-bg); }
 
-/* extra letters for typing German: ä ö ü ß */
+/* extra letter buttons for typing, like ä ö ü */
 .letter-keys{ display: flex; gap: 8px; flex-wrap: wrap; margin-top: -8px; }
 .letter-keys .btn{ font-size: 16px; min-width: 42px; }
 
-/* explanations: der / die / das colours and verb tables */
-.explain .der{ color: #5aa0ff; font-weight: 700; }
-.explain .die{ color: #ff6b81; font-weight: 700; }
-.explain .das{ color: #4fcf7a; font-weight: 700; }
-.explain table.verb{ border-collapse: collapse; margin-top: 6px; font-size: 13.5px; }
-.explain table.verb td{ padding: 2px 14px 2px 0; }
-.explain table.verb tr.hit td{ color: var(--good); font-weight: 700; }
+/* explanations: word parts (morphemes) in colour */
+.explain .m-pre{ color: #5aa0ff; font-weight: 700; }
+.explain .m-stem{ color: var(--accent); font-weight: 700; }
+.explain .m-suf{ color: #4fcf7a; font-weight: 700; }
 
 .card-foot{ display: flex; justify-content: space-between; align-items: center; gap: 10px; flex-wrap: wrap; }
 

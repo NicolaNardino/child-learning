@@ -1,302 +1,409 @@
-/* Deutsch Dash: German for English speakers. Words, numbers, der/die/das, phrases and verbs,
-   at three levels, with a 🔊 button to hear the German and a tip for every answer. */
+/* Deutsch Dash: Deutsch für die 5. Klasse in der Schweiz, passend zu «Die Sprachstarken 5»
+   (Lehrplan 21): Wortarten, die vier Fälle, Verben und Zeitformen, Rechtschreibung,
+   Satzzeichen und Morpheme. Schweizer Rechtschreibung: immer ss, nie ß, und «Anführungszeichen». */
 (function(){
   "use strict";
-  const { pick, typed, sample, choice } = Notebook;
-  const say = text => ({ text, lang: "de-DE" });
-  const KEYS = ["ä", "ö", "ü", "ß"];
-  const TYPE_HINT = "Use the ä ö ü ß buttons, or type ae, oe, ue, ss.";
-  const art = a => `<span class="${a}">${a}</span>`;
+  const { pick, choice } = Notebook;
 
-  /* ---------------- words: [German, English (others that count after /), emoji] ---------------- */
-  const WORDS = {
+  /* ---------------- Wortarten: Wörter in {Klammern|Art} können abgefragt werden ---------------- */
+  const WORTARTEN = {
+    n: ["Nomen", "Artikelprobe: Man kann <i>der, die</i> oder <i>das</i> davor setzen. Nomen schreibt man gross."],
+    v: ["Verb", "Personalform-Probe: Verben verändern sich mit der Person (ich …, du …, er …) und mit der Zeit."],
+    a: ["Adjektiv", "Vergleichsprobe: Adjektive kann man steigern (laut – lauter – am lautesten)."],
+    p: ["Pronomen", "Pronomen begleiten ein Nomen oder stehen für ein Nomen: ich, er, mein, dieser …"],
+    x: ["Partikel", "Partikeln verändern sich nie: und, auf, heute, sehr, nicht …"]
+  };
+  const WORTART_LEVELS = { warmup: ["n", "v", "a"], practice: ["n", "v", "a"], challenge: ["n", "v", "a", "p", "x"] };
+  const WORTART_SAETZE = {
     warmup: [
-      ["rot", "red", "🔴"], ["blau", "blue", "🔵"], ["grün", "green", "🟢"], ["gelb", "yellow", "🟡"],
-      ["schwarz", "black", "⚫"], ["weiß", "white", "⚪"], ["braun", "brown", "🟤"], ["lila", "purple", "🟣"],
-      ["der Hund", "dog", "🐶"], ["die Katze", "cat", "🐱"], ["das Pferd", "horse", "🐴"], ["die Kuh", "cow", "🐮"],
-      ["der Vogel", "bird", "🐦"], ["die Maus", "mouse", "🐭"], ["der Fisch", "fish", "🐟"], ["das Schwein", "pig", "🐷"],
-      ["die Mutter", "mother/mum/mom", "👩"], ["der Vater", "father/dad", "👨"], ["der Bruder", "brother", "👦"],
-      ["die Schwester", "sister", "👧"], ["die Oma", "grandma/granny", "👵"], ["der Opa", "grandpa/grandad", "👴"]
+      "Der {Hund|n} {bellt|v} {laut|a}.",
+      "Meine {Schwester|n} {liest|v} ein {spannendes|a} {Buch|n}.",
+      "Im {Sommer|n} {schwimmen|v} wir im {kalten|a} {See|n}.",
+      "Die {Katze|n} {schläft|v} auf dem {weichen|a} {Sofa|n}.",
+      "Die {Kinder|n} {bauen|v} eine {grosse|a} {Sandburg|n}.",
+      "Der {rote|a} {Zug|n} {fährt|v} nach {Zug|n}.",
+      "Mein {Bruder|n} {isst|v} einen {sauren|a} {Apfel|n}.",
+      "Die {Lehrerin|n} {erzählt|v} eine {lustige|a} {Geschichte|n}."
     ],
     practice: [
-      ["der Apfel", "apple", "🍎"], ["die Banane", "banana", "🍌"], ["das Brot", "bread", "🍞"], ["der Käse", "cheese", "🧀"],
-      ["die Milch", "milk", "🥛"], ["das Wasser", "water", "💧"], ["das Ei", "egg", "🥚"], ["der Kuchen", "cake", "🍰"],
-      ["die Erdbeere", "strawberry", "🍓"], ["das Eis", "ice cream/ice", "🍦"],
-      ["die Schule", "school", "🏫"], ["das Buch", "book", "📕"], ["der Stift", "pen/pencil", "✏️"], ["der Tisch", "table", "🪑"],
-      ["der Stuhl", "chair", "🪑"], ["die Tür", "door", "🚪"], ["das Fenster", "window", "🪟"], ["das Haus", "house", "🏠"],
-      ["der Kopf", "head", "🙂"], ["die Hand", "hand", "✋"], ["der Fuß", "foot", "🦶"], ["das Auge", "eye", "👁️"],
-      ["die Nase", "nose", "👃"], ["der Mund", "mouth", "👄"]
+      "Das {Lachen|n} der {Kinder|n} {war|v} {laut|a}.",
+      "Die {Kinder|n} {warten|v} {geduldig|a} vor der {Schule|n}.",
+      "Beim {Zeichnen|n} {vergisst|v} {Lena|n} die {Zeit|n}.",
+      "Der {Lehrer|n} {erklärt|v} die {schwierige|a} {Aufgabe|n} {genau|a}.",
+      "Das {Wetter|n} {wird|v} {wärmer|a} und {sonniger|a}.",
+      "{Luca|n} {rennt|v} {schneller|a} als sein {Bruder|n}.",
+      "Das {Schwimmen|n} im {See|n} {macht|v} {Spass|n}.",
+      "Die {müden|a} {Wanderer|n} {ruhen|v} sich aus."
     ],
     challenge: [
-      ["spielen", "to play/play", "⚽"], ["laufen", "to run/run", "🏃"], ["essen", "to eat/eat", "🍽️"],
-      ["trinken", "to drink/drink", "🥤"], ["schlafen", "to sleep/sleep", "😴"], ["schwimmen", "to swim/swim", "🏊"],
-      ["lesen", "to read/read", "📖"], ["springen", "to jump/jump", "🦘"],
-      ["groß", "big/tall/large", "🦒"], ["klein", "small/little", "🐜"], ["schnell", "fast/quick", "⚡"],
-      ["langsam", "slow", "🐢"], ["kalt", "cold", "🥶"], ["heiß", "hot", "🔥"], ["glücklich", "happy", "😄"], ["müde", "tired", "🥱"],
-      ["das Auto", "car", "🚗"], ["der Zug", "train", "🚆"], ["das Fahrrad", "bike/bicycle", "🚲"],
-      ["das Flugzeug", "plane/aeroplane/airplane", "✈️"], ["das Schiff", "ship", "🚢"],
-      ["die Sonne", "sun", "☀️"], ["der Regen", "rain", "🌧️"], ["der Schnee", "snow", "❄️"], ["die Wolke", "cloud", "☁️"]
+      "{Er|p} {rennt|v} {schneller|a} {als|x} {sein|p} {Bruder|n}.",
+      "{Wir|p} {spielen|v} {heute|x} {Fussball|n} {auf|x} dem {Pausenplatz|n}.",
+      "{Sie|p} {trinkt|v} {warmen|a} {Tee|n}, {denn|x} {sie|p} {friert|v}.",
+      "{Dieser|p} {Berg|n} {ist|v} {höher|a} {als|x} der {Pilatus|n}.",
+      "{Ich|p} {habe|v} {mein|p} {Velo|n} {gestern|x} {geputzt|v}.",
+      "{Unser|p} {Hund|n} {frisst|v} {nicht|x} gern {Gemüse|n}.",
+      "{Morgen|x} {fahren|v} {wir|p} {mit|x} dem {Zug|n} nach {Luzern|n}.",
+      "Die {Kinder|n} {lachen|v} {und|x} {singen|v} {sehr|x} {laut|a}."
     ]
   };
-  const english = w => w[1].split("/")[0];
-  const bareNoun = de => de.replace(/^(der|die|das) /, "");
 
-  function wordExplain(w){
-    const m = w[0].match(/^(der|die|das) (.+)$/);
-    let html = `${w[2]} <b>${w[0]}</b> = ${english(w)}`;
-    if (m) html += `<br>💡 It's a ${art(m[1])} word. German nouns always start with a capital letter: <b>${m[2]}</b>.`;
-    else if (english(w).startsWith("to ")) html += `<br>💡 Most German verbs end in <b>-en</b>, like ${w[0]}.`;
-    return html;
-  }
-
-  function wordQuestion(level, mode){
-    const list = WORDS[level];
-    const w = choice(list);
-    const others = sample(list.filter(o => o !== w), 3);
-    const toEnglish = mode === "de2en";
-    if (level === "challenge") {
-      return toEnglish
-        ? typed({
-            prompt: `What does „${w[0]}“ mean?`, answers: w[1].split("/"), say: say(w[0]),
-            hint: "Type it in English.", explain: wordExplain(w)
-          })
-        : typed({
-            prompt: `How do you say “${english(w)}” in German?`,
-            answers: [w[0], bareNoun(w[0])], answerDisplay: w[0], keys: KEYS,
-            say: say(w[0]), sayAfter: true,
-            hint: "You can leave out der/die/das. " + TYPE_HINT, explain: wordExplain(w)
-          });
-    }
-    return toEnglish
-      ? pick({
-          prompt: `What does „${w[0]}“ mean?`, say: say(w[0]),
-          answer: english(w), options: [english(w), ...others.map(english)], explain: wordExplain(w)
-        })
-      : pick({
-          prompt: `How do you say “${english(w)}” in German?`, say: say(w[0]), sayAfter: true,
-          answer: w[0], options: [w[0], ...others.map(o => o[0])], explain: wordExplain(w)
-        });
-  }
-
-  /* ---------------- numbers ---------------- */
-  const ONES = ["null", "eins", "zwei", "drei", "vier", "fünf", "sechs", "sieben", "acht", "neun",
-                "zehn", "elf", "zwölf", "dreizehn", "vierzehn", "fünfzehn", "sechzehn", "siebzehn", "achtzehn", "neunzehn"];
-  const TENS = ["", "", "zwanzig", "dreißig", "vierzig", "fünfzig", "sechzig", "siebzig", "achtzig", "neunzig"];
-  // the German word, and the pieces it's built from (for the explanation)
-  function germanNumber(n){
-    if (n === 1000) return { word: "tausend", parts: [] };
-    const parts = [];
-    const h = Math.floor(n / 100), r = n % 100;
-    if (h) parts.push([h === 1 ? "hundert" : ONES[h] + "hundert", h * 100]);
-    if (r >= 20) {
-      const o = r % 10, t = Math.floor(r / 10);
-      if (o) parts.push([o === 1 ? "ein" : ONES[o], o], ["und", null]);
-      parts.push([TENS[t], t * 10]);
-    } else if (r || !h) {
-      parts.push([ONES[r], r]);
-    }
-    return { word: parts.map(p => p[0]).join(""), parts };
-  }
-  function numberExplain(n){
-    const { word, parts } = germanNumber(n);
-    let html = `<b>${n}</b> = <b>${word}</b>`;
-    if (parts.length > 1) html += `<br>${parts.map(p => p[1] === null ? "<i>und</i> (and)" : `${p[0]} (${p[1]})`).join(" + ")}`;
-    if (parts.some(p => p[0] === "und")) html += `<br>💡 In German the ones come <b>before</b> the tens: “seven-and-twenty” for 27.`;
-    return html;
-  }
-  const NUMBER_RANGE = { warmup: [0, 12], practice: [13, 100], challenge: [100, 1000] };
-
-  function numberQuestion(level, mode){
-    const [lo, hi] = NUMBER_RANGE[level];
-    const n = lo + Math.floor(Math.random() * (hi - lo + 1));
-    const word = germanNumber(n).word;
-    if (mode === "read") {
-      return typed({
-        prompt: `„${word}“ = ?`, answers: [String(n)], say: say(word),
-        hint: "Type the number in digits.", explain: numberExplain(n)
-      });
-    }
-    // wrong answers that look close: digits swapped, one more or less, ten more or less
-    const near = new Set();
-    const swapped = n % 100 >= 10 ? Math.floor(n / 100) * 100 + (n % 10) * 10 + Math.floor(n / 10) % 10 : -1;
-    [swapped, n + 1, n - 1, n + 10, n - 10, n + 2, n - 2].forEach(m => { if (m !== n && m >= 0 && m <= 1000 && near.size < 3) near.add(m); });
+  function wortartQuestion(level){
+    const allowed = WORTART_LEVELS[level];
+    const tag = /\{([^|}]+)\|(\w)\}/g;
+    const asks = [];
+    WORTART_SAETZE[level].forEach((s, si) => {
+      let ti = 0;
+      s.replace(tag, (m, word, art) => { if (allowed.includes(art)) asks.push({ si, ti, word, art }); ti++; return m; });
+    });
+    const q = choice(asks);
+    let ti = 0;
+    const satz = WORTART_SAETZE[level][q.si].replace(tag, (m, word) => ti++ === q.ti ? `<mark>${word}</mark>` : word);
+    const [name, probe] = WORTARTEN[q.art];
     return pick({
-      prompt: `How do you say ${n} in German?`, say: say(word), sayAfter: true,
-      answer: word, options: [word, ...[...near].map(m => germanNumber(m).word)], explain: numberExplain(n)
+      promptHtml: `${satz}<span class="sub">Welche Wortart ist «${q.word}»?</span>`, prompt: satz.replace(/<[^>]+>/g, ""),
+      answer: name, options: allowed.map(a => WORTARTEN[a][0]), keepOrder: true,
+      explain: `<b>${q.word}</b> ist ein${q.art === "x" ? "e" : ""} <b>${name}</b>.<br>💡 ${probe}`
     });
   }
 
-  /* ---------------- der / die / das: [noun, article, English, tip] ---------------- */
-  const GENDERS = {
+  /* ---------------- Die vier Fälle: [Satz mit {Nomengruppe}, Fall, Frage] ---------------- */
+  const FAELLE = {
+    N: ["Nominativ", "Wer oder was?"], A: ["Akkusativ", "Wen oder was?"],
+    D: ["Dativ", "Wem?"], G: ["Genitiv", "Wessen?"]
+  };
+  const FALL_LEVELS = { warmup: ["N", "A"], practice: ["N", "A", "D"], challenge: ["N", "A", "D", "G"] };
+  const FALL_SAETZE = {
     warmup: [
-      ["Hund", "der", "dog"], ["Katze", "die", "cat"], ["Haus", "das", "house"], ["Ball", "der", "ball"],
-      ["Buch", "das", "book"], ["Mutter", "die", "mother"], ["Vater", "der", "father"], ["Auto", "das", "car"],
-      ["Sonne", "die", "sun"], ["Mond", "der", "moon"], ["Baum", "der", "tree"], ["Blume", "die", "flower"],
-      ["Bett", "das", "bed"], ["Tisch", "der", "table"], ["Tür", "die", "door"], ["Kind", "das", "child"]
+      ["{Der Bäcker} backt frisches Brot.", "N", "Wer backt frisches Brot?"],
+      ["Mia füttert {den Hund}.", "A", "Wen oder was füttert Mia?"],
+      ["{Die Kinder} spielen im Garten.", "N", "Wer spielt im Garten?"],
+      ["Ich esse {einen Apfel}.", "A", "Wen oder was esse ich?"],
+      ["{Mein Bruder} liest ein Comic.", "N", "Wer liest ein Comic?"],
+      ["Wir besuchen {unsere Grossmutter}.", "A", "Wen besuchen wir?"],
+      ["{Das Velo} steht vor dem Haus.", "N", "Wer oder was steht vor dem Haus?"],
+      ["Leo sucht {seinen Schlüssel}.", "A", "Wen oder was sucht Leo?"],
+      ["{Der Zug} fährt nach Zürich.", "N", "Wer oder was fährt nach Zürich?"],
+      ["Die Lehrerin lobt {die Klasse}.", "A", "Wen lobt die Lehrerin?"]
     ],
     practice: [
-      ["Apfel", "der", "apple"], ["Banane", "die", "banana"], ["Brot", "das", "bread"], ["Milch", "die", "milk"],
-      ["Ei", "das", "egg"], ["Käse", "der", "cheese"], ["Schule", "die", "school"], ["Stift", "der", "pen"],
-      ["Fenster", "das", "window"], ["Stuhl", "der", "chair"], ["Lampe", "die", "lamp"], ["Zimmer", "das", "room"],
-      ["Garten", "der", "garden"], ["Straße", "die", "street"], ["Fahrrad", "das", "bike"], ["Zug", "der", "train"],
-      ["Uhr", "die", "clock"], ["Wasser", "das", "water"], ["Hose", "die", "trousers"], ["Hemd", "das", "shirt"]
+      ["Ich schenke {meiner Mutter} Blumen.", "D", "Wem schenke ich Blumen?"],
+      ["Der Ball gehört {dem Mädchen}.", "D", "Wem gehört der Ball?"],
+      ["Tim hilft {seinem Freund}.", "D", "Wem hilft Tim?"],
+      ["Wir danken {der Lehrerin}.", "D", "Wem danken wir?"],
+      ["{Die Katze} jagt eine Maus.", "N", "Wer jagt eine Maus?"],
+      ["Lena kauft {ein neues Heft}.", "A", "Wen oder was kauft Lena?"],
+      ["Der Arzt gibt {dem Kind} ein Pflaster.", "D", "Wem gibt der Arzt ein Pflaster?"],
+      ["Opa erzählt {den Enkeln} eine Geschichte.", "D", "Wem erzählt Opa eine Geschichte?"],
+      ["Ich sehe {den Vogel} im Baum.", "A", "Wen oder was sehe ich im Baum?"],
+      ["{Der Hund} bringt den Ball zurück.", "N", "Wer bringt den Ball zurück?"]
     ],
     challenge: [
-      ["Mädchen", "das", "girl", "Words ending in <b>-chen</b> are always das, even <i>girl</i>!"],
-      ["Kätzchen", "das", "kitten", "Words ending in <b>-chen</b> (little things) are always das."],
-      ["Büchlein", "das", "little book", "Words ending in <b>-lein</b> (little things) are always das."],
-      ["Zeitung", "die", "newspaper", "Words ending in <b>-ung</b> are always die."],
-      ["Wohnung", "die", "flat", "Words ending in <b>-ung</b> are always die."],
-      ["Freiheit", "die", "freedom", "Words ending in <b>-heit</b> are always die."],
-      ["Gesundheit", "die", "health", "Words ending in <b>-heit</b> are always die. (You also say it when someone sneezes!)"],
-      ["Freundschaft", "die", "friendship", "Words ending in <b>-schaft</b> are always die."],
-      ["Station", "die", "station", "Words ending in <b>-ion</b> are always die."],
-      ["Musik", "die", "music", "Words ending in <b>-ik</b> are usually die."],
-      ["Montag", "der", "Monday", "Days of the week are always der."],
-      ["Januar", "der", "January", "Months are always der."],
-      ["Sommer", "der", "summer", "Seasons are always der."],
-      ["Winter", "der", "winter", "Seasons are always der."],
-      ["Lehrer", "der", "teacher", "A man or boy doing a job is der: der Lehrer. A woman is die Lehrerin."],
-      ["Lehrerin", "die", "teacher (a woman)", "Words ending in <b>-in</b> for a woman or girl are die."],
-      ["Tomate", "die", "tomato", "Lots of words ending in <b>-e</b> are die."]
+      ["Das ist das Velo {meines Bruders}.", "G", "Wessen Velo ist das?"],
+      ["Die Farbe {des Autos} ist rot.", "G", "Wessen Farbe ist rot?"],
+      ["Das Dach {der Schule} ist neu.", "G", "Wessen Dach ist neu?"],
+      ["Der Schwanz {der Katze} ist lang.", "G", "Wessen Schwanz ist lang?"],
+      ["Ich bringe {dem Nachbarn} die Post.", "D", "Wem bringe ich die Post?"],
+      ["Sie zeigt {dem Besuch} ihr Zimmer.", "D", "Wem zeigt sie ihr Zimmer?"],
+      ["Der Lehrer erklärt {den Schülern} die Aufgabe.", "D", "Wem erklärt der Lehrer die Aufgabe?"],
+      ["{Der Wind} weht kräftig.", "N", "Wer oder was weht kräftig?"],
+      ["Wir bauen {eine Sandburg}.", "A", "Wen oder was bauen wir?"],
+      ["Ich vermisse {meinen Freund}.", "A", "Wen vermisse ich?"]
     ]
   };
 
-  function genderQuestion(level){
-    const [noun, a, en, tip] = choice(GENDERS[level]);
+  function fallQuestion(level){
+    const [satz, fall, frage] = choice(FALL_SAETZE[level]);
+    const gruppe = satz.match(/\{([^}]+)\}/)[1];
+    const html = satz.replace(/\{([^}]+)\}/, "<mark>$1</mark>");
+    const [name, fragewort] = FAELLE[fall];
     return pick({
-      promptHtml: `___ ${noun}<span class="sub">(${en})</span>`, prompt: `___ ${noun}`,
-      answer: a, options: ["der", "die", "das"], keepOrder: true,
-      say: say(a + " " + noun), sayAfter: true,
-      explain: `${art(a)} <b>${noun}</b> = the ${en}<br>💡 ${tip || "Learn every new noun with its der, die or das, like a little name tag."}`
+      promptHtml: `${html}<span class="sub">In welchem Fall steht «${gruppe}»?</span>`, prompt: satz.replace(/[{}]/g, ""),
+      answer: name, options: FALL_LEVELS[level].map(f => FAELLE[f][0]), keepOrder: true,
+      explain: `Frageprobe: <i>${frage}</i> → <b>${gruppe}</b><br>💡 <b>${fragewort}</b> fragt nach dem <b>${name}</b>.`
     });
   }
 
-  /* ---------------- phrases: [German, English, note] ---------------- */
-  const PHRASES = {
-    warmup: [
-      ["Hallo!", "Hello!"], ["Tschüss!", "Bye!"], ["Guten Morgen!", "Good morning!"], ["Gute Nacht!", "Good night!"],
-      ["Danke!", "Thank you!"], ["Bitte!", "Please!"], ["Ja", "Yes"], ["Nein", "No"],
-      ["Wie geht's?", "How are you?", "Word for word it's “How goes it?”"],
-      ["Mir geht's gut.", "I'm fine.", "Word for word it's “To me it goes well.”"]
-    ],
-    practice: [
-      ["Wie heißt du?", "What's your name?", "Word for word it's “How are you called?”"],
-      ["Ich heiße Max.", "My name is Max.", "Word for word it's “I am called Max.”"],
-      ["Wie alt bist du?", "How old are you?"],
-      ["Ich bin zehn Jahre alt.", "I'm ten years old."],
-      ["Woher kommst du?", "Where are you from?"],
-      ["Entschuldigung!", "Excuse me! / Sorry!"],
-      ["Guten Appetit!", "Enjoy your meal!"],
-      ["Alles Gute zum Geburtstag!", "Happy birthday!", "Word for word it's “All the best for your birthday!”"],
-      ["Bis morgen!", "See you tomorrow!"],
-      ["Ich habe Hunger.", "I'm hungry.", "Germans say “I have hunger.”"],
-      ["Ich habe Durst.", "I'm thirsty.", "Germans say “I have thirst.”"]
-    ],
-    challenge: [
-      ["Kannst du mir helfen?", "Can you help me?"],
-      ["Ich verstehe das nicht.", "I don't understand."],
-      ["Wo ist die Toilette?", "Where is the toilet?"],
-      ["Wie spät ist es?", "What time is it?", "Word for word it's “How late is it?”"],
-      ["Ich spiele gern Fußball.", "I like playing football.", "Put <b>gern</b> after a verb to say you like doing it."],
-      ["Wie viel kostet das?", "How much is that?"],
-      ["Das ist super!", "That's great!"],
-      ["Ich habe einen Hund.", "I have a dog."],
-      ["Meine Lieblingsfarbe ist Blau.", "My favourite colour is blue.", "<b>Lieblings-</b> means favourite: Lieblingsessen is favourite food."],
-      ["Kannst du das wiederholen?", "Can you say that again?"],
-      ["Ich bin müde.", "I'm tired."],
-      ["Es regnet.", "It's raining."]
-    ]
-  };
-
-  function phraseQuestion(level, mode){
-    const list = PHRASES[level];
-    const p = choice(list);
-    const others = sample(list.filter(o => o !== p), 3);
-    const explain = `<b>${p[0]}</b> = ${p[1]}` + (p[2] ? `<br>💡 ${p[2]}` : "");
-    return mode === "de2en"
-      ? pick({ prompt: `„${p[0]}“`, say: say(p[0]), answer: p[1], options: [p[1], ...others.map(o => o[1])], explain })
-      : pick({ prompt: `How do you say “${p[1]}”?`, say: say(p[0]), sayAfter: true, answer: p[0], options: [p[0], ...others.map(o => o[0])], explain });
-  }
-
-  /* ---------------- verbs: [infinitive, English, ich, du, er/sie, wir, ihr, sie, end of the sentence, tip] ---------------- */
-  const VERBS = {
-    warmup: [
-      ["sein", "to be", ["bin", "bist", "ist", "sind", "seid", "sind"], "sehr müde", "<i>sein</i> is irregular, so learn it by heart."],
-      ["haben", "to have", ["habe", "hast", "hat", "haben", "habt", "haben"], "einen Hund", "<i>haben</i> drops the <b>b</b> with du and er/sie: du <b>hast</b>, er <b>hat</b>."]
-    ],
-    practice: [
-      ["spielen", "to play", ["spiele", "spielst", "spielt", "spielen", "spielt", "spielen"], "Fußball"],
-      ["wohnen", "to live", ["wohne", "wohnst", "wohnt", "wohnen", "wohnt", "wohnen"], "in Berlin"],
-      ["machen", "to do / make", ["mache", "machst", "macht", "machen", "macht", "machen"], "Hausaufgaben"],
-      ["lernen", "to learn", ["lerne", "lernst", "lernt", "lernen", "lernt", "lernen"], "Deutsch"],
-      ["gehen", "to go", ["gehe", "gehst", "geht", "gehen", "geht", "gehen"], "nach Hause"]
-    ],
-    challenge: [
-      ["essen", "to eat", ["esse", "isst", "isst", "essen", "esst", "essen"], "einen Apfel", "<i>essen</i> changes <b>e → i</b> with du and er/sie: du <b>isst</b>."],
-      ["lesen", "to read", ["lese", "liest", "liest", "lesen", "lest", "lesen"], "ein Buch", "<i>lesen</i> changes <b>e → ie</b> with du and er/sie: du <b>liest</b>."],
-      ["fahren", "to ride / drive", ["fahre", "fährst", "fährt", "fahren", "fahrt", "fahren"], "mit dem Bus", "<i>fahren</i> changes <b>a → ä</b> with du and er/sie: du <b>fährst</b>."],
-      ["schlafen", "to sleep", ["schlafe", "schläfst", "schläft", "schlafen", "schlaft", "schlafen"], "sehr lange", "<i>schlafen</i> changes <b>a → ä</b> with du and er/sie: du <b>schläfst</b>."],
-      ["sprechen", "to speak", ["spreche", "sprichst", "spricht", "sprechen", "sprecht", "sprechen"], "Deutsch", "<i>sprechen</i> changes <b>e → i</b> with du and er/sie: du <b>sprichst</b>."],
-      ["sehen", "to see / watch", ["sehe", "siehst", "sieht", "sehen", "seht", "sehen"], "einen Film", "<i>sehen</i> changes <b>e → ie</b> with du and er/sie: du <b>siehst</b>."]
-    ]
-  };
-  const PERSONS = ["ich", "du", "er/sie", "wir", "ihr", "sie"];
-  const SUBJECTS = [["Ich"], ["Du"], ["Er", "Lena", "Max"], ["Wir"], ["Ihr"], ["Die Kinder"]];
-  const REGULAR_TIP = "Take off <b>-en</b> and add the ending: ich <b>-e</b>, du <b>-st</b>, er/sie <b>-t</b>, wir <b>-en</b>, ihr <b>-t</b>, sie <b>-en</b>.";
+  /* ---------------- Verben: [Grundform, er-Form Präsens, Präteritum, Partizip, hat/ist, Subjekt, Rest] ---------------- */
+  const REGELMAESSIG = [
+    ["spielen", "spielt", "spielte", "gespielt", "hat", "Lena", "Fussball"],
+    ["lachen", "lacht", "lachte", "gelacht", "hat", "Der Clown", "laut"],
+    ["kaufen", "kauft", "kaufte", "gekauft", "hat", "Mama", "Brot"],
+    ["lernen", "lernt", "lernte", "gelernt", "hat", "Tim", "für den Test"],
+    ["wohnen", "wohnt", "wohnte", "gewohnt", "hat", "Oma", "in Baar"],
+    ["malen", "malt", "malte", "gemalt", "hat", "Mia", "ein Bild"],
+    ["hören", "hört", "hörte", "gehört", "hat", "Leo", "Musik"],
+    ["baden", "badet", "badete", "gebadet", "hat", "Der Hund", "im See"],
+    ["warten", "wartet", "wartete", "gewartet", "hat", "Ben", "auf den Bus"],
+    ["wandern", "wandert", "wanderte", "gewandert", "ist", "Die Klasse", "auf den Zugerberg"]
+  ];
+  const UNREGELMAESSIG = [
+    ["gehen", "geht", "ging", "gegangen", "ist", "Lena", "nach Hause"],
+    ["kommen", "kommt", "kam", "gekommen", "ist", "Der Zug", "zu spät"],
+    ["sehen", "sieht", "sah", "gesehen", "hat", "Tim", "einen Fuchs"],
+    ["essen", "isst", "ass", "gegessen", "hat", "Mia", "einen Apfel"],
+    ["trinken", "trinkt", "trank", "getrunken", "hat", "Der Hund", "Wasser"],
+    ["schreiben", "schreibt", "schrieb", "geschrieben", "hat", "Leo", "einen Brief"],
+    ["lesen", "liest", "las", "gelesen", "hat", "Oma", "die Zeitung"],
+    ["fahren", "fährt", "fuhr", "gefahren", "ist", "Papa", "nach Zug"],
+    ["schwimmen", "schwimmt", "schwamm", "geschwommen", "ist", "Die Ente", "über den See"],
+    ["finden", "findet", "fand", "gefunden", "hat", "Ben", "einen Franken"],
+    ["laufen", "läuft", "lief", "gelaufen", "ist", "Die Katze", "über die Wiese"],
+    ["schlafen", "schläft", "schlief", "geschlafen", "hat", "Das Baby", "lange"],
+    ["sprechen", "spricht", "sprach", "gesprochen", "hat", "Die Lehrerin", "leise"],
+    ["singen", "singt", "sang", "gesungen", "hat", "Der Chor", "ein Lied"],
+    ["springen", "springt", "sprang", "gesprungen", "ist", "Das Pferd", "über den Zaun"]
+  ];
+  const stamm = inf => inf.replace(/e?n$/, "");
+  const reihe = v => `<b>${v[0]}</b> – ${v[2]} – ${v[4]} ${v[3]}`;
 
   function verbQuestion(level){
-    const [inf, en, forms, rest, tip] = choice(VERBS[level]);
-    const i = Math.floor(Math.random() * 6);
-    const subject = choice(SUBJECTS[i]);
-    const answer = forms[i];
-    const unique = [...new Set(forms)];
-    const options = [answer, ...sample(unique.filter(f => f !== answer), 3)];
-    const table = PERSONS.map((p, k) => `<tr${k === i ? ' class="hit"' : ""}><td>${p}</td><td>${forms[k]}</td></tr>`).join("");
-    const who = i === 2 && subject !== "Er" ? ` (${subject} = er/sie)` : i === 5 ? " (die Kinder = sie)" : "";
+    const r = Math.random();
+    if (level === "warmup" && r < 0.4) {
+      const regel = Math.random() < 0.5, v = choice(regel ? REGELMAESSIG : UNREGELMAESSIG);
+      return pick({
+        prompt: `Ist «${v[0]}» regelmässig oder unregelmässig?`,
+        answer: regel ? "regelmässig" : "unregelmässig", options: ["regelmässig", "unregelmässig"], keepOrder: true,
+        explain: `${reihe(v)}<br>💡 ` + (regel
+          ? "Der Stamm bleibt gleich, im Präteritum kommt <b>-te</b> dazu → regelmässig."
+          : "Der Stammvokal ändert sich (z. B. geh → <b>ging</b>) → unregelmässig.")
+      });
+    }
+    if (level === "warmup" || level === "practice") {
+      const regel = level === "warmup";
+      const v = choice(regel ? REGELMAESSIG : UNREGELMAESSIG);
+      const falsch = regel
+        ? [v[1], v[3], stamm(v[0]) + (v[2].endsWith("ete") ? "te" : "ete")]
+        : [stamm(v[0]) + "te", v[1], v[3]];
+      return pick({
+        promptHtml: `Gestern: ${v[5]} ___ ${v[6]}.<span class="sub">Präteritum von «${v[0]}»</span>`, prompt: `${v[5]} ___ ${v[6]}.`,
+        answer: v[2], options: [v[2], ...falsch],
+        explain: `${v[5]} <b>${v[2]}</b> ${v[6]}.<br>${reihe(v)}<br>💡 ` + (regel
+          ? "Regelmässig: Stamm + <b>-te</b>" + (v[2].endsWith("ete") ? " (nach d und t: <b>-ete</b>)." : ".")
+          : "Unregelmässig: Der Stammvokal ändert sich. Diese Formen lernt man auswendig.")
+      });
+    }
+    // challenge: Perfekt, entweder das Hilfsverb oder das Partizip
+    const v = choice(REGELMAESSIG.concat(UNREGELMAESSIG));
+    const satz = `${v[5]} ${v[4]} ${v[6]} ${v[3]}.`;
+    if (Math.random() < 0.5) {
+      return pick({
+        promptHtml: `${v[5]} ___ ${v[6]} ${v[3]}.<span class="sub">Perfekt: hat oder ist?</span>`, prompt: `${v[5]} ___ ${v[6]} ${v[3]}.`,
+        answer: v[4], options: ["hat", "ist"], keepOrder: true,
+        explain: `${satz}<br>💡 Verben der Bewegung (gehen, fahren, laufen …) bilden das Perfekt meistens mit <b>sein</b>, die anderen mit <b>haben</b>.`
+      });
+    }
+    const regel = REGELMAESSIG.includes(v);
+    const falsch = regel ? [v[2], "ge" + v[0]] : ["ge" + stamm(v[0]) + "t", v[2]];
     return pick({
-      promptHtml: `${subject} ___ ${rest}.<span class="sub">${inf} = ${en}</span>`, prompt: `${subject} ___ ${rest}.`,
-      answer, options,
-      say: say(`${subject} ${answer} ${rest}.`), sayAfter: true,
-      explain: `<b>${subject} ${answer} ${rest}.</b>${who}<br>💡 ${tip || REGULAR_TIP}<table class="verb">${table}</table>`
+      promptHtml: `${v[5]} ${v[4]} ${v[6]} ___.<span class="sub">Partizip von «${v[0]}»</span>`, prompt: `${v[5]} ${v[4]} ${v[6]} ___.`,
+      answer: v[3], options: [v[3], ...falsch],
+      explain: `${satz}<br>${reihe(v)}<br>💡 ` + (regel ? "Regelmässig: <b>ge- … -t</b>." : "Unregelmässig: oft <b>ge- … -en</b> und ein anderer Stammvokal.")
+    });
+  }
+
+  /* ---------------- Rechtschreibung: [Satz mit ___ oder null, richtig, [falsch], Tipp] ---------------- */
+  const DOPPEL = "Nach einem <b>kurzen</b> Vokal hört man nur einen Konsonanten → er wird verdoppelt.";
+  const RECHTSCHREIBUNG = {
+    warmup: [
+      [null, "Ball", ["Bal"], DOPPEL + " Ba<b>ll</b>"],
+      [null, "kommen", ["komen"], DOPPEL + " ko<b>mm</b>en"],
+      [null, "Sonne", ["Sone"], DOPPEL + " So<b>nn</b>e"],
+      [null, "Schiff", ["Schif"], DOPPEL + " Schi<b>ff</b>"],
+      [null, "Mutter", ["Muter"], DOPPEL + " Mu<b>tt</b>er"],
+      [null, "schwimmen", ["schwimen"], DOPPEL + " schwi<b>mm</b>en"],
+      [null, "Wasser", ["Waser"], DOPPEL + " Wa<b>ss</b>er"],
+      [null, "Hut", ["Hutt"], "Nach einem <b>langen</b> Vokal steht nur ein Konsonant: H<b>u</b>t."],
+      [null, "Hose", ["Hosse"], "Nach einem <b>langen</b> Vokal steht nur ein Konsonant: H<b>o</b>se."],
+      [null, "Biene", ["Bine"], "Ein langes i schreibt man meistens <b>ie</b>: B<b>ie</b>ne."],
+      [null, "spielen", ["spilen"], "Ein langes i schreibt man meistens <b>ie</b>: sp<b>ie</b>len."],
+      [null, "Tiger", ["Tieger"], "Ausnahme! Tiger schreibt man mit einfachem <b>i</b>."]
+    ],
+    practice: [
+      [null, "Strasse", ["Strase", "Straße"], "In der Schweiz schreibt man nie ß, sondern immer <b>ss</b>."],
+      [null, "gross", ["gros", "groß"], "In der Schweiz schreibt man nie ß, sondern immer <b>ss</b>."],
+      [null, "Fuss", ["Fus", "Fuß"], "In der Schweiz schreibt man nie ß, sondern immer <b>ss</b>."],
+      [null, "Haus", ["Hauss"], "Verlängern: Häu<b>s</b>er – man hört ein weiches s → nur ein <b>s</b>."],
+      [null, "Glas", ["Glass"], "Verlängern: Glä<b>s</b>er – man hört ein weiches s → nur ein <b>s</b>."],
+      [null, "Katze", ["Kaze"], "Nach einem kurzen Vokal schreibt man <b>tz</b>: Ka<b>tz</b>e."],
+      [null, "Brücke", ["Brüke"], "Nach einem kurzen Vokal schreibt man <b>ck</b>: Brü<b>ck</b>e."],
+      [null, "Zucker", ["Zuker"], "Nach einem kurzen Vokal schreibt man <b>ck</b>: Zu<b>ck</b>er."],
+      [null, "Onkel", ["Onckel"], "Nach l, n, r steht nie ck oder tz: O<b>nk</b>el."],
+      [null, "Herz", ["Hertz"], "Nach l, n, r steht nie ck oder tz: He<b>rz</b>."],
+      ["Ich freue mich ___.", "aufs Lesen", ["aufs lesen"], "Mit einem Begleiter (aufs = auf das) wird das Verb zum Nomen → gross."],
+      ["Wir treffen uns ___.", "am Morgen", ["am morgen"], "Mit einem Begleiter (am = an dem) ist <i>Morgen</i> ein Nomen → gross."]
+    ],
+    challenge: [
+      ["Ich weiss, ___ du kommst.", "dass", ["das"], "Man kann nicht <i>dieses</i> oder <i>welches</i> einsetzen → <b>dass</b>."],
+      ["___ Velo ist neu.", "Das", ["Dass"], "Man kann <i>dieses</i> einsetzen (Dieses Velo) → <b>das</b>."],
+      ["Das Buch, ___ ich lese, ist spannend.", "das", ["dass"], "Man kann <i>welches</i> einsetzen → <b>das</b>."],
+      ["Ich hoffe, ___ es morgen schneit.", "dass", ["das"], "Man kann nicht <i>dieses</i> oder <i>welches</i> einsetzen → <b>dass</b>."],
+      ["Er sagt, ___ er müde ist.", "dass", ["das"], "Man kann nicht <i>dieses</i> oder <i>welches</i> einsetzen → <b>dass</b>."],
+      ["Siehst du ___ Haus dort?", "das", ["dass"], "Man kann <i>dieses</i> einsetzen → <b>das</b>."],
+      ["Das Lied, ___ wir singen, ist schön.", "das", ["dass"], "Man kann <i>welches</i> einsetzen → <b>das</b>."],
+      ["Ich wünsche dir ___.", "etwas Schönes", ["etwas schönes"], "Nach <i>etwas, nichts, viel, alles</i> wird das Adjektiv zum Nomen → gross."],
+      ["Im Zoo gab es ___.", "viel Neues", ["viel neues"], "Nach <i>etwas, nichts, viel, alles</i> wird das Adjektiv zum Nomen → gross."],
+      [null, "Maschine", ["Maschiene"], "Fremdwort: langes i ohne e. Ma-schi-ne."],
+      [null, "Vogel", ["Fogel"], "Merkwort mit <b>V</b>: Vogel, Vater, viel, vier, vor."],
+      [null, "Rhythmus", ["Rytmus", "Rhytmus"], "Merkwort: R-<b>h</b>-y-t-<b>h</b>-m-u-s."]
+    ]
+  };
+
+  function rechtschreibQuestion(level){
+    const [satz, richtig, falsch, tipp] = choice(RECHTSCHREIBUNG[level]);
+    return pick({
+      prompt: satz || "Welches Wort ist richtig geschrieben?",
+      answer: richtig, options: [richtig, ...falsch],
+      explain: (satz ? `${satz.replace("___", "<b>" + richtig + "</b>")}` : `<b>${richtig}</b>`) + `<br>💡 ${tipp}`
+    });
+  }
+
+  /* ---------------- Satzzeichen: direkte Rede und Komma ---------------- */
+  const SPRECHER = ["Mia", "Leo", "Lena", "Tim", "Oma", "die Lehrerin"];
+  const REDEN = {
+    aussage: { verb: "sagt", zeichen: ".", texte: ["Ich komme mit", "Heute ist es kalt", "Der Bus ist zu spät", "Ich habe Hunger"] },
+    frage:   { verb: "fragt", zeichen: "?", texte: ["Kommst du mit", "Wo ist mein Etui", "Hast du Hunger", "Wann fährt der Zug"] },
+    ausruf:  { verb: "ruft", zeichen: "!", texte: ["Pass auf", "Komm schnell", "Das ist super", "Hilfe"] }
+  };
+  const gross = s => s[0].toUpperCase() + s.slice(1);
+  const KOMMA = [
+    ["Ich bleibe zu Hause, weil ich krank bin.", ["Ich bleibe zu Hause weil ich krank bin.", "Ich bleibe, zu Hause weil ich krank bin."], "Zwischen zwei Verbgruppen steht ein Komma: <i>…bleibe…, weil…bin.</i>"],
+    ["Wenn es regnet, nehme ich den Schirm.", ["Wenn es regnet nehme ich den Schirm.", "Wenn es, regnet nehme ich den Schirm."], "Zwischen zwei Verbgruppen steht ein Komma: <i>…regnet, nehme…</i>"],
+    ["Ich weiss, dass du recht hast.", ["Ich weiss dass du recht hast.", "Ich weiss dass, du recht hast."], "Vor <i>dass</i> steht immer ein Komma."],
+    ["Lena lacht, als sie den Clown sieht.", ["Lena lacht als sie den Clown sieht.", "Lena lacht als, sie den Clown sieht."], "Zwischen zwei Verbgruppen steht ein Komma: <i>…lacht, als…sieht.</i>"],
+    ["Wir gehen baden, denn es ist heiss.", ["Wir gehen baden denn es ist heiss.", "Wir gehen, baden denn es ist heiss."], "Vor <i>denn</i> und <i>aber</i> steht ein Komma."],
+    ["Er fragt, ob wir mitkommen.", ["Er fragt ob wir mitkommen.", "Er fragt ob, wir mitkommen."], "Zwischen zwei Verbgruppen steht ein Komma: <i>…fragt, ob…mitkommen.</i>"],
+    ["Ich esse Brot, Käse und Äpfel.", ["Ich esse Brot, Käse, und Äpfel.", "Ich esse Brot Käse und Äpfel."], "Bei Aufzählungen steht ein Komma, aber nicht vor <i>und</i>."],
+    ["Der Hund, der dort bellt, gehört Tim.", ["Der Hund der dort bellt gehört Tim.", "Der Hund, der dort bellt gehört Tim."], "Ein eingeschobener Satz wird vorne <b>und</b> hinten mit Komma abgetrennt."]
+  ];
+
+  function satzzeichenQuestion(level){
+    if (level === "challenge" && Math.random() < 0.6) {
+      const [richtig, falsch, tipp] = choice(KOMMA);
+      return pick({
+        prompt: "Wo stehen die Kommas richtig?", answer: richtig, options: [richtig, ...falsch],
+        explain: `<b>${richtig}</b><br>💡 ${tipp}`
+      });
+    }
+    const art = level === "warmup" ? "aussage" : choice(Object.keys(REDEN));
+    const { verb, zeichen, texte } = REDEN[art];
+    const wer = choice(SPRECHER), text = choice(texte);
+    let richtig, falsch, tipp;
+    if (level === "warmup") {
+      richtig = `${gross(wer)} ${verb}: «${text}${zeichen}»`;
+      falsch = [`${gross(wer)} ${verb} «${text}${zeichen}»`, `${gross(wer)} ${verb}: «${text}»${zeichen}`, `${gross(wer)} ${verb}: ${text}${zeichen}`];
+      tipp = "Begleitsatz vorne: Doppelpunkt, dann die Rede in «…». Der Punkt steht <b>in</b> den Anführungszeichen.";
+    } else {
+      const innen = zeichen === "." ? "" : zeichen;
+      richtig = `«${text}${innen}», ${verb} ${wer}.`;
+      falsch = [
+        zeichen === "." ? `«${text}.», ${verb} ${wer}.` : `«${text}», ${verb} ${wer}${zeichen}`,
+        `«${text}${innen}» ${verb} ${wer}.`,
+        `«${text}${innen}», ${gross(verb)} ${wer}.`
+      ];
+      tipp = zeichen === "."
+        ? "Begleitsatz hinten: Der Punkt der Rede fällt weg, nach » kommt ein Komma."
+        : `Begleitsatz hinten: Das ${zeichen === "?" ? "Fragezeichen" : "Ausrufezeichen"} bleibt in «…», danach kommt trotzdem ein Komma.`;
+    }
+    return pick({
+      prompt: "Welcher Satz ist richtig?", answer: richtig, options: [richtig, ...falsch],
+      explain: `<b>${richtig}</b><br>💡 ${tipp}`
+    });
+  }
+
+  /* ---------------- Morpheme: [Wort, [Vormorpheme], Stamm, [Nachmorpheme], Tipp] ---------------- */
+  const MORPHEME = {
+    warmup: [
+      ["Spieler", [], "spiel", ["er"]], ["Freiheit", [], "frei", ["heit"]], ["Kindheit", [], "kind", ["heit"]],
+      ["lesbar", [], "les", ["bar"]], ["glücklich", [], "glück", ["lich"]], ["Wanderung", [], "wander", ["ung"]],
+      ["Fahrer", [], "fahr", ["er"]], ["hilflos", [], "hilf", ["los"]], ["Mannschaft", [], "mann", ["schaft"]],
+      ["Lehrerin", [], "lehr", ["er", "in"]]
+    ],
+    practice: [
+      ["unfreundlich", ["un"], "freund", ["lich"]], ["Verpackung", ["ver"], "pack", ["ung"]],
+      ["Entdeckung", ["ent"], "deck", ["ung"]], ["Erzählung", ["er"], "zähl", ["ung"]],
+      ["Besucher", ["be"], "such", ["er"]], ["unglücklich", ["un"], "glück", ["lich"]],
+      ["Zerstörung", ["zer"], "stör", ["ung"]], ["vergesslich", ["ver"], "gess", ["lich"]],
+      ["untrinkbar", ["un"], "trink", ["bar"]], ["Abfahrt", ["ab"], "fahr", ["t"]]
+    ],
+    challenge: [
+      ["Unfreundlichkeit", ["un"], "freund", ["lich", "keit"]], ["Erfindung", ["er"], "find", ["ung"]],
+      ["Verkäuferin", ["ver"], "käuf", ["er", "in"], "Der Stamm ist <b>kauf</b>, hier mit Umlaut: <b>käuf</b>."],
+      ["Unsicherheit", ["un"], "sicher", ["heit"]], ["Bewohnerin", ["be"], "wohn", ["er", "in"]],
+      ["Entschuldigung", ["ent"], "schuld", ["ig", "ung"]], ["unvergesslich", ["un", "ver"], "gess", ["lich"]],
+      ["Ungeduld", ["un", "ge"], "duld", []], ["Beleuchtung", ["be"], "leucht", ["ung"]],
+      ["Häuschen", [], "häus", ["chen"], "Der Stamm ist <b>haus</b>, hier mit Umlaut: <b>häus</b>."]
+    ]
+  };
+
+  function morphemQuestion(level){
+    const [wort, vor, st, nach, extra] = choice(MORPHEME[level]);
+    const kinds = ["stamm"];
+    if (level !== "warmup" && vor.length) kinds.push("vor");
+    if (level !== "warmup" && nach.length) kinds.push("nach");
+    const kind = choice(kinds);
+    const vorStr = vor.join(""), nachStr = nach.join("");
+    let frage, answer, options;
+    if (kind === "stamm") {
+      frage = "Wie heisst das Stammmorphem?";
+      answer = st;
+      options = [st, vorStr + st, st + (nach[0] || ""), vorStr || nachStr || st.slice(0, -1)];
+    } else if (kind === "vor") {
+      frage = vor.length > 1 ? "Welches ist ein Vormorphem?" : "Wie heisst das Vormorphem?";
+      answer = vor[0];
+      options = [vor[0], vorStr + st, st, nach[0] || st + "en"];
+    } else {
+      frage = nach.length > 1 ? "Welches ist das letzte Nachmorphem?" : "Wie heisst das Nachmorphem?";
+      answer = nach[nach.length - 1];
+      options = [answer, st, st + nachStr, vor[0] || st.slice(0, -1)];
+    }
+    const others = [...new Set(options)].filter(o => o && o !== answer);
+    const teile = [...vor.map(m => `<span class="m-pre">${m}</span>`), `<span class="m-stem">${st}</span>`, ...nach.map(m => `<span class="m-suf">${m}</span>`)];
+    return pick({
+      promptHtml: `«${wort}»<span class="sub">${frage}</span>`, prompt: wort,
+      answer, options: [answer, ...others.slice(0, 3)],
+      explain: `${teile.join(" | ")}<br>` +
+        `<span class="m-pre">Vormorphem</span> · <span class="m-stem">Stammmorphem</span> · <span class="m-suf">Nachmorphem</span>` +
+        (extra ? `<br>💡 ${extra}` : "")
     });
   }
 
   /* ---------------- topics ---------------- */
-  const TO_ENGLISH = { id: "de2en", label: "🇩🇪 → 🇬🇧" }, TO_GERMAN = { id: "en2de", label: "🇬🇧 → 🇩🇪" };
   const TOPICS = [
     {
-      id: "words", label: "Words", icon: "🍎", title: "Wörter · words",
-      levelDesc: { warmup: "Colours, animals and family", practice: "Food, school and your body", challenge: "Verbs, describing words and travel — type them!" },
-      hint: "Tap 🔊 Listen to hear the German.",
-      modes: [TO_ENGLISH, TO_GERMAN],
-      generate: wordQuestion
+      id: "wortarten", label: "Wortarten", icon: "🧩", title: "Welche Wortart ist das?",
+      levelDesc: { warmup: "Nomen, Verb, Adjektiv", practice: "Nomen, Verb, Adjektiv – mit Stolpersteinen", challenge: "Alle fünf: auch Pronomen und Partikel" },
+      hint: "Mach die Probe: Artikelprobe, Personalform-Probe, Vergleichsprobe.",
+      generate: wortartQuestion
     },
     {
-      id: "numbers", label: "Numbers", icon: "🔢", title: "Zahlen · numbers",
-      levelDesc: { warmup: "0 to 12", practice: "13 to 100", challenge: "100 to 1000" },
-      hint: "German says the ones before the tens: 21 is “one-and-twenty”.",
-      modes: [{ id: "pick", label: "Number → German" }, { id: "read", label: "German → number" }],
-      generate: numberQuestion
+      id: "faelle", label: "Die 4 Fälle", icon: "🎯", title: "In welchem Fall?",
+      levelDesc: { warmup: "Nominativ und Akkusativ", practice: "…dazu der Dativ", challenge: "Alle vier, auch der Genitiv" },
+      hint: "Frag: Wer oder was? Wen oder was? Wem? Wessen?",
+      generate: fallQuestion
     },
     {
-      id: "gender", label: "der / die / das", icon: "🎩", title: "der, die or das?",
-      levelDesc: { warmup: "Everyday things", practice: "Food, home and school", challenge: "Words with a rule you can learn" },
-      hint: "Every German noun is der, die or das. Press 1, 2 or 3.",
-      generate: genderQuestion
-    },
-    {
-      id: "phrases", label: "Phrases", icon: "💬", title: "Sätze · things to say",
-      levelDesc: { warmup: "Hello, please and thank you", practice: "Talking about you", challenge: "Asking for things" },
-      hint: "Tap 🔊 Listen to hear how it sounds.",
-      modes: [TO_ENGLISH, TO_GERMAN],
-      generate: phraseQuestion
-    },
-    {
-      id: "verbs", label: "Verbs", icon: "🏃", title: "Verben · doing words",
-      levelDesc: { warmup: "sein and haben", practice: "Regular verbs like spielen", challenge: "Verbs that change: essen, fahren, lesen…" },
-      hint: "Look at who is doing it: ich, du, er, wir…",
+      id: "verben", label: "Verben", icon: "🏃", title: "Verben und Zeitformen",
+      levelDesc: { warmup: "Regelmässig oder unregelmässig? Präteritum", practice: "Unregelmässige Verben im Präteritum", challenge: "Perfekt: hat oder ist? Partizip" },
+      hint: "Sag die Reihe auf: gehen – ging – ist gegangen.",
       generate: verbQuestion
+    },
+    {
+      id: "rechtschreibung", label: "Rechtschreibung", icon: "✍️", title: "Richtig geschrieben?",
+      levelDesc: { warmup: "Doppelkonsonanten-Regel und ie", practice: "ss, ck, tz und Grossschreibung", challenge: "das oder dass? Merkwörter" },
+      hint: "Sprich das Wort langsam: Ist der Vokal kurz oder lang?",
+      generate: rechtschreibQuestion
+    },
+    {
+      id: "satzzeichen", label: "Satzzeichen", icon: "💬", title: "Satzzeichen setzen",
+      levelDesc: { warmup: "Direkte Rede: Begleitsatz vorne", practice: "Direkte Rede: Begleitsatz hinten", challenge: "Kommas zwischen Verbgruppen" },
+      hint: "Schau genau auf : « » , und .",
+      generate: satzzeichenQuestion
+    },
+    {
+      id: "morpheme", label: "Morpheme", icon: "🧱", title: "Wörterwerkstatt",
+      levelDesc: { warmup: "Das Stammmorphem finden", practice: "Vor- und Nachmorpheme", challenge: "Lange Wörter zerlegen" },
+      hint: "Vormorphem | Stammmorphem | Nachmorphem: un | freund | lich.",
+      generate: morphemQuestion
     }
   ];
 
@@ -305,16 +412,18 @@
 
   Notebook.register({
     id: "german", title: "Deutsch Dash", icon: "🥨",
-    blurb: "German: words, numbers, der/die/das, phrases and verbs, with 🔊 to hear it.",
-    unit: "/// a German practice notebook",
-    tagline: "Five German topics, a 🔊 button to hear every word, and a tip for every answer",
-    nameFallback: "a German explorer",
+    blurb: "Deutsch für die 5. Klasse, wie in den Sprachstarken 5: Wortarten, Fälle, Verben, Rechtschreibung.",
+    unit: "/// ein Deutsch-Übungsheft",
+    tagline: "Deutsch für die 5. Klasse, passend zu den Sprachstarken 5, mit einem Tipp zu jeder Antwort",
+    taglineFor: "für",
+    nameFallback: "dich",
     subject: "German",
     wordy: true,
+    verdicts: { right: "Richtig!", wrong: "Nicht ganz – richtig ist:" },
     data: store.german,
     badgePrefix: "de-",
     badgeNames: {
-      first: ["⭐", "Hallo!"], streak5: ["🔥", "Super!"], streak10: ["🚀", "Fantastisch!"],
+      first: ["⭐", "Los geht's!"], streak5: ["🔥", "Super!"], streak10: ["🚀", "Fantastisch!"],
       streak25: ["⚡", "Wunderbar!"], race1: ["🏁", "Schnell!"], race5: ["🏆", "Champion"],
       race20: ["👑", "Legende"], trial: ["⏱️", "Blitz"], challenge: ["💪", "Stark!"],
       century: ["💯", "Hundert!"]
