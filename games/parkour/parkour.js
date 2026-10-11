@@ -409,7 +409,7 @@
     const ISLES = [
       { ang: 1.35, y: HORIZON + 150, s: 46 },
       { ang: 3.10, y: HORIZON + 96,  s: 26 },
-      { ang: 5.00, y: HORIZON + 212, s: 62 },
+      { ang: 5.00, y: HORIZON + 206, s: 74, fall: true },
       { ang: 6.05, y: HORIZON + 128, s: 34 }
     ];
 
@@ -475,6 +475,41 @@
       c.lobes.forEach(([ox, oy, r]) => ctx.ellipse(x + ox * c.w * 0.55, y + oy * 7 - r * c.w * 0.07, r * c.w * 0.5, r * c.w * 0.08, 0, 0, Math.PI * 2));
       ctx.fill();
     }
+    // water pouring off the edge of an island and falling away into the haze
+    function fallPath(x, y, w, len){
+      ctx.beginPath();
+      ctx.moveTo(x - w * 0.5, y); ctx.lineTo(x + w * 0.5, y);
+      ctx.lineTo(x + w * 0.95, y + len); ctx.lineTo(x - w * 0.95, y + len);
+      ctx.closePath();
+    }
+    function drawFall(x, y, s){
+      const w = s * 0.34, len = s * 4.2;
+      const g = ctx.createLinearGradient(0, y, 0, y + len);
+      g.addColorStop(0, "rgba(255,255,255,0.98)");
+      g.addColorStop(0.35, "rgba(176,226,255,0.92)");
+      g.addColorStop(1, "rgba(176,226,255,0)"); // it never lands, it just fades into the air
+      ctx.fillStyle = g;
+      fallPath(x, y, w, len); ctx.fill();
+      // streaks running down the water, so you can see it moving
+      ctx.save();
+      fallPath(x, y, w, len); ctx.clip();
+      const alpha = ctx.globalAlpha;
+      ctx.fillStyle = "#ffffff";
+      for (let i = 0; i < 7; i++) {
+        const t = (clock * 0.5 + i / 7) % 1;
+        ctx.globalAlpha = alpha * (1 - t) * 0.7;
+        ctx.fillRect(x - w * (0.42 - i % 3 * 0.12), y + t * len, w * 0.2, s * 0.3);
+      }
+      ctx.restore();
+      // spray where the water breaks up on the way down
+      ctx.fillStyle = "rgba(255,255,255,0.45)";
+      for (let i = 0; i < 4; i++) {
+        const t = 0.55 + i * 0.12, r = s * (0.14 + t * 0.16);
+        ctx.beginPath();
+        ctx.ellipse(x + Math.sin(clock * 1.4 + i * 2) * s * 0.07, y + t * len, r, r * 0.5, 0, 0, Math.PI * 2);
+        ctx.fill();
+      }
+    }
     function drawIsle(o){
       const x = skyX(o.ang + clock * 0.002);
       if (x === null) return;
@@ -490,11 +525,18 @@
       ctx.beginPath();
       ctx.moveTo(x + s * 0.08, y); ctx.lineTo(x + s * 0.5, y); ctx.lineTo(x + s * 0.2, y + s * 0.52); ctx.lineTo(x - s * 0.05, y + s * 0.88);
       ctx.closePath(); ctx.fill();
+      if (o.fall) drawFall(x - s * 0.4, y - s * 0.04, s);
       // grass on top, and a little tree
       ctx.fillStyle = "#3fae56";
       ctx.beginPath(); ctx.ellipse(x, y, s * 0.5, s * 0.14, 0, 0, Math.PI * 2); ctx.fill();
       ctx.fillStyle = "#5ccb72";
       ctx.beginPath(); ctx.ellipse(x - s * 0.08, y - s * 0.04, s * 0.33, s * 0.08, 0, 0, Math.PI * 2); ctx.fill();
+      if (o.fall) {
+        ctx.fillStyle = "#bfeaff";
+        ctx.beginPath(); ctx.ellipse(x - s * 0.32, y - s * 0.05, s * 0.2, s * 0.06, 0, 0, Math.PI * 2); ctx.fill();
+        ctx.fillStyle = "rgba(255,255,255,0.8)";
+        ctx.beginPath(); ctx.ellipse(x - s * 0.32, y - s * 0.08, s * 0.14, s * 0.035, 0, 0, Math.PI * 2); ctx.fill();
+      }
       ctx.fillStyle = "#5a4030"; ctx.fillRect(x + s * 0.15, y - s * 0.26, s * 0.05, s * 0.26);
       ctx.fillStyle = "#2f8f44";
       ctx.beginPath(); ctx.arc(x + s * 0.175, y - s * 0.33, s * 0.14, 0, Math.PI * 2); ctx.fill();
