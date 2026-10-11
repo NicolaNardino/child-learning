@@ -1,0 +1,9 @@
+/* Musik Maestro: notes drawn on a staff inside the question. */
+.mu-staff{ display: block; margin: 0 auto; max-width: 100%; height: auto; color: var(--ink); }
+.mu-line{ stroke: currentColor; stroke-width: 1.2; }
+.mu-stem{ stroke: currentColor; stroke-width: 1.6; }
+.mu-fill{ fill: currentColor; }
+.mu-hollow{ fill: none; stroke: currentColor; stroke-width: 1.8; }
+.mu-flag{ fill: none; stroke: currentColor; stroke-width: 2.2; stroke-linecap: round; }
+.mu-clef{ fill: currentColor; font: 62px "Noto Music", "Bravura", "Segoe UI Symbol", "Apple Symbols", "DejaVu Sans", serif; }
+.mu-time{ fill: currentColor; font: 800 21px "Bricolage Grotesque", sans-serif; }

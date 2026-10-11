@@ -11,13 +11,15 @@
      badgePrefix, badgeNames       trophy ids must be unique across apps; names can be swapped per subject
      wordy                         true for word questions, so they're not shown in the number font
      verdicts                      optional { right: "Richtig!", wrong: "Nicht ganz – richtig ist" } for another language
+     listenLabel                   optional: the 🔊 button's words, "🔊 Listen" unless it's another language
      topics: [{ id, label, icon, title, levelDesc: { warmup, practice, challenge }, hint, inputMode,
                 modes (optional [{ id, label }]), generate(level, mode) -> a question }]
    })
 
    A question is { prompt or promptHtml, check(answer), explain() -> html, answerDisplay, hint }, plus
    optionally choices: [...] (answer buttons instead of typing), keys: [...] (extra letter buttons
-   like ä ö ü), say: { text, lang } (a 🔊 button) and sayAfter (show 🔊 only once it's answered).
+   like ä ö ü), say: { text, lang } or a function that plays a sound (a 🔊 button), and sayAfter
+   (show 🔊 only once it's answered).
    Notebook.pick() and Notebook.typed() build the word kinds. */
 (function(){
   "use strict";
@@ -63,7 +65,9 @@
 
   /* ---------------- reading words out loud ---------------- */
   const canSpeak = "speechSynthesis" in window && typeof SpeechSynthesisUtterance === "function";
+  const canPlay = say => typeof say === "function" || (canSpeak && !!say);
   function speak(say){
+    if (typeof say === "function") { say(); return; }
     if (!canSpeak) return;
     speechSynthesis.cancel();
     const u = new SpeechSynthesisUtterance(say.text);
@@ -142,7 +146,7 @@
     const verdicts = cfg.verdicts || { right: "Correct!", wrong: "Not quite — the answer is" };
     const card = p => `
           <div class="problem ${cfg.wordy ? "wordy" : "mono"}" data-ref="${p}problem" aria-live="polite"></div>
-          <button class="btn ghost small say-btn" data-ref="${p}say" type="button" hidden>🔊 Listen</button>
+          <button class="btn ghost small say-btn" data-ref="${p}say" type="button" hidden></button>
           <div class="choices" data-ref="${p}choices" role="group" aria-label="Answers" hidden></div>
           <div class="answer-row" data-ref="${p}answerRow">
             <input data-ref="${p}input" type="text" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" placeholder="your answer" aria-label="Your answer">
@@ -245,6 +249,7 @@
     $.title.textContent = cfg.title;
     $.unit.textContent = cfg.unit;
     $.tagline.textContent = cfg.tagline;
+    host.querySelectorAll(".say-btn").forEach(b => { b.textContent = cfg.listenLabel || "🔊 Listen"; });
     $.taglineFor.textContent = cfg.taglineFor || "for";
 
     let currentTopicId = d.topic;
@@ -294,7 +299,7 @@
       if (prob.promptHtml) c.problem.innerHTML = prob.promptHtml;
       else c.problem.textContent = prob.prompt;
       c.problem.classList.toggle("long", (prob.prompt || c.problem.textContent).length > 34);
-      c.say.hidden = !canSpeak || !prob.say || !!prob.sayAfter;
+      c.say.hidden = !canPlay(prob.say) || !!prob.sayAfter;
       const hasChoices = !!prob.choices;
       c.choices.hidden = !hasChoices;
       c.answerRow.hidden = hasChoices;
@@ -332,7 +337,7 @@
         if (c.prob.check(b.dataset.value)) b.classList.add("right");
         else if (b.dataset.value === picked) b.classList.add("wrong");
       });
-      if (canSpeak && c.prob.say) c.say.hidden = false;
+      if (canPlay(c.prob.say)) c.say.hidden = false;
     }
 
     function focusCard(c){ if (!c.prob || !c.prob.choices) c.input.focus(); }

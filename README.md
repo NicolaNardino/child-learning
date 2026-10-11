@@ -16,6 +16,10 @@ There's nothing to install and no build step. Just open `index.html` in a browse
   - Five topics: 📚 Words (English ↔ German: school, free time, town and traffic), ↔️ Opposites, 🐝 Spelling (pick it, or hear it 🔊 and type it), 🏃 Verbs (present simple, present continuous, past simple) and ✏️ Grammar (be / have got, prepositions, question words, comparing).
 - 🥨 **Deutsch Dash**: Deutsch für die 5. Klasse, passend zu *Die Sprachstarken 5*, mit Schweizer Rechtschreibung (ss statt ß, «Anführungszeichen»).
   - Sechs Themen: 🧩 Wortarten (Nomen, Verb, Adjektiv, Pronomen, Partikel), 🎯 Die 4 Fälle, 🏃 Verben (Präteritum, Perfekt), ✍️ Rechtschreibung (Doppelkonsonanten, ss, ck/tz, das/dass), 💬 Satzzeichen (direkte Rede, Kommas) und 🧱 Morpheme.
+- 🌍 **NMG Entdecker**: Natur, Mensch, Gesellschaft für die 5. Klasse in Zug (Lehrplan 21), mit vielen Beispielen aus Zug und Baar.
+  - Sechs Themen: 🗺️ Kantone, ⛰️ Geografie, 🏰 Geschichte (Pfahlbauer, Römer, Ritter, 1291, Morgarten), 🫀 Mensch & Körper, 🦊 Tiere & Pflanzen und 🧲 Natur & Technik.
+- 🎵 **Musik Maestro**: Musik für die 5. Klasse, mit Noten auf einem echten Notensystem und Tönen zum Anhören.
+  - Sechs Themen: 🎼 Notennamen (mit h!), ⏱️ Notenwerte und Pausen, 📏 Takt, 🎻 Instrumente, 🔤 Musikwörter und Komponisten, und 👂 ein Hör-Quiz (hoch oder tief, Dur oder Moll, schnell oder langsam).
 
 Every Learning subject has the same three levels, ⏱️ Time Trial, 🏁 race against Robo, streaks and trophies. Word questions have answer buttons you can tap, or press the number keys.
 
@@ -42,6 +46,8 @@ learning/
   math/                    Fast Math
   english/                 Word Wizard
   german/                  Deutsch Dash
+  nmg/                     NMG Entdecker
+  musik/                   Musik Maestro (draws notes as SVG and plays tones with Web Audio)
 games/
   game-frame.css           the full-screen frame every game sits in
   robot-tag/               Robot Tag
