@@ -409,7 +409,7 @@
     const ISLES = [
       { ang: 1.35, y: HORIZON + 150, s: 46 },
       { ang: 3.10, y: HORIZON + 96,  s: 26 },
-      { ang: 5.00, y: HORIZON + 206, s: 74, fall: true },
+      { ang: 5.00, y: HORIZON + 190, s: 112, fall: true },
       { ang: 6.05, y: HORIZON + 128, s: 34 }
     ];
 
@@ -483,7 +483,7 @@
       ctx.closePath();
     }
     function drawFall(x, y, s){
-      const w = s * 0.34, len = s * 4.2;
+      const w = s * 0.4, len = s * 4.6;
       const g = ctx.createLinearGradient(0, y, 0, y + len);
       g.addColorStop(0, "rgba(255,255,255,0.98)");
       g.addColorStop(0.35, "rgba(176,226,255,0.92)");
