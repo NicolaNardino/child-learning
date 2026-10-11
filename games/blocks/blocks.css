@@ -60,8 +60,10 @@
   background: rgba(110,110,110,0.32); border: 2px solid rgba(70,70,70,0.9); border-radius: 0;
   touch-action: none;
 }
-.bl-slot canvas{ display: block; width: 100%; height: 100%; }
-.bl-slot span{ position: absolute; right: 3px; bottom: 0; font: 700 10px/1.4 "IBM Plex Mono", monospace; color: #fff; text-shadow: 1px 1px 0 #000; }
+.bl-slot img{ display: block; width: 100%; height: 100%; image-rendering: pixelated; }
+.bl-slot .bl-key{ position: absolute; left: 3px; top: 0; font: 700 9px/1.4 "IBM Plex Mono", monospace; color: rgba(255,255,255,0.75); text-shadow: 1px 1px 0 #000; }
+.bl-slot .bl-count{ position: absolute; right: 2px; bottom: 0; font: 800 12px/1.2 "IBM Plex Mono", monospace; color: #fff; text-shadow: 1px 1px 0 #3a3a3a, 2px 2px 0 #000; }
+.bl-hotbar:not(.survival) .bl-key{ left: auto; right: 3px; top: auto; bottom: 0; font-size: 10px; color: #fff; }
 .bl-slot.sel{ border: 3px solid #fff; background: rgba(255,255,255,0.18); z-index: 1; margin: -1px; }
 @media (max-width: 640px), (max-height: 500px){
   .bl-hotbar{ bottom: 4px; padding: 2px; }
@@ -71,3 +73,74 @@
 
 /* eight touch buttons: let them wrap onto a second row on a narrow phone */
 .bl-touch{ flex-wrap: wrap; }
+
+/* the start screen's Creative / Survival switch */
+.bl-modes button{ padding: 8px 16px; font-size: 14px; }
+
+/* ---------- the inventory, crafting table and furnace screens ---------- */
+.bl-inv{
+  position: absolute; inset: 0; z-index: 5; border-radius: 12px;
+  background: rgba(0,0,0,0.55); display: flex;
+  overflow: auto; padding: 8px; touch-action: none;
+}
+.bl-inv-box{
+  background: #c6c6c6; color: #3f3f3f; border: 3px solid #fff; border-right-color: #555; border-bottom-color: #555;
+  border-radius: 4px; padding: 10px 12px; display: flex; flex-direction: column; gap: 8px; max-width: 100%;
+  margin: auto; width: max-content;
+  font: 700 13px "Karla", sans-serif; user-select: none; -webkit-user-select: none;
+}
+.bl-inv-head{ display: flex; justify-content: space-between; align-items: center; gap: 10px; }
+.bl-inv-title{ font: 800 15px "Bricolage Grotesque", sans-serif; color: #3f3f3f; }
+.bl-inv-head .btn.ghost{ color: #3f3f3f; border-color: #888; }
+.bl-inv-top{ display: flex; gap: 14px; align-items: flex-start; }
+.bl-inv-left{ display: flex; flex-direction: column; gap: 6px; min-width: 0; }
+.bl-craft, .bl-furnace{ display: flex; align-items: center; gap: 10px; }
+.bl-grid{ display: grid; gap: 2px; }
+.bl-grid.g2{ grid-template-columns: repeat(2, max-content); }
+.bl-grid.g3{ grid-template-columns: repeat(3, max-content); }
+.bl-arrow{ font-size: 26px; color: #8b8b8b; }
+.bl-result .bl-islot{ width: 52px; height: 52px; }
+.bl-result .bl-islot.ready{ box-shadow: 0 0 0 2px #ffd34d; }
+.bl-inv-note{ font-size: 12px; color: #444; max-width: 260px; min-height: 16px; line-height: 1.35; }
+/* the slots: sunk-in grey squares, like the real thing */
+.bl-islot{
+  position: relative; width: 38px; height: 38px; background: #8b8b8b;
+  border: 2px solid #373737; border-right-color: #fff; border-bottom-color: #fff; cursor: pointer;
+}
+.bl-islot:hover{ background: #a5a5a5; }
+.bl-islot img{ position: absolute; inset: 3px; width: calc(100% - 6px); height: calc(100% - 6px); image-rendering: pixelated; pointer-events: none; }
+.bl-islot span{ position: absolute; right: 2px; bottom: 0; font: 800 12px/1.2 "IBM Plex Mono", monospace; color: #fff; text-shadow: 1px 1px 0 #3a3a3a, 2px 2px 0 #000; pointer-events: none; }
+.bl-islot.ghost img{ opacity: 0.35; }
+.bl-inv-main{ display: grid; grid-template-columns: repeat(9, max-content); gap: 2px; justify-content: start; }
+.bl-inv-hot{ display: grid; grid-template-columns: repeat(9, max-content); gap: 2px; margin-top: 4px; justify-content: start; }
+/* the furnace: what to cook on top, the flame, the fuel underneath, then the arrow and what comes out */
+.bl-fcol{ display: flex; flex-direction: column; align-items: center; gap: 4px; }
+.bl-flame{ width: 16px; height: 18px; background: #8b8b8b; position: relative; overflow: hidden; border-radius: 3px; }
+.bl-flame div{ position: absolute; left: 0; right: 0; bottom: 0; background: linear-gradient(#ffe14d, #ff7a1c); }
+.bl-fprog{ width: 46px; height: 12px; background: #8b8b8b; border-radius: 3px; overflow: hidden; }
+.bl-fprog div{ height: 100%; background: #f4f4f4; width: 0; }
+.bl-fout .bl-islot{ width: 52px; height: 52px; }
+/* the recipe book */
+.bl-book{ display: flex; flex-direction: column; gap: 4px; max-height: 210px; min-width: 150px; }
+.bl-book-title{ font-weight: 800; }
+.bl-book-list{ display: flex; flex-direction: column; gap: 2px; overflow-y: auto; padding-right: 4px; }
+.bl-recipe{
+  display: flex; align-items: center; gap: 6px; padding: 2px 6px; border: 1px solid #8b8b8b; border-radius: 3px;
+  background: #b0b0b0; color: #555; font: 700 12px "Karla", sans-serif; cursor: pointer; text-align: left;
+}
+.bl-recipe img{ width: 22px; height: 22px; image-rendering: pixelated; }
+.bl-recipe.can{ background: #e8e8e8; color: #222; border-color: #4a9e3f; }
+.bl-recipe.big{ opacity: 0.55; }
+.bl-inv.book .bl-recipe{ background: #e8e8e8; color: #222; }
+/* what you're carrying, following the pointer */
+.bl-cursor{ position: absolute; width: 36px; height: 36px; pointer-events: none; transform: translate(-50%, -50%); z-index: 6; }
+.bl-cursor img{ width: 100%; height: 100%; image-rendering: pixelated; }
+.bl-cursor span{ position: absolute; right: -2px; bottom: -2px; font: 800 12px "IBM Plex Mono", monospace; color: #fff; text-shadow: 1px 1px 0 #000; }
+@media (max-width: 640px), (max-height: 520px){
+  .bl-islot{ width: min(30px, calc((100vw - 70px) / 9)); height: min(30px, calc((100vw - 70px) / 9)); }
+  .bl-result .bl-islot, .bl-fout .bl-islot{ width: 40px; height: 40px; }
+  .bl-inv-top{ flex-direction: column; gap: 6px; }
+  .bl-book{ max-height: 96px; min-width: 0; max-width: calc(9 * 32px); }
+  .bl-book-list{ flex-direction: row; flex-wrap: wrap; }
+  .bl-inv-box{ padding: 6px 8px; gap: 5px; }
+}

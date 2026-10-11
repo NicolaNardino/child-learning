@@ -8,7 +8,7 @@
 (function(){
   "use strict";
   const BW = window.BlockWorld;
-  const { WW, WH, WD, SEA, world, at, ID, K, T, TILE_COLS, TILE_ROWS, BLOCKS, FACE, KIND, IS_OPAQUE, EMIT, TORCH_DIR, atlasData } = BW;
+  const { WW, WH, WD, SEA, world, at, ID, K, T, TILE_COLS, TILE_ROWS, BLOCKS, FACE, FACE6, KIND, IS_OPAQUE, EMIT, TORCH_DIR, atlasData } = BW;
   const CH = 16, NCX = WW / CH, NCZ = WD / CH;
   const FOV = 70 * Math.PI / 180;
   const AO = [0.5, 0.68, 0.84, 1];          // how bright a corner is with 3, 2, 1 or 0 blocks crowding it
@@ -30,11 +30,11 @@
     }`;
   const MAIN_FS = PREC + `
     uniform sampler2D uTex; uniform vec3 uFog; uniform float uFogStart; uniform float uFogEnd;
-    uniform float uAlpha; uniform float uWave; uniform float uTime; uniform vec3 uLight;
+    uniform float uAlpha; uniform float uWave; uniform float uTime; uniform vec3 uLight; uniform float uCut;
     varying vec2 vUV; varying float vLight; varying float vBlock; varying float vDist; varying vec3 vPos;
     void main(){
       vec4 c = texture2D(uTex, vUV);
-      if (uAlpha >= 1.0 && c.a < 0.5) discard;          // the holes in leaves and glass
+      if (uAlpha >= 1.0 && c.a < uCut) discard;         // the holes in leaves and glass (and, while digging, the cracks still to come)
       float light = vLight;
       if (uWave > 0.5) light *= 0.93 + 0.07 * sin(vPos.x * 2.3 + vPos.z * 1.9 + uTime * 1.6); // water shimmers
       // the sun or moon lights everything the same, and a glowing block adds a warm light to what's near it (by day there's nothing to add)
@@ -283,11 +283,11 @@
         if (kind === K.PLANT) { addCross(solid, x, y, z, FACE[id * 3]); continue; }
         if (kind === K.TORCH) { addTorch(solid, x, y, z, id); continue; }
         if (kind === K.WATER) { addWater(water, x, y, z); continue; }
-        for (const F of FACES) {
+        FACES.forEach((F, f) => {
           const nid = idAt(x + F.n[0], y + F.n[1], z + F.n[2]);
-          if (IS_OPAQUE[nid] || (nid === id && id === ID.GLASS)) continue;
-          addFace(solid, x, y, z, F, FACE[id * 3 + F.kind], EMIT[id] > 0);
-        }
+          if (IS_OPAQUE[nid] || (nid === id && id === ID.GLASS)) return;
+          addFace(solid, x, y, z, F, FACE6[id * 6 + f], EMIT[id] > 0);
+        });
       }
       const c = chunks[cz * NCX + cx] || (chunks[cz * NCX + cx] = { sBuf: gl.createBuffer(), wBuf: gl.createBuffer(), sN: 0, wN: 0 });
       upload(c.sBuf, solid); c.sN = solid.length / 7;
@@ -377,6 +377,15 @@
       if (id === heldId) return;
       heldId = id;
       const out = [];
+      if (!id) { heldN = 0; return; }             // an empty hand
+      if (id >= 100) {                            // a tool or anything else that isn't a block: a flat picture
+        const tile = BW.Survival.ITEMS[id].tile, col = (tile % TILE_COLS) * 16, row = Math.floor(tile / TILE_COLS) * 16;
+        const U = px => (col + px) / AW, V = py => (row + py) / AH;
+        pushQuad(out, [[-0.5, -0.5, 0, U(0.03), V(15.97), 1, 0], [0.5, -0.5, 0, U(15.97), V(15.97), 1, 0], [0.5, 0.5, 0, U(15.97), V(0.03), 1, 0], [-0.5, 0.5, 0, U(0.03), V(0.03), 1, 0]], false);
+        heldScale = 0.62;
+        upload(heldBuf, out); heldN = out.length / 7;
+        return;
+      }
       if (KIND[id] === K.TORCH) {
         addTorch(out, 0, 0, 0, BW.ID.TORCH);
         for (let i = 0; i < out.length; i += 7) { out[i] -= 0.5; out[i + 1] -= 0.3; out[i + 2] -= 0.5; }
@@ -386,7 +395,7 @@
       }
       heldScale = 0.3;
       FACES.forEach(F => {
-        const tile = FACE[id * 3 + F.kind];
+        const tile = FACE6[id * 6 + FACES.indexOf(F)];
         const light = F.kind === 1 ? 1 : F.kind === 2 ? 0.5 : (F.n[0] !== 0 ? 0.62 : 0.82);
         const v = [];
         for (const [su, sv] of [[0, 0], [1, 0], [1, 1], [0, 1]]) {
@@ -407,6 +416,20 @@
       e.forEach(([a, b]) => out.push(...c[a], ...c[b]));
       gl.bindBuffer(gl.ARRAY_BUFFER, lineBuf);
       gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(out), gl.STATIC_DRAW);
+    })();
+    const crackBuf = gl.createBuffer();
+    let crackN = 0;
+    (function(){
+      const out = [], t = T.CRACK, e = 0.004;
+      FACES.forEach(F => {
+        const v = [];
+        for (const [su, sv] of [[0, 0], [1, 0], [1, 1], [0, 1]]) {
+          const p = [0, 1, 2].map(a => -e + (F.n[a] > 0 ? 1 + 2 * e : 0) + (su * F.u[a] + sv * F.v[a]) * (1 + 2 * e));
+          v.push([p[0], p[1], p[2], tu(t, su), tv(t, F.kind !== 0 ? sv : 1 - sv), 1, 0]);
+        }
+        pushQuad(out, v, false);
+      });
+      upload(crackBuf, out); crackN = out.length / 7;
     })();
     const partBuf = gl.createBuffer();
     const skyBuf = gl.createBuffer();
@@ -461,8 +484,18 @@
       gl.uniform3fv(main.u.uFog, fog); gl.uniform1f(main.u.uFogStart, fogStart); gl.uniform1f(main.u.uFogEnd, fogEnd);
       gl.uniform3f(main.u.uOffset, 0, 0, 0);
       gl.uniform3fv(main.u.uLight, sk.light);
-      gl.uniform1f(main.u.uAlpha, 1); gl.uniform1f(main.u.uWave, 0); gl.uniform1f(main.u.uTime, v.time);
+      gl.uniform1f(main.u.uAlpha, 1); gl.uniform1f(main.u.uWave, 0); gl.uniform1f(main.u.uTime, v.time); gl.uniform1f(main.u.uCut, 0.5);
       chunks.forEach(c => { if (c.sN) { bindMesh(c.sBuf); gl.drawArrays(gl.TRIANGLES, 0, c.sN); } });
+
+      // cracks spreading over the block you're digging
+      if (v.crack && v.crack.progress > 0) {
+        gl.enable(gl.POLYGON_OFFSET_FILL); gl.polygonOffset(-1, -1);
+        gl.uniform1f(main.u.uCut, Math.max(0.03, 1 - v.crack.progress));
+        gl.uniform3f(main.u.uOffset, v.crack.x, v.crack.y, v.crack.z);
+        bindMesh(crackBuf); gl.drawArrays(gl.TRIANGLES, 0, crackN);
+        gl.uniform3f(main.u.uOffset, 0, 0, 0); gl.uniform1f(main.u.uCut, 0.5);
+        gl.disable(gl.POLYGON_OFFSET_FILL);
+      }
 
       // the outline round the block you point at
       if (v.target) {

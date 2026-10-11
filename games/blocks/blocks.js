@@ -1,12 +1,15 @@
 /* Block World: a Minecraft-style sandbox. Walk, jump, swim and fly around a world made of blocks, dig them
-   out and build whatever you like. The picture comes from gl.js (WebGL, or soft.js on a device without it);
-   this file is the game itself: moving, digging, building, the hotbar and saving.
-   Your builds are saved (only the blocks you changed, not the whole world). */
+   out and build whatever you like. In Creative every block is yours to build with; in Survival you collect
+   what you dig, build with what you have, and craft new things at a crafting table and a furnace.
+   The picture comes from gl.js (WebGL, or soft.js on a device without it), the Survival rules from items.js
+   and the inventory screens from inventory.js; this file is the game itself: moving, digging, building,
+   the hotbar and saving. Your builds are saved (only the blocks you changed, not the whole world). */
 (function(){
   "use strict";
   const store = Hub.store;
   const BW = window.BlockWorld;
-  const { WW, WH, WD, world, at, ID, K, TEX, FACE, KIND, IS_SOLID, HOTBAR, BLOCKS, generate, spawnPoint, skyState, TORCH_DIR, wallTorch, IS_OPAQUE } = BW;
+  const { WW, WH, WD, world, at, ID, K, TEX, FACE, KIND, IS_SOLID, HOTBAR, BLOCKS, generate, spawnPoint, skyState, TORCH_DIR, wallTorch, IS_OPAQUE, isFurnace, furnaceFacing, T } = BW;
+  const SV = BW.Survival;
   const CYCLE = 360;              // a whole day and night takes 6 minutes
   const SLOTS = HOTBAR.length;
   // the times the clock button jumps to
@@ -49,11 +52,15 @@
           <div class="game-panel bl-panel" id="blPanel">
             <div class="game-panel-title">⛏️ Block World</div>
             <div class="game-panel-text" id="blPanelText"></div>
+            <div class="segmented bl-modes" role="group" aria-label="Game mode">
+              <button type="button" data-mode="creative">🎨 Creative</button>
+              <button type="button" data-mode="survival">⛏️ Survival</button>
+            </div>
             <button class="btn" id="blPlayBtn" type="button">▶ Play</button>
             <button class="btn ghost small" id="blNewBtn" type="button">🌱 New world</button>
           </div>
         </div>
-        <div class="game-help">W A S D to move · mouse or ← → ↑ ↓ to look · Space to jump or swim up · left click to dig · right click to build · 1–9, 0, – or the mouse wheel to pick a block · F to fly (Space up, Shift down) · T for another time of day</div>
+        <div class="game-help">W A S D to move · mouse or ← → ↑ ↓ to look · Space to jump or swim up · left click to dig · right click to build · 1–9, 0, – or the mouse wheel to pick a block · F to fly (Space up, Shift down) · E for your inventory · T for another time of day</div>
         <div class="game-touch bl-touch">
           <button class="btn ghost" data-bkey="left" type="button" aria-label="Step left">◀</button>
           <button class="btn ghost" data-bkey="forward" type="button" aria-label="Walk forward">▲</button>
@@ -63,6 +70,7 @@
           <button class="btn" data-bkey="mine" type="button" aria-label="Dig">⛏</button>
           <button class="btn" data-bkey="place" type="button" aria-label="Build">🧱</button>
           <button class="btn ghost" data-bkey="fly" type="button" aria-label="Fly or walk">✈</button>
+          <button class="btn ghost" data-bkey="bag" type="button" aria-label="Inventory">🎒</button>
         </div>
       </div>
     </section>`;
@@ -103,6 +111,11 @@
     const bits = []; // the flying bits of a dug block, and the flames
     const torches = new Set(); // where the torches are, for the flames
     const isTorch = id => KIND[id] === K.TORCH;
+    // Creative or Survival, the bag, and the furnaces (each world keeps its own)
+    let survival = store.blockMode === "survival";
+    const bag = () => store.blockInv;
+    let mining = null;        // the block you're digging in Survival, and how far along you are
+    let furnSaveT = 0;
     const keys = { forward: false, back: false, left: false, right: false, jump: false, down: false, mine: false, lookL: false, lookR: false, lookU: false, lookD: false };
 
     /* ---------------- the world around you ---------------- */
@@ -176,29 +189,79 @@
       const sid = idAt(sx, sy, sz);
       return IS_SOLID[sid] === 1 && IS_OPAQUE[sid] === 1;
     }
-    // after a block goes, any torch it was holding up falls off
-    function dropTorchesAround(x, y, z){
+    // a little message above the hotbar ("+1 Log", "Your bag is full")
+    function tell(text){
+      nameEl.textContent = text;
+      nameEl.classList.add("show");
+      nameT = 1.6;
+    }
+    // in Survival, what you dig goes in your bag
+    function collect(list){
+      list.forEach(([id, n]) => {
+        const left = SV.addItem(bag(), id, n);
+        tell(left > 0 ? "Your bag is full!" : "+" + n + " " + SV.nameOf(id));
+      });
+      refreshHotbar();
+    }
+    // a block goes: what it drops, the torches it was holding up, and a furnace's contents
+    function breakAt(t){
+      const id = world[at(t.x, t.y, t.z)];
+      if (survival) {
+        collect(SV.drops(id, heldId()));
+        if (isFurnace(id)) {
+          const f = store.blockFurnaces[at(t.x, t.y, t.z)];
+          if (f) collect([f.input, f.fuel, f.output].filter(Boolean).map(s => [s.id, s.n]));
+        }
+      }
+      if (isFurnace(id)) delete store.blockFurnaces[at(t.x, t.y, t.z)];
+      setBlock(t.x, t.y, t.z, 0);
+      debris(t.x, t.y, t.z, id);
+      // torches it was holding up fall off (and in Survival you catch them)
       for (const [dx, dy, dz] of [[0, 1, 0], [1, 0, 0], [-1, 0, 0], [0, 0, 1], [0, 0, -1]]) {
-        const tx = x + dx, ty = y + dy, tz = z + dz, id = idAt(tx, ty, tz);
-        if (!isTorch(id) || torchSupported(tx, ty, tz, id)) continue;
+        const tx = t.x + dx, ty = t.y + dy, tz = t.z + dz, tid = idAt(tx, ty, tz);
+        if (!isTorch(tid) || torchSupported(tx, ty, tz, tid)) continue;
         setBlock(tx, ty, tz, 0);
-        debris(tx, ty, tz, id);
+        debris(tx, ty, tz, tid);
+        if (survival) collect([[ID.TORCH, 1]]);
       }
     }
     function dig(){
       const t = aim();
       if (!t || t.y === 0) return; // the very bottom layer can't be dug
-      const id = world[at(t.x, t.y, t.z)];
-      setBlock(t.x, t.y, t.z, 0);
-      debris(t.x, t.y, t.z, id);
-      dropTorchesAround(t.x, t.y, t.z);
+      breakAt(t);
       swing = 0.001;
       store.blocksBroken = (store.blocksBroken || 0) + 1;
       Hub.checkBadges(); saveSoon();
     }
+    // Survival digging takes time (less with the right tool): hold the button down and the cracks spread
+    function mineStep(dt){
+      if (!keys.mine) { mining = null; return; }
+      if (!survival) { mineT -= dt; if (mineT <= 0) { dig(); mineT = 0.22; } return; }
+      const t = aim();
+      if (!t || t.y === 0) { mining = null; return; }
+      const i = at(t.x, t.y, t.z);
+      if (!mining || mining.i !== i) mining = { i, x: t.x, y: t.y, z: t.z, t: 0, need: SV.digTime(world[i], heldId()) };
+      mining.t += dt;
+      if (swing === 0) swing = 0.001;
+      if (mining.t >= mining.need) { dig(); mining = null; }
+    }
+    // right-clicking a crafting table or a furnace opens it instead of building
+    function useBlock(t){
+      const id = world[at(t.x, t.y, t.z)];
+      if (id === ID.CRAFTING) { openScreen(() => survival ? ui.openCrafting() : ui.openBook()); return true; }
+      if (isFurnace(id)) {
+        if (!survival) { tell("Furnaces work in Survival"); return true; }
+        const k = at(t.x, t.y, t.z);
+        const f = store.blockFurnaces[k] || (store.blockFurnaces[k] = SV.newFurnace());
+        openScreen(() => ui.openFurnace(f));
+        return true;
+      }
+      return false;
+    }
     function build(){
       const t = aim();
       if (!t) return;
+      if (useBlock(t)) return;
       const hit = world[at(t.x, t.y, t.z)];
       // pointing at a flower or a torch: the new block takes its place
       const replace = KIND[hit] === K.PLANT || isTorch(hit);
@@ -207,13 +270,24 @@
       const there = world[at(x, y, z)];
       if (there && KIND[there] !== K.PLANT && KIND[there] !== K.WATER && !isTorch(there)) return;
       if (inPlayer(x, y, z)) return;
-      let id = HOTBAR[sel];
+      let id = heldId();
+      const it = SV.ITEMS[id];
+      if (!id || (survival && !(it && it.block))) return;   // a tool, a stick or an empty hand doesn't build
       if (id === ID.TORCH) {
         // a torch goes on top of a block (standing) or on the side of one (hanging), but not under one
         if (replace || t.ny === 1) id = ID.TORCH;
         else if (t.ny === 0) id = wallTorch(-t.nx, -t.nz);
         else return;
         if (!torchSupported(x, y, z, id)) return;
+      }
+      if (id === ID.FURNACE) { // its front faces you
+        id = furnaceFacing(p.x - (x + 0.5), p.z - (z + 0.5));
+        store.blockFurnaces[at(x, y, z)] = SV.newFurnace();
+      }
+      if (survival) {
+        const slot = bag()[sel];
+        if (--slot.n <= 0) bag()[sel] = null;
+        refreshHotbar();
       }
       setBlock(x, y, z, id);
       swing = 0.001;
@@ -279,7 +353,7 @@
       else if (keys.jump && p.onGround) { p.vy = JUMP; p.onGround = false; }
       for (let k = 0; k < 3; k++) move(dt / 3); // little steps, so you can't fall through a block
       if (p.fly && p.y > 70) p.y = 70;
-      if (keys.mine) { mineT -= dt; if (mineT <= 0) { dig(); mineT = 0.22; } }
+      mineStep(dt);
       const high = Math.floor(p.y);
       if (high > (store.blocksHigh || 0)) { store.blocksHigh = high; Hub.checkBadges(); saveSoon(); }
     }
@@ -291,7 +365,12 @@
       c.width = c.height = 64;
       const g = c.getContext("2d");
       g.imageSmoothingEnabled = false;
-      const tile = k => FACE[id * 3 + k];
+      const tile = k => k === 0 && isFurnace(id) ? T.FURN_FRONT : FACE[id * 3 + k];
+      if (id >= 100) { // a tool, a stick, coal...: its picture, big and crisp
+        const t = SV.ITEMS[id].tile, sx = (t % 6) * 16, sy = Math.floor(t / 6) * 16;
+        g.drawImage(atlas, sx, sy, 16, 16, 4, 4, 56, 56);
+        return c;
+      }
       if (isTorch(id)) { // a torch is drawn as itself, big, with a little dark edge so it shows on any slot
         const t = tile(0), sx = (t % 6) * 16, sy = Math.floor(t / 6) * 16;
         g.drawImage(atlas, sx + 3, sy + 3, 10, 13, 12, 6, 40, 52);
@@ -301,10 +380,10 @@
       const faces = [
         { k: 1, m: [1.75, -0.875, 1.75, 0.875, 4, 18], dark: 0,    poly: [[32, 4], [60, 18], [32, 32], [4, 18]] },
         { k: 0, m: [1.75, 0.875, 0, 1.75, 4, 18],      dark: 0.26, poly: [[4, 18], [32, 32], [32, 60], [4, 46]] },
-        { k: 0, m: [1.75, -0.875, 0, 1.75, 32, 32],    dark: 0.46, poly: [[32, 32], [60, 18], [60, 46], [32, 60]] }
+        { k: 2, m: [1.75, -0.875, 0, 1.75, 32, 32],    dark: 0.46, poly: [[32, 32], [60, 18], [60, 46], [32, 60]] }
       ];
       faces.forEach(f => {
-        const t = tile(f.k), sx = (t % 6) * 16, sy = Math.floor(t / 6) * 16;
+        const t = f.k === 2 ? FACE[id * 3] : tile(f.k), sx = (t % 6) * 16, sy = Math.floor(t / 6) * 16;   // (2: the right-hand side, never the front)
         g.setTransform(f.m[0], f.m[1], f.m[2], f.m[3], f.m[4], f.m[5]);
         g.drawImage(atlas, sx, sy, 16, 16, 0, 0, 16, 16);
         g.setTransform(1, 0, 0, 1, 0, 0);
@@ -315,25 +394,44 @@
       });
       return c;
     }
-    function select(i, quiet){
-      sel = ((i % SLOTS) + SLOTS) % SLOTS;
-      [...hotbar.children].forEach((el, n) => el.classList.toggle("sel", n === sel));
-      renderer.setSelected(HOTBAR[sel]);
-      if (quiet) return;
-      nameEl.textContent = BLOCKS[HOTBAR[sel]].name;
-      nameEl.classList.add("show");
-      nameT = 1.6;
+    const iconURLs = new Map();
+    const iconURL = id => { if (!iconURLs.has(id)) iconURLs.set(id, icon(id).toDataURL()); return iconURLs.get(id); };
+    const slotCount = () => survival ? 9 : HOTBAR.length;
+    // what's in your hand: in Creative the hotbar block, in Survival whatever is in that slot of your bag
+    const heldId = () => survival ? (bag()[sel] ? bag()[sel].id : 0) : HOTBAR[sel];
+    function buildHotbar(){
+      hotbar.innerHTML = "";
+      for (let i = 0; i < slotCount(); i++) {
+        const btn = document.createElement("button");
+        btn.type = "button"; btn.className = "bl-slot";
+        btn.innerHTML = "<img alt='' draggable='false'><span class='bl-key'></span><span class='bl-count'></span>";
+        btn.querySelector(".bl-key").textContent = i < 9 ? String(i + 1) : i === 9 ? "0" : "–";
+        btn.addEventListener("pointerdown", e => { e.preventDefault(); select(i); });
+        hotbar.appendChild(btn);
+      }
+      hotbar.classList.toggle("survival", survival);
+      refreshHotbar();
     }
-    HOTBAR.forEach((id, i) => {
-      const btn = document.createElement("button");
-      btn.type = "button"; btn.className = "bl-slot"; btn.title = BLOCKS[id].name; btn.setAttribute("aria-label", BLOCKS[id].name);
-      const num = document.createElement("span");
-      num.textContent = i < 9 ? String(i + 1) : i === 9 ? "0" : "–";
-      btn.append(icon(id), num);
-      btn.addEventListener("pointerdown", e => { e.preventDefault(); select(i); });
-      hotbar.appendChild(btn);
-    });
-    select(0, true);
+    function refreshHotbar(){
+      [...hotbar.children].forEach((btn, i) => {
+        const s = survival ? bag()[i] : null, id = survival ? (s ? s.id : 0) : HOTBAR[i];
+        const img = btn.querySelector("img");
+        if (id) { img.src = iconURL(id); img.hidden = false; } else img.hidden = true;
+        btn.querySelector(".bl-count").textContent = s && s.n > 1 ? String(s.n) : "";
+        const name = id ? SV.nameOf(id) : "Empty";
+        btn.title = name; btn.setAttribute("aria-label", name);
+        btn.classList.toggle("sel", i === sel);
+      });
+      renderer.setSelected(heldId());
+    }
+    function select(i, quiet){
+      const n = slotCount();
+      sel = ((i % n) + n) % n;
+      mining = null;
+      refreshHotbar();
+      if (quiet) return;
+      tell(heldId() ? SV.nameOf(heldId()) : "Empty hand");
+    }
 
     // morning, day, sunset or night, as a name for the clock button
     function timeLabel(){
@@ -355,10 +453,48 @@
     timeEl.addEventListener("click", () => nextTime());
 
     function toggleFly(){
+      if (survival) { tell("No flying in Survival!"); return; }
       p.fly = !p.fly;
       p.vy = 0;
-      modeEl.textContent = p.fly ? "🕊️ Flying" : "🚶 Walking";
+      showMode();
     }
+    function showMode(){ modeEl.textContent = survival ? "⛏️ Survival" : p.fly ? "🕊️ Flying" : "🚶 Walking"; }
+
+    const ui = BW.createInventoryUI({
+      stage: overlay.querySelector(".game-stage"),
+      getInv: bag,
+      icon,
+      onChange(){ refreshHotbar(); saveSoon(); },
+      onCraft(){ store.blocksCrafted = (store.blocksCrafted || 0) + 1; }
+    });
+    // open one of the screens: the mouse is let go so you can click on things
+    function openScreen(how){
+      releaseKeys(); mining = null;
+      if (document.pointerLockElement === canvas) document.exitPointerLock();
+      how();
+    }
+    function toggleBag(){
+      if (ui.isOpen()) { ui.close(); return; }
+      openScreen(() => survival ? ui.openInventory() : ui.openBook());
+    }
+
+    // Creative or Survival, chosen on the start screen
+    const modeBtns = [...overlay.querySelectorAll(".bl-modes button")];
+    function setMode(m){
+      survival = m === "survival";
+      store.blockMode = m;
+      if (survival) p.fly = false;
+      sel = Math.min(sel, slotCount() - 1);
+      modeBtns.forEach(b => b.setAttribute("aria-pressed", String(b.dataset.mode === m)));
+      overlay.querySelector('[data-bkey="fly"]').hidden = survival;
+      showMode();
+      buildHotbar();
+      panelText.textContent = survival
+        ? "Survival: hold the left button to dig, and what you dig goes in your bag (press E or 🎒). Build with what you have, and craft new things: start by punching a tree for logs, make planks, then a crafting table. Stone needs a pickaxe!"
+        : "Creative: dig, build and explore with every block! Left click digs a block and right click puts one down. Pick what to build with in the bar at the bottom. Swim in the lakes, and press F to fly.";
+      saveSoon();
+    }
+    modeBtns.forEach(b => b.addEventListener("click", () => setMode(b.dataset.mode)));
 
     /* ---------------- starting and stopping ---------------- */
     function spawn(){
@@ -372,6 +508,8 @@
       }
       if (!store.blockSeed) store.blockSeed = 1 + Math.floor(Math.random() * 99999);
       if (!store.blockEdits) store.blockEdits = {};
+      if (!Array.isArray(store.blockInv) || store.blockInv.length !== SV.SLOTS) store.blockInv = SV.newInventory();
+      if (!store.blockFurnaces) store.blockFurnaces = {};
       if (loadedSeed === store.blockSeed) return;
       generate(store.blockSeed, store.blockEdits);
       torches.clear();
@@ -400,9 +538,11 @@
       store.blockSeed = 1 + Math.floor(Math.random() * 99999);
       store.blockEdits = {};
       store.blockPos = null;
+      store.blockInv = SV.newInventory();
+      store.blockFurnaces = {};
       Hub.saveStore();
       ensureWorld();
-      p.fly = false; modeEl.textContent = "🚶 Walking";
+      p.fly = false; showMode(); refreshHotbar();
       panelText.textContent = "A brand new world is ready. Have fun!";
     });
     playBtn.addEventListener("click", start);
@@ -413,8 +553,7 @@
       overlay.hidden = false;
       document.body.style.overflow = "hidden";
       releaseKeys();
-      panelText.textContent = "Dig, build and explore! Left click digs a block and right click puts one down. Pick what to build with in the bar at the bottom. Swim in the lakes, and press F to fly. Your builds are saved."
-        + (store.blocksPlaced ? ` You have built ${store.blocksPlaced} blocks so far.` : "");
+      setMode(store.blockMode === "survival" ? "survival" : "creative");
       playBtn.textContent = store.blocksPlaced || store.blocksBroken ? "▶ Continue" : "▶ Play";
       panel.hidden = false;
       last = performance.now();
@@ -422,6 +561,7 @@
       playBtn.focus();
     }
     function close(){
+      ui.close();
       isOpen = false; running = false;
       overlay.hidden = true;
       document.body.style.overflow = "";
@@ -436,7 +576,16 @@
       if (!isOpen) return;
       const dt = Math.min(1 / 30, (now - last) / 1000 || 0);
       last = now; frame++;
-      if (running) { step(dt); dayT = (dayT + dt / CYCLE) % 1; }
+      if (running && !ui.isOpen()) step(dt);
+      else if (running) { for (let k = 0; k < 3; k++) move(dt / 3); }   // with a screen open you stand still, but you still fall
+      if (running) {
+        dayT = (dayT + dt / CYCLE) % 1;
+        // every furnace keeps cooking, even when you're not looking at it
+        let busy = false;
+        for (const k in store.blockFurnaces) { const f = store.blockFurnaces[k]; SV.tickFurnace(f, dt); if (f.burn > 0 || f.cook > 0) busy = true; }
+        if (busy && (furnSaveT += dt) > 4) { furnSaveT = 0; saveSoon(); }
+        ui.tick();
+      }
       for (let i = bits.length - 1; i >= 0; i--) {
         const b = bits[i];
         b.vy -= (b.grav === undefined ? 16 : b.grav) * dt; b.x += b.vx * dt; b.y += b.vy * dt; b.z += b.vz * dt; b.life -= dt;
@@ -457,7 +606,8 @@
       waterEl.style.opacity = String(0.3 + 0.7 * sky.day);
       renderer.draw({
         eye: [p.x, eyeY, p.z], yaw, pitch, time: now / 1000, swing, held: true, underwater: under, sky,
-        target: target ? [target.x, target.y, target.z] : null, particles: bits
+        target: target && !ui.isOpen() ? [target.x, target.y, target.z] : null, particles: bits,
+        crack: mining && mining.t > 0 ? { x: mining.x, y: mining.y, z: mining.z, progress: Math.min(1, mining.t / mining.need) } : null
       });
       if (frame % 8 === 0) {
         posEl.textContent = `📍 ${Math.floor(p.x)} ${Math.floor(p.y)} ${Math.floor(p.z)}`;
@@ -476,13 +626,15 @@
     };
     window.addEventListener("keydown", e => {
       if (!isOpen) return;
-      if (e.key === "Escape") { Hub.leave(); return; }
+      if (e.key === "Escape") { if (ui.isOpen()) { ui.close(); e.preventDefault(); } else Hub.leave(); return; }
       if (!running) return;
+      if (e.code === "KeyE") { if (!e.repeat) toggleBag(); return; }
+      if (ui.isOpen()) return;   // the screen has the mouse; keys wait
       if (e.code === "KeyF") { if (!e.repeat) toggleFly(); return; }
       if (e.code === "KeyT") { if (!e.repeat) nextTime(); return; }
-      if (e.code === "Minus") { select(10); return; }
+      if (e.code === "Minus") { if (!survival) select(10); return; }
       const digit = /^Digit([0-9])$/.exec(e.code);
-      if (digit) { select((+digit[1] + 9) % 10); return; }
+      if (digit) { if (survival && digit[1] === "0") return; select((+digit[1] + 9) % 10); return; }
       const k = KEYMAP[e.code];
       if (!k) return;
       e.preventDefault();
@@ -496,7 +648,10 @@
 
     // mouse: once the pointer is locked, moving it turns you; left digs, right builds
     let lockedAt = 0;
-    document.addEventListener("pointerlockchange", () => { lockedAt = performance.now(); });
+    document.addEventListener("pointerlockchange", () => {
+      lockedAt = performance.now();
+      if (ui.isOpen() && document.pointerLockElement === canvas) document.exitPointerLock(); // a screen is open: keep the mouse free
+    });
     document.addEventListener("mousemove", e => {
       if (!isOpen || !running || document.pointerLockElement !== canvas) return;
       // some browsers send one huge fake movement just as the pointer locks: skip it
@@ -513,9 +668,10 @@
         return;
       }
       e.preventDefault();
-      lockMouse();
       if (e.button === 2) build();
+      else if (survival) { keys.mine = true; mining = null; }
       else { dig(); keys.mine = true; mineT = 0.3; }
+      if (!ui.isOpen()) lockMouse();   // (not when the click opened a crafting table or a furnace: you need the mouse for that)
     });
     canvas.addEventListener("pointermove", e => {
       if (e.pointerId !== lookId) return;
@@ -542,12 +698,13 @@
         if (!running) return;
         if (k === "place") build();
         else if (k === "fly") toggleFly();
-        else if (k === "mine") { dig(); keys.mine = true; mineT = 0.3; }
+        else if (k === "bag") toggleBag();
+        else if (k === "mine") { if (!survival) dig(); keys.mine = true; mineT = 0.3; mining = null; }
         else keys[k] = true;
       });
       ["pointerup", "pointercancel", "pointerleave"].forEach(ev => btn.addEventListener(ev, () => {
         if (k === "mine") keys.mine = false;
-        else if (k !== "place" && k !== "fly") keys[k] = false;
+        else if (k !== "place" && k !== "fly" && k !== "bag") keys[k] = false;
       }));
     });
 
