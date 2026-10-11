@@ -9,7 +9,7 @@
   const at = (x, y, z) => (y * WD + z) * WW + x;
 
   // block ids. 1 to 8 are the original blocks (saved builds use these numbers, so they never change)
-  const ID = { GRASS: 1, DIRT: 2, STONE: 3, LOG: 4, LEAVES: 5, PLANKS: 6, SAND: 7, BRICK: 8, COBBLE: 9, GLASS: 10, WATER: 11, TALLGRASS: 12, POPPY: 13, DANDELION: 14 };
+  const ID = { GRASS: 1, DIRT: 2, STONE: 3, LOG: 4, LEAVES: 5, PLANKS: 6, SAND: 7, BRICK: 8, COBBLE: 9, GLASS: 10, WATER: 11, TALLGRASS: 12, POPPY: 13, DANDELION: 14, GLOWSTONE: 15 };
   const K = { SOLID: 0, CUTOUT: 1, WATER: 2, PLANT: 3 }; // see-through holes, water, or a flower you walk through
 
   /* ---------------- noise ---------------- */
@@ -139,12 +139,14 @@
     return pack(0, 0, 0, 0);
   });
   const poppy = flower(214, 40, 40), dandelion = flower(250, 214, 40);
+  const GLOW_PAL = [[255, 222, 132], [246, 196, 96], [255, 238, 172], [228, 172, 78], [250, 210, 112]];
+  const glow = make((x, y) => hash2(x, y, 132) < 0.08 ? pack(206, 134, 52) : paint(GLOW_PAL, grain(x, y, 131)));
   const white = make(() => pack(255, 255, 255));
   const ocean = make(() => pack(52, 108, 214));
 
-  const TEX = [dirt, grassTop, grassSide, stone, cobble, logSide, logTop, leaves, planks, sand, brick, glass, water, tallGrass, poppy, dandelion, white, ocean];
-  const T = { DIRT: 0, GRASS_TOP: 1, GRASS_SIDE: 2, STONE: 3, COBBLE: 4, LOG_SIDE: 5, LOG_TOP: 6, LEAVES: 7, PLANKS: 8, SAND: 9, BRICK: 10, GLASS: 11, WATER: 12, TALLGRASS: 13, POPPY: 14, DANDELION: 15, WHITE: 16, OCEAN: 17 };
-  const TILE_COLS = 6, TILE_ROWS = 3;
+  const TEX = [dirt, grassTop, grassSide, stone, cobble, logSide, logTop, leaves, planks, sand, brick, glass, water, tallGrass, poppy, dandelion, white, ocean, glow];
+  const T = { DIRT: 0, GRASS_TOP: 1, GRASS_SIDE: 2, STONE: 3, COBBLE: 4, LOG_SIDE: 5, LOG_TOP: 6, LEAVES: 7, PLANKS: 8, SAND: 9, BRICK: 10, GLASS: 11, WATER: 12, TALLGRASS: 13, POPPY: 14, DANDELION: 15, WHITE: 16, OCEAN: 17, GLOW: 18 };
+  const TILE_COLS = 6, TILE_ROWS = 4;
 
   // all the textures side by side in one picture (raw bytes, for the graphics card)
   function atlasData(){
@@ -169,6 +171,7 @@
   const KIND = new Uint8Array(256);
   const IS_SOLID = new Uint8Array(256);   // you can't walk through it
   const IS_OPAQUE = new Uint8Array(256);  // it hides what's behind it (and makes the soft shadow in the corners)
+  const EMIT = new Uint8Array(256);       // how brightly it glows (0 for most blocks, up to 15)
   function def(id, name, side, top, bottom, kind, opaque){
     BLOCKS[id] = { id, name, side, top, bottom, kind };
     FACE[id * 3] = side; FACE[id * 3 + 1] = top; FACE[id * 3 + 2] = bottom;
@@ -190,9 +193,11 @@
   def(ID.TALLGRASS, "Tall grass", T.TALLGRASS, T.TALLGRASS, T.TALLGRASS, K.PLANT, 0);
   def(ID.POPPY,  "Poppy",     T.POPPY,      T.POPPY,     T.POPPY,  K.PLANT, 0);
   def(ID.DANDELION, "Dandelion", T.DANDELION, T.DANDELION, T.DANDELION, K.PLANT, 0);
+  def(ID.GLOWSTONE, "Glowstone", T.GLOW, T.GLOW, T.GLOW, K.SOLID, 1);
+  EMIT[ID.GLOWSTONE] = 15;
 
   // what's on the hotbar, left to right
-  const HOTBAR = [ID.GRASS, ID.DIRT, ID.COBBLE, ID.PLANKS, ID.LOG, ID.LEAVES, ID.SAND, ID.BRICK, ID.GLASS];
+  const HOTBAR = [ID.GRASS, ID.DIRT, ID.COBBLE, ID.PLANKS, ID.LOG, ID.LEAVES, ID.SAND, ID.BRICK, ID.GLASS, ID.GLOWSTONE];
 
   /* ---------------- terrain: an island of hills and mountains with lakes, beaches, trees and flowers ---------------- */
   // the highest block you could stand on in a column
@@ -260,5 +265,27 @@
     return [cx, heightAt(cx, cz) + 1, cz];
   }
 
-  window.BlockWorld = { WW, WH, WD, SEA, world, at, ID, K, TEX, T, TILE_COLS, TILE_ROWS, BLOCKS, FACE, KIND, IS_SOLID, IS_OPAQUE, HOTBAR, atlasData, atlasCanvas, generate, heightAt, spawnPoint, hash2 };
+  /* ---------------- the sky: where the sun is and what colour everything is, at any time of day ----------------
+     t runs from 0 to 1: 0 is sunrise, 0.25 noon, 0.5 sunset and 0.75 midnight. */
+  const smooth = (a, b, x) => { const t = Math.min(1, Math.max(0, (x - a) / (b - a))); return t * t * (3 - 2 * t); };
+  const lerp3 = (a, b, t) => [a[0] + (b[0] - a[0]) * t, a[1] + (b[1] - a[1]) * t, a[2] + (b[2] - a[2]) * t];
+  const DAY_TOP = [0.33, 0.55, 0.92], DAY_HOR = [0.78, 0.88, 0.98], DAY_BOT = [0.66, 0.78, 0.92];
+  const NIGHT_TOP = [0.012, 0.02, 0.065], NIGHT_HOR = [0.045, 0.06, 0.13], NIGHT_BOT = [0.03, 0.04, 0.09];
+  const DUSK_HOR = [1.0, 0.58, 0.34];
+  const NIGHT_LIGHT = [0.25, 0.3, 0.48];  // moonlight is dim and blue
+  const DUSK_LIGHT = [1.0, 0.82, 0.68];
+  function skyState(t){
+    const a = t * Math.PI * 2, s = Math.sin(a);
+    const sun = [Math.cos(a), s, 0.3], n = Math.hypot(...sun);
+    const day = smooth(-0.24, 0.3, s);                 // 0 in the dark, 1 in full day
+    const dusk = Math.exp(-(s / 0.27) * (s / 0.27));      // 1 when the sun is on the horizon: sunrise and sunset
+    const hor = lerp3(lerp3(NIGHT_HOR, DAY_HOR, day), DUSK_HOR, dusk * 0.72);
+    return {
+      t, a, day, dusk, stars: 1 - day, sun: sun.map(v => v / n),
+      top: lerp3(NIGHT_TOP, DAY_TOP, day), hor, bot: lerp3(NIGHT_BOT, DAY_BOT, day),
+      light: lerp3(lerp3(NIGHT_LIGHT, [1, 1, 1], day), [1, 1, 1].map((v, i) => v * DUSK_LIGHT[i]), dusk * 0.55)
+    };
+  }
+
+  window.BlockWorld = { WW, WH, WD, SEA, world, at, ID, K, TEX, T, TILE_COLS, TILE_ROWS, BLOCKS, FACE, KIND, IS_SOLID, IS_OPAQUE, EMIT, HOTBAR, skyState, atlasData, atlasCanvas, generate, heightAt, spawnPoint, hash2 };
 })();

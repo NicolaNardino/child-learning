@@ -5,8 +5,8 @@
   "use strict";
   const BW = window.BlockWorld;
   const { WW, WH, WD, world, TEX, FACE, IS_SOLID } = BW;
-  const FOV = 70 * Math.PI / 180, MAXD = 44, EYE_FOG = [196, 224, 250];
-  const SUN = (() => { const l = [0.5, 0.75, 0.4], n = Math.hypot(...l); return l.map(v => v / n); })();
+  const FOV = 70 * Math.PI / 180, MAXD = 44;
+  const GLOW = BW.ID.GLOWSTONE;
 
   function createSoft(canvas){
     const ctx = canvas.getContext("2d");
@@ -32,6 +32,7 @@
       const [ox, oy, oz] = v.eye;
       const sx0 = Math.floor(ox), sy0 = Math.floor(oy), sz0 = Math.floor(oz);
       const maxd2 = MAXD * MAXD;
+      const sk = v.sky, EYE_FOG = sk.hor.map(c => c * 255), TOP = sk.top.map(c => c * 255), LIT = sk.light, SUN = sk.sun;
       const tgt = v.target ? (v.target[1] * WD + v.target[2]) * WW + v.target[0] : -1;
       for (let j = 0; j < h; j++) {
         const ny = (1 - (j + 0.5) / h * 2) * tY;
@@ -74,15 +75,16 @@
             // the block you're pointing at gets a bright face and dark edges
             if ((y * WD + z) * WW + x === tgt) shade *= (fu < 0.04 || fu > 0.96 || fv < 0.04 || fv > 0.96) ? 0.45 : 1.22;
             const ff = Math.min(1, t * t / maxd2);
-            r = r * shade; g = g * shade; bl = bl * shade;
+            // glowing blocks stay bright at night; everything else follows the light of the sun or moon
+            if (hit === GLOW) { r = r * shade; g = g * shade; bl = bl * shade; } else { r = r * shade * LIT[0]; g = g * shade * LIT[1]; bl = bl * shade * LIT[2]; }
             r += (EYE_FOG[0] - r) * ff; g += (EYE_FOG[1] - g) * ff; bl += (EYE_FOG[2] - bl) * ff;
             if (r > 255) r = 255; if (g > 255) g = 255; if (bl > 255) bl = 255;
           } else {
             const k = dy * 1.4 + 0.3, kk = k < 0 ? 0 : k > 1 ? 1 : k;
-            r = EYE_FOG[0] + (84 - EYE_FOG[0]) * kk; g = EYE_FOG[1] + (140 - EYE_FOG[1]) * kk; bl = EYE_FOG[2] + (232 - EYE_FOG[2]) * kk;
+            r = EYE_FOG[0] + (TOP[0] - EYE_FOG[0]) * kk; g = EYE_FOG[1] + (TOP[1] - EYE_FOG[1]) * kk; bl = EYE_FOG[2] + (TOP[2] - EYE_FOG[2]) * kk;
             const sd = dx * SUN[0] + dy * SUN[1] + dz * SUN[2];
             if (sd > 0.9992) { r = 255; g = 250; bl = 215; }
-            else if (sd > 0.985) { const a = (sd - 0.985) / 0.0142 * 0.55; r += (255 - r) * a; g += (250 - g) * a; bl += (210 - bl) * a; }
+            else if (sd > 0.985 && sk.day > 0.3) { const a = (sd - 0.985) / 0.0142 * 0.55; r += (255 - r) * a; g += (250 - g) * a; bl += (210 - bl) * a; }
           }
           buf[j * w + i] = 0xff000000 | ((bl | 0) << 16) | ((g | 0) << 8) | (r | 0);
         }

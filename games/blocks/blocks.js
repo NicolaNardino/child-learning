@@ -6,7 +6,11 @@
   "use strict";
   const store = Hub.store;
   const BW = window.BlockWorld;
-  const { WW, WH, WD, world, at, ID, K, TEX, FACE, KIND, IS_SOLID, HOTBAR, BLOCKS, generate, spawnPoint } = BW;
+  const { WW, WH, WD, world, at, ID, K, TEX, FACE, KIND, IS_SOLID, HOTBAR, BLOCKS, generate, spawnPoint, skyState } = BW;
+  const CYCLE = 360;              // a whole day and night takes 6 minutes
+  const SLOTS = HOTBAR.length;
+  // the times the clock button jumps to
+  const TIMES = [{ t: 0.04, icon: "🌅", name: "Morning" }, { t: 0.25, icon: "☀️", name: "Day" }, { t: 0.47, icon: "🌇", name: "Sunset" }, { t: 0.75, icon: "🌙", name: "Night" }];
   const WORLD_VERSION = 2; // bumped when the terrain changed shape, so an old save doesn't land in the wrong place
 
   Hub.register({
@@ -32,6 +36,7 @@
         <div class="game-hud">
           <h2>⛏️ Block World</h2>
           <span class="mono game-stat" id="blPos">📍 0 0 0</span>
+          <button class="mono game-stat bl-time" id="blTime" type="button" title="Change the time of day">☀️ Day</button>
           <span class="mono game-stat" id="blMode">🚶 Walking</span>
           <button class="btn ghost small" id="blCloseBtn" type="button">✕ Exit</button>
         </div>
@@ -48,7 +53,7 @@
             <button class="btn ghost small" id="blNewBtn" type="button">🌱 New world</button>
           </div>
         </div>
-        <div class="game-help">W A S D to move · mouse or ← → ↑ ↓ to look · Space to jump or swim up · left click to dig · right click to build · 1–9 or the mouse wheel to pick a block · F to fly (Space up, Shift down)</div>
+        <div class="game-help">W A S D to move · mouse or ← → ↑ ↓ to look · Space to jump or swim up · left click to dig · right click to build · 1–9, 0 or the mouse wheel to pick a block · F to fly (Space up, Shift down) · T for another time of day</div>
         <div class="game-touch bl-touch">
           <button class="btn ghost" data-bkey="left" type="button" aria-label="Step left">◀</button>
           <button class="btn ghost" data-bkey="forward" type="button" aria-label="Walk forward">▲</button>
@@ -84,6 +89,7 @@
     const hotbar = document.getElementById("blHotbar");
     const nameEl = document.getElementById("blName");
     const waterEl = document.getElementById("blWater");
+    const timeEl = document.getElementById("blTime");
 
     const HALF = 0.3, HEIGHT = 1.8, EYE = 1.62, REACH = 6;
     const GRAVITY = 26, JUMP = 8.2, WALK = 4.6, FLY = 10;
@@ -92,6 +98,7 @@
     let isOpen = false, running = false, last = 0, frame = 0, loadedSeed = 0;
     const p = { x: 0, y: 0, z: 0, vx: 0, vy: 0, vz: 0, onGround: false, fly: false, wet: false };
     let yaw = 0, pitch = 0, sel = 0, mineT = 0, saveT = 0, swing = 0, nameT = 0;
+    let dayT = typeof store.blockTime === "number" ? store.blockTime : 0.1;  // 0 sunrise, 0.25 noon, 0.5 sunset, 0.75 midnight
     let target = null;
     const bits = []; // the flying bits of a dug block
     const keys = { forward: false, back: false, left: false, right: false, jump: false, down: false, mine: false, lookL: false, lookR: false, lookU: false, lookD: false };
@@ -255,7 +262,7 @@
       return c;
     }
     function select(i, quiet){
-      sel = ((i % 9) + 9) % 9;
+      sel = ((i % SLOTS) + SLOTS) % SLOTS;
       [...hotbar.children].forEach((el, n) => el.classList.toggle("sel", n === sel));
       renderer.setSelected(HOTBAR[sel]);
       if (quiet) return;
@@ -273,6 +280,25 @@
       hotbar.appendChild(btn);
     });
     select(0, true);
+
+    // morning, day, sunset or night, as a name for the clock button
+    function timeLabel(){
+      const t = dayT % 1;
+      if (t < 0.06 || t >= 0.96) return "🌅 Sunrise";
+      if (t < 0.42) return "☀️ Day";
+      if (t < 0.56) return "🌇 Sunset";
+      return "🌙 Night";
+    }
+    // jump to the next time of day: morning, day, sunset, night, and round again
+    function nextTime(){
+      const t = dayT % 1;
+      const next = TIMES.find(x => x.t > t + 0.02) || TIMES[0];
+      dayT = next.t;
+      store.blockTime = dayT;
+      saveSoon();
+      timeEl.textContent = next.icon + " " + next.name;
+    }
+    timeEl.addEventListener("click", () => nextTime());
 
     function toggleFly(){
       p.fly = !p.fly;
@@ -345,6 +371,7 @@
       document.body.style.overflow = "";
       if (document.pointerLockElement === canvas) document.exitPointerLock();
       store.blockPos = [p.x, p.y, p.z, yaw, pitch];
+      store.blockTime = dayT;
       clearTimeout(saveT);
       Hub.saveStore();
     }
@@ -353,7 +380,7 @@
       if (!isOpen) return;
       const dt = Math.min(1 / 30, (now - last) / 1000 || 0);
       last = now; frame++;
-      if (running) step(dt);
+      if (running) { step(dt); dayT = (dayT + dt / CYCLE) % 1; }
       for (let i = bits.length - 1; i >= 0; i--) {
         const b = bits[i];
         b.vy -= 16 * dt; b.x += b.vx * dt; b.y += b.vy * dt; b.z += b.vz * dt; b.life -= dt;
@@ -368,12 +395,19 @@
       target = aim();
       const eyeY = p.y + EYE;
       const under = idAt(Math.floor(p.x), Math.floor(eyeY), Math.floor(p.z)) === ID.WATER;
+      const sky = skyState(dayT);
       waterEl.hidden = !under;
+      waterEl.style.opacity = String(0.3 + 0.7 * sky.day);
       renderer.draw({
-        eye: [p.x, eyeY, p.z], yaw, pitch, time: now / 1000, swing, held: true, underwater: under,
+        eye: [p.x, eyeY, p.z], yaw, pitch, time: now / 1000, swing, held: true, underwater: under, sky,
         target: target ? [target.x, target.y, target.z] : null, particles: bits
       });
-      if (frame % 8 === 0) posEl.textContent = `📍 ${Math.floor(p.x)} ${Math.floor(p.y)} ${Math.floor(p.z)}`;
+      if (frame % 8 === 0) {
+        posEl.textContent = `📍 ${Math.floor(p.x)} ${Math.floor(p.y)} ${Math.floor(p.z)}`;
+        const lbl = timeLabel();
+        if (timeEl.textContent !== lbl) timeEl.textContent = lbl;
+        store.blockTime = dayT;
+      }
       requestAnimationFrame(loop);
     }
 
@@ -388,8 +422,9 @@
       if (e.key === "Escape") { Hub.leave(); return; }
       if (!running) return;
       if (e.code === "KeyF") { if (!e.repeat) toggleFly(); return; }
-      const digit = /^Digit([1-9])$/.exec(e.code);
-      if (digit) { select(+digit[1] - 1); return; }
+      if (e.code === "KeyT") { if (!e.repeat) nextTime(); return; }
+      const digit = /^Digit([0-9])$/.exec(e.code);
+      if (digit) { select((+digit[1] + 9) % 10); return; }
       const k = KEYMAP[e.code];
       if (!k) return;
       e.preventDefault();
