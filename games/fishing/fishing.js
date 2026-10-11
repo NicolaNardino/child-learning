@@ -463,10 +463,12 @@
       splashes = splashes.filter(s => s.t < 0.8);
       if (msg && (msg.t -= dt) <= 0) msg = null;
 
-      // the camera follows your float out to sea, and comes back to the beach
-      const focus = state === "charging" ? landX(power) : bob ? bobPos().x : ANGLER_X;
-      const want = Math.min(SC.WORLD - W, Math.max(0, focus - W * (state === "charging" ? 0.8 : 0.55)));
-      camX += (want - camX) * Math.min(1, dt * (bob && bob.flying ? 4 : 2.5));
+      // the camera follows your float out to sea, and comes back to the beach (it stays still while you power up)
+      if (state !== "charging") {
+        const focus = bob ? bobPos().x : ANGLER_X;
+        const want = Math.min(SC.WORLD - W, Math.max(0, focus - W * 0.55));
+        camX += (want - camX) * Math.min(1, dt * (bob && bob.flying ? 4 : 2.5));
+      }
     }
 
     // a little map of the whole beach and sea at the top, showing where your float is
@@ -481,7 +483,13 @@
       ctx.strokeStyle = "rgba(255,255,255,0.8)"; ctx.lineWidth = 1;
       ctx.strokeRect(x0 + camX * sc, y0 - 2, W * sc, 12);
       ctx.fillStyle = "#ff7a1f"; ctx.beginPath(); ctx.arc(x0 + ANGLER_X * sc, y0 + 4, 3, 0, Math.PI * 2); ctx.fill();
-      if (bob) {
+      if (state === "charging") {
+        // where the float will land
+        const lx = x0 + landX(power) * sc;
+        ctx.fillStyle = "#fff"; ctx.beginPath(); ctx.moveTo(lx, y0 + 1); ctx.lineTo(lx - 5, y0 - 7); ctx.lineTo(lx + 5, y0 - 7); ctx.fill();
+        ctx.font = "700 11px 'IBM Plex Mono', monospace"; ctx.textAlign = "left"; ctx.fillStyle = "#fff";
+        ctx.fillText(`📏 ${Math.round((landX(power) - SC.SHORE_X) / 8)} m`, x0, y0 + 20);
+      } else if (bob) {
         const bx = bobPos().x;
         ctx.fillStyle = "#e8262b"; ctx.beginPath(); ctx.arc(x0 + bx * sc, y0 + 4, 3.5, 0, Math.PI * 2); ctx.fill();
         ctx.font = "700 11px 'IBM Plex Mono', monospace"; ctx.textAlign = "left"; ctx.fillStyle = "#fff";
