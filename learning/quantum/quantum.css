@@ -1,0 +1,59 @@
+/* Quantum Lab: the lab pages, their canvases, missions and controls. */
+.qm .tick-btn .qm-ring{ width: auto; height: 22px; font-size: 17px; line-height: 22px; text-align: center; }
+.qm-title{ display: flex; align-items: center; gap: 12px; }
+.qm-big{ font-size: 40px; line-height: 1; }
+.qm-story p{ line-height: 1.6; margin-bottom: 10px; font-size: 15.5px; }
+.qm-story p:last-child{ margin-bottom: 0; }
+.qm-g{ color: #4fbf63; font-weight: 800; }
+.qm-r{ color: #e0505a; font-weight: 800; }
+.qm-labbox{ display: flex; flex-direction: column; gap: 10px; }
+.qm-canvas{ display: block; width: 100%; height: auto; border-radius: 10px; border: 1.5px solid var(--line-strong); background: #0b1030; }
+.qm-controls{ display: flex; flex-wrap: wrap; gap: 10px 16px; align-items: center; }
+.qm-slider{ display: flex; align-items: center; gap: 10px; font-weight: 700; font-size: 14px; flex: 1 1 260px; }
+.qm-slider input{ flex: 1; accent-color: var(--accent); }
+.qm-readout{ font-size: 14px; display: flex; align-items: center; gap: 8px; }
+.qm-swatch{ display: inline-block; width: 22px; height: 22px; border-radius: 50%; border: 2px solid var(--line-strong); }
+.qm-buttons{ display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+.qm-buttons .segmented button{ font-size: 13.5px; }
+.qm-look{ background: #6b5bd6; color: #fff; }
+.qm-count{ font-size: 13px; color: var(--ink-soft); }
+.qm-recipe{ font: 600 14px "IBM Plex Mono", monospace; color: var(--ink-soft); overflow-wrap: anywhere; }
+.qm-recipe b{ color: var(--ink); }
+.qm-tally{ font-size: 14px; line-height: 1.55; background: var(--paper); border: 1.5px solid var(--line); border-radius: 8px; padding: 10px 12px; }
+.qm-tally:empty{ display: none; }
+.qm-bar{ display: grid; grid-template-columns: 110px 1fr 46px; align-items: center; gap: 8px; margin-top: 4px; position: relative; }
+.qm-bar i{ display: block; height: 14px; border-radius: 7px; background: #f0c64a; min-width: 2px; }
+.qm-bar i.t{ background: #7fa6ff; }
+.qm-bar b{ text-align: right; font-family: "IBM Plex Mono", monospace; }
+.qm-compare{ margin-top: 8px; position: relative; }
+.qm-compare .qm-bar::after{ content: ""; position: absolute; top: -3px; bottom: -3px; left: calc(118px + (100% - 172px) * 0.556); border-left: 2px dashed var(--ink-soft); }
+.qm-compare small{ display: block; margin-top: 4px; color: var(--ink-soft); font-size: 12.5px; }
+.qm-plan{ display: flex; flex-direction: column; gap: 6px; font-size: 14px; font-weight: 700; }
+.qm-dials{ display: flex; flex-wrap: wrap; align-items: center; gap: 6px; font-weight: 700; font-size: 14px; }
+.qm-dials > span{ min-width: 92px; }
+.qm-dial{ min-width: 40px; padding: 6px 10px; border-radius: 8px; border: 1.5px solid var(--line-strong); background: var(--paper); color: var(--ink); font: 700 14px "Karla", sans-serif; cursor: pointer; }
+.qm-dial[aria-pressed="true"]{ background: var(--accent); color: var(--accent-ink); border-color: var(--accent); }
+.qm-table{ border-collapse: collapse; margin: 6px 0; font-size: 13.5px; }
+.qm-table th, .qm-table td{ padding: 2px 12px 2px 0; text-align: left; }
+.qm-missions h3, .qm-checks h3{ font-size: 16px; margin-bottom: 8px; }
+.qm-missions ul{ list-style: none; display: flex; flex-direction: column; gap: 6px; }
+.qm-missions li{ display: flex; gap: 10px; align-items: baseline; font-size: 14.5px; color: var(--ink-soft); }
+.qm-missions li.done{ color: var(--ink); }
+.qm-tick{ font-weight: 800; width: 16px; flex: none; color: var(--ink-soft); }
+.qm-missions li.done .qm-tick{ color: var(--good); }
+.qm-real{ font-size: 14.5px; line-height: 1.55; background: var(--paper); border-left: 4px solid var(--accent2); border-radius: 0 8px 8px 0; padding: 10px 14px; }
+.qm-checks{ display: flex; flex-direction: column; gap: 4px; }
+.qm-q{ display: flex; flex-direction: column; gap: 8px; margin-bottom: 14px; }
+.qm-qtext{ font-size: 15.5px; font-weight: 600; line-height: 1.4; }
+.qm-q .choice{ font-size: 15px; }
+.qm-finish{ font-size: 15px; padding: 10px 14px; border-radius: 8px; background: var(--good-bg); border: 1.5px solid var(--good); }
+.qm-quiz{ display: flex; flex-direction: column; gap: 12px; }
+.qm-quiz > .btn{ align-self: flex-start; }
+.qm-score{ text-align: center; display: flex; flex-direction: column; align-items: center; gap: 10px; padding: 10px 0; }
+.qm-score .qm-big{ font-size: 60px; }
+.qm-score h2{ font-size: 34px; }
+@media (max-width: 520px){
+  .page.qm-page{ padding: 18px 14px; }
+  .qm-bar{ grid-template-columns: 96px 1fr 40px; }
+  .qm-compare .qm-bar::after{ left: calc(104px + (100% - 152px) * 0.556); }
+}
