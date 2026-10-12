@@ -36,6 +36,7 @@ Every Learning subject has the same three levels, ⏱️ Time Trial, 🏁 race a
 - 🏎️ **Turbo Track**: a toy-car race seen from above, on an orange toy track floating high in the sky, with clouds, floating islands, hot-air balloons and birds far below. Pick your car (Muscle, Formula, Shark, Monster or Bubble) and its colour, even 🌈 rainbow or gold, then race three robot cars (🐢 Easy, 🚗 Medium or 🚀 Hard) for 3 laps against the clock. Hit the ⚡ speed boosters, fly off the ramp over the gap, go round the 🌀 loop-the-loop, and brake for the sharp turns. Too slow for the jump or the loop and you have to go back and try again! Every race is on a random track out of five: ☁️ Sky Loop, 🏜️ Cloud Canyon, 🌈 Rainbow Hairpins, ⛰️ Zigzag Mountain and 🏝️ Island Hopper.
 
 - 🎣 **Fishing Beach**: stand on the beach and fish in a wide ocean, seen from the side with the sea cut open (the camera follows your float far out to sea): the sandy Shallows, a Coral Reef, the Deep Sea with a shipwreck, and the dark Abyss. One button does it all: hold to power up your cast, press when the float dips, then hold to keep the green bar on the fish. There are **500 different fish** (25 kinds × 20 versions, from Common to Mythic, some only at night) to collect in the 📖 Fish Book, and **8 rods** to unlock by catching special fish. Watch out: sometimes a bigger fish swims in and eats the fish on your hook, and then you have to reel in the big one! Day turns to sunset and a starry night every 6 minutes.
+- 🏓 **Ping Pong 3D**: table tennis in 3D against Pong-Bot, seen from behind your end of the table in a sports hall with a cheering crowd. Your paddle follows the mouse (or your finger, or the arrow keys) and the ball bounces off it by itself: swing fast to hit harder, hit with the edge of the paddle to aim to the side, and swing down on a high ball to **smash** it. The ball has a shadow so you can tell how high it is, and on Easy and Medium a ring shows where it will bounce. Real rules: the serve bounces on your side first, two serves each, first to 11 wins by 2 clear points. Pong-Bot comes in 🐢 Easy, 🤖 Medium and 🔥 Hard, and the game remembers your longest rally.
 
 Every game fills the screen and has touch buttons on phones and tablets.
 
@@ -62,6 +63,7 @@ games/
   parkour/                 Parkour Run
   fishing/                 Fishing Beach (fish.js has the 500 fish, scene.js draws the beach and sea, fishing.js is the game)
   blocks/                  Block World (world.js has the textures and the terrain, items.js has the Survival rules and recipes, inventory.js the inventory and crafting screens, gl.js draws it with WebGL, soft.js is the backup picture, blocks.js is the game)
+  ping-pong/               Ping Pong 3D (the table, the hall, the ball's physics and Pong-Bot, drawn in 3D on a 2D canvas)
   turbo-track/             Turbo Track (track.js has the five tracks and builds them, sky.js draws the sky, turbo-track.js is the race)
 ```
 
