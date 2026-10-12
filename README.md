@@ -21,6 +21,7 @@ There's nothing to install and no build step. Just open `index.html` in a browse
 - 🎵 **Musik Maestro**: Musik für die 5. Klasse, mit Noten auf einem echten Notensystem und Tönen zum Anhören.
   - Sechs Themen: 🎼 Notennamen (mit h!), ⏱️ Notenwerte und Pausen, 📏 Takt, 🎻 Instrumente, 🔤 Musikwörter und Komponisten, und 👂 ein Hör-Quiz (hoch oder tief, Dur oder Moll, schnell oder langsam).
 - ⌨️ **Tipp-Meister**: 10-Finger-Schreiben auf der Schweizer Tastatur (QWERTZ), wie bei Typewriter. 80 Lektionen: Grundreihe, alle Buchstaben, Grossbuchstaben, Zahlen und Zeichen, dann Sätze und Texte über Zug, Baar, Tiere, Wilhelm Tell und mehr. Die nächste Taste leuchtet in der Farbe ihres Fingers; Anschläge pro Minute, Fehler und bis zu 3 Sterne pro Lektion. Jede Lektion kann man direkt wählen.
+- ⚛️ **Quantum Lab**: quantum physics for curious kids, by doing real experiments, with Professor Whiskers (Schrödinger's cat). Five labs, each with a short story, an experiment, missions, where it's used in real life, and questions to finish it: 🪜 **Energy steps** (shoot photons of any colour at an atom; only the exact colours make the electron jump), 🪙 **Quantum coin** (a qubit with H, X and Z moves: superposition, measuring, and why spinning twice always gives heads), 🌊 **Wave or particle?** (the double slit, with electrons, tennis balls and a detector that makes the stripes vanish), 👻 **Through walls** (quantum tunnelling, and why the Sun needs it) and 🔗 **Spooky twins** (entanglement, and a real Bell test: no secret plan can match like entangled twins do). Then a 10-question quiz.
 
 Every Learning subject has the same three levels, ⏱️ Time Trial, 🏁 race against Robo, streaks and trophies. Word questions have answer buttons you can tap, or press the number keys.
 
@@ -54,6 +55,7 @@ learning/
   german/                  Deutsch Dash
   nmg/                     NMG Entdecker
   typing/                  Tipp-Meister (its own page, not the notebook)
+  quantum/                 Quantum Lab (its own page: five labs with experiments drawn on canvases, and a quiz)
   musik/                   Musik Maestro (draws notes as SVG and plays tones with Web Audio)
 games/
   game-frame.css           the full-screen frame every game sits in
