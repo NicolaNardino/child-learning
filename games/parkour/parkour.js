@@ -184,6 +184,8 @@
     let flash = { text: "", t: 0 };
     const keys = { left: false, right: false, up: false, down: false, strafeL: false, strafeR: false, jump: false };
     let jumpQueued = false;
+    const fx = Fun.pops();
+    let frameDt = 1 / 60, deathText = "Oof!", screamed = false;
     const cam = { x: 0, y: 0, z: 0, a: 0, s: 0, c: 1 };
 
     /* ----- the camera follows behind you ----- */
@@ -304,14 +306,21 @@
     }
     function drawPlayer(){
       if (deadT > 0) return;
+      const air = !player.onGround, sq = player.squash || 1;
       const swing = player.onGround ? Math.sin(player.walk) * 0.2 : 0.15;
+      const Y = v => v / sq, Wd = v => v * Math.sqrt(sq);
+      // arms go up in the air when you jump: wheee!
+      const armY = air ? 1.45 : 0.85;
       const parts = [
-        [-0.18, 0, swing, 0.34, 0.8, 0.4, "#2fa84f"],          // legs
-        [0.18, 0, -swing, 0.34, 0.8, 0.4, "#2fa84f"],
-        [0, 0.8, 0, 0.8, 0.8, 0.45, "#2f6fd6"],                // body
-        [-0.56, 0.85, -swing, 0.3, 0.75, 0.38, "#ffd21f"],     // arms
-        [0.56, 0.85, swing, 0.3, 0.75, 0.38, "#ffd21f"],
-        [0, 1.6, 0, 0.52, 0.5, 0.5, "#ffd21f", drawFace]       // head
+        [-0.18, 0, swing, Wd(0.34), Y(0.8), 0.4, "#2fa84f"],                 // legs
+        [0.18, 0, -swing, Wd(0.34), Y(0.8), 0.4, "#2fa84f"],
+        [0, Y(0.8), 0, Wd(0.8), Y(0.8), 0.45, "#2f6fd6"],                      // body
+        [0, Y(0.95), -0.33, Wd(0.56), Y(0.6), 0.2, "#ff8a00"],                  // a backpack
+        [-0.56, Y(armY), -swing, 0.3, Y(0.75), 0.38, "#ffd21f"],               // arms
+        [0.56, Y(armY), swing, 0.3, Y(0.75), 0.38, "#ffd21f"],
+        [0, Y(1.6), 0, Wd(0.52), Y(0.5), 0.5, "#ffd21f", drawFace],             // head
+        [0, Y(2.1), 0, Wd(0.56), Y(0.12), 0.56, "#e8402f"],                     // a cap, on backwards
+        [0, Y(2.1), -0.38, Wd(0.4), Y(0.06), 0.26, "#e8402f"]
       ];
       // farthest part first
       parts.map(pt => ({ pt, z: camSpace(player.x + pt[0] * Math.cos(player.face) + pt[2] * Math.sin(player.face), player.y + pt[1] + pt[4] / 2, player.z - pt[0] * Math.sin(player.face) + pt[2] * Math.cos(player.face))[2] }))
@@ -319,12 +328,21 @@
         .forEach(({ pt }) => drawPart(...pt));
     }
     function drawFace(world, fz){
-      ctx.fillStyle = "#1b1f2a";
-      [[-0.11, 1.9], [0.11, 1.9]].forEach(([x, y]) => {
-        if (polyPath([world(x - 0.04, y - 0.05, fz), world(x + 0.04, y - 0.05, fz), world(x + 0.04, y + 0.05, fz), world(x - 0.04, y + 0.05, fz)])) ctx.fill();
+      const sq = player.squash || 1, y0 = 1.6 / sq, k = 1 / sq;
+      const quad = (x0, y1, x1, y2) => polyPath([world(x0, y1, fz), world(x1, y1, fz), world(x1, y2, fz), world(x0, y2, fz)]);
+      // big cartoon eyes that look the way you're going
+      [-0.12, 0.12].forEach(x => {
+        ctx.fillStyle = "#ffffff"; if (quad(x - 0.075, y0 + 0.24 * k, x + 0.075, y0 + 0.42 * k)) ctx.fill();
+        ctx.fillStyle = "#1b1f2a"; if (quad(x - 0.035, y0 + 0.27 * k, x + 0.035, y0 + 0.37 * k)) ctx.fill();
       });
-      if (polyPath([world(-0.13, 1.75, fz), world(0.13, 1.75, fz), world(0.08, 1.7, fz), world(-0.08, 1.7, fz)])) ctx.fill();
+      // a grin, or an "o" when you're flying
+      ctx.fillStyle = "#1b1f2a";
+      if (!player.onGround) { if (quad(-0.05, y0 + 0.08 * k, 0.05, y0 + 0.18 * k)) ctx.fill(); }
+      else if (polyPath([world(-0.14, y0 + 0.17 * k, fz), world(0.14, y0 + 0.17 * k, fz), world(0.08, y0 + 0.09 * k, fz), world(-0.08, y0 + 0.09 * k, fz)])) ctx.fill();
     }
+    // where a spot in the world is on the screen (or null when it's behind the camera)
+    function screenAt(x, y, z){ const q = camSpace(x, y, z); return q[2] > NEAR ? toScreen(q) : null; }
+    function popOver(text, colour, size){ const sp = screenAt(player.x, player.y + 2.8, player.z); if (sp) fx.pop(text, sp[0], sp[1], colour, size || 34); }
 
     /* ----- painting far to near: a block goes in front when the camera is on its side of the gap between them ----- */
     function frontOf(a, b, camP){
@@ -663,10 +681,11 @@
       });
       ctx.globalAlpha = 1;
 
+      fx.draw(ctx, frameDt);
       if (deadT > 0) {
         ctx.fillStyle = `rgba(255,40,40,${Math.min(0.45, deadT * 0.6)})`; ctx.fillRect(0, 0, W, H);
         ctx.fillStyle = "#fff"; ctx.font = "800 64px 'Bricolage Grotesque', sans-serif"; ctx.textAlign = "center";
-        ctx.fillText("Oof!", W / 2, H / 2);
+        ctx.fillText(deathText, W / 2, H / 2);
       }
       if (flash.t > 0) {
         ctx.globalAlpha = Math.min(1, flash.t * 2);
@@ -691,10 +710,15 @@
       cam.a = 0;
       placeCamera(0);
     }
-    function die(){
+    function die(kill){
       if (deadT > 0) return;
       deaths++;
       deadT = 0.8;
+      deathText = kill ? ["ZAPPED!", "Ouchie!", "Hot hot hot!", "Bzzzt!"][deaths % 4] : ["Oof!", "Whoopsie!", "Not again!", "SPLAT!", "Wheee… oops"][deaths % 5];
+      const sp = screenAt(player.x, player.y + 1, player.z);
+      if (sp) fx.burst(sp[0], sp[1], kill ? "#ff5a4a" : "#ffd21f", 22, 260);
+      Fun.shake(canvas);
+      if (kill) Fun.sfx.zap(); else Fun.sfx.wah();
     }
     function step(dt){
       runTime += dt;
@@ -710,13 +734,29 @@
       let mx = Math.sin(cam.a) * fwd + Math.cos(cam.a) * side, mz = Math.cos(cam.a) * fwd - Math.sin(cam.a) * side;
       const len = Math.hypot(mx, mz);
       if (len > 1) { mx /= len; mz /= len; }
+      const wasGround = player.onGround, vyBefore = player.vy;
       stepPlayer(player, dt, [mx, mz], keys.jump, jumpQueued);
       jumpQueued = false;
-      if (player.y < FALL_LIMIT || touchingKill(player)) { die(); return; }
+      if (player.vy > 8 && vyBefore <= 0.01) { player.squash = 0.8; Fun.sfx.pop(); }
+      if (!wasGround && player.onGround) {
+        screamed = false;
+        if (vyBefore < -12) {
+          player.squash = 1.35;
+          const sp = screenAt(player.x, player.y, player.z);
+          if (sp) fx.burst(sp[0], sp[1], "rgba(255,255,255,0.9)", 10, 120, 40);
+        }
+      }
+      if (!screamed && player.vy < -22) { screamed = true; popOver("AAAAH!", "#ffffff", 30); }
+      player.squash = (player.squash || 1) + (1 - (player.squash || 1)) * Math.min(1, dt * 12);
+      if (touchingKill(player)) { die(true); return; }
+      if (player.y < FALL_LIMIT) { die(false); return; }
       const on = player.onGround && player.support;
       if (on && on.kind === "check" && on.stage > stage) {
         stage = on.stage;
         flash = { text: `🚩 Checkpoint ${stage}!`, t: 1.8 };
+        popOver("CHECKPOINT! 🎉", "#7bd68a", 32); Fun.sfx.tada();
+        const sp = screenAt(player.x, player.y + 1, player.z);
+        if (sp) fx.burst(sp[0], sp[1], "#7bd68a", 20, 220);
       }
       if (on === finish) win();
     }
@@ -728,7 +768,7 @@
     function loop(now){
       if (!open) return;
       const dt = Math.min(1 / 30, (now - last) / 1000 || 0);
-      last = now;
+      last = now; frameDt = dt;
       clock += dt;
       if (running) step(dt);
       placeCamera(dt);
@@ -752,6 +792,7 @@
     }
     function win(){
       running = false;
+      Fun.sfx.tada(); popOver("YOU DID IT! 🏆", "#ffe14d", 40);
       store.parkourWins = (store.parkourWins || 0) + 1;
       const best = !store.parkourBest || runTime < store.parkourBest;
       if (best) store.parkourBest = runTime;
@@ -827,6 +868,7 @@
     canvas.tabIndex = 0;
 
     document.getElementById("pkCloseBtn").addEventListener("click", () => Hub.leave());
+    Fun.soundButton(document.getElementById("pkCloseBtn"));
     playBtn.addEventListener("click", start);
 
     return { open: openGame, close: closeGame };

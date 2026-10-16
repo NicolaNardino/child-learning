@@ -223,6 +223,48 @@
     pushQuad(out, [[...t[0], U(7.05), V(6.05), 1, 1], [...t[1], U(8.95), V(6.05), 1, 1], [...t[2], U(8.95), V(7.95), 1, 1], [...t[3], U(7.05), V(7.95), 1, 1]], false);
   }
 
+  /* ---------------- the animals: little models made of boxes ---------------- */
+  // each part: [x, y, z (its centre, in the animal's own space: +z is where it looks), width, height, depth, tile, front tile]
+  function mobParts(m){
+    const step = Math.sin(m.walk) * (m.moving ? 0.09 : 0);
+    if (m.kind === "pig") return [
+      [0, 0.6, 0, 0.62, 0.5, 0.9, T.PIG],
+      [0, 0.72, 0.6, 0.5, 0.5, 0.42, T.PIG, T.PIG_FACE],
+      [-0.18, 0.18, 0.3 + step, 0.2, 0.36, 0.2, T.PIG], [0.18, 0.18, 0.3 - step, 0.2, 0.36, 0.2, T.PIG],
+      [-0.18, 0.18, -0.3 - step, 0.2, 0.36, 0.2, T.PIG], [0.18, 0.18, -0.3 + step, 0.2, 0.36, 0.2, T.PIG],
+      [0, 0.7, -0.47, 0.06, 0.06, 0.08, T.PIG]
+    ];
+    const flap = m.flap ? Math.abs(Math.sin(m.walk * 3)) * 0.12 : 0;
+    return [
+      [0, 0.45, 0, 0.38, 0.36, 0.5, T.CHICK],
+      [0, 0.78, 0.2, 0.24, 0.34, 0.22, T.CHICK, T.CHICK_FACE],
+      [0, 0.74, 0.36, 0.12, 0.08, 0.1, T.BEAK],
+      [-0.23, 0.48 + flap, 0, 0.08, 0.24 + flap, 0.36, T.CHICK], [0.23, 0.48 + flap, 0, 0.08, 0.24 + flap, 0.36, T.CHICK],
+      [-0.09, 0.13, step, 0.06, 0.26, 0.06, T.BEAK], [0.09, 0.13, -step, 0.06, 0.26, 0.06, T.BEAK]
+    ];
+  }
+  function addMob(out, m){
+    const c = Math.cos(m.yaw), s = Math.sin(m.yaw);
+    const bl = lightAt(Math.floor(m.x), Math.floor(m.y + 0.5), Math.floor(m.z)) / 15;
+    const glow = m.hurt > 0 ? 1.6 : 1;
+    // the whole animal squashes a little when it lands
+    const sq = m.squash || 1;
+    mobParts(m).forEach(([px, py, pz, w, h, d, tile, front]) => {
+      FACES.forEach(F => {
+        const v = [];
+        const isFront = F.n[2] > 0;
+        const t = isFront && front !== undefined ? front : tile;
+        for (const [su, sv] of [[0, 0], [1, 0], [1, 1], [0, 1]]) {
+          const lx = px + (-0.5 + (F.n[0] > 0 ? 1 : 0) + su * F.u[0] + sv * F.v[0]) * w;
+          const ly = (py + (-0.5 + (F.n[1] > 0 ? 1 : 0) + su * F.u[1] + sv * F.v[1]) * h) / sq;
+          const lz = pz + (-0.5 + (F.n[2] > 0 ? 1 : 0) + su * F.u[2] + sv * F.v[2]) * d;
+          v.push([m.x + lx * c + lz * s, m.y + ly, m.z - lx * s + lz * c, tu(t, su), tv(t, F.kind !== 0 ? sv : 1 - sv), F.l * glow, bl]);
+        }
+        pushQuad(out, v, false);
+      });
+    });
+  }
+
   function createGL(canvas){
     let gl = null;
     try { gl = canvas.getContext("webgl", { antialias: true, alpha: false, powerPreference: "high-performance" }); } catch (e) {}
@@ -432,6 +474,7 @@
       upload(crackBuf, out); crackN = out.length / 7;
     })();
     const partBuf = gl.createBuffer();
+    const mobBuf = gl.createBuffer();
     const skyBuf = gl.createBuffer();
     gl.bindBuffer(gl.ARRAY_BUFFER, skyBuf);
     gl.bufferData(gl.ARRAY_BUFFER, new Float32Array([-1, -1, 1, -1, 1, 1, -1, -1, 1, 1, -1, 1]), gl.STATIC_DRAW);
@@ -486,6 +529,16 @@
       gl.uniform3fv(main.u.uLight, sk.light);
       gl.uniform1f(main.u.uAlpha, 1); gl.uniform1f(main.u.uWave, 0); gl.uniform1f(main.u.uTime, v.time); gl.uniform1f(main.u.uCut, 0.5);
       chunks.forEach(c => { if (c.sN) { bindMesh(c.sBuf); gl.drawArrays(gl.TRIANGLES, 0, c.sN); } });
+      // the animals, rebuilt every picture because they move
+      if (v.mobs && v.mobs.length) {
+        const out = [];
+        v.mobs.forEach(m => { if (Math.abs(m.x - ex) + Math.abs(m.z - ez) < 90) addMob(out, m); });
+        if (out.length) {
+          gl.bindBuffer(gl.ARRAY_BUFFER, mobBuf);
+          gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(out), gl.DYNAMIC_DRAW);
+          bindMesh(mobBuf); gl.drawArrays(gl.TRIANGLES, 0, out.length / 7);
+        }
+      }
 
       // cracks spreading over the block you're digging
       if (v.crack && v.crack.progress > 0) {

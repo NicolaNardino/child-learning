@@ -89,6 +89,10 @@
     let tagFlash = { text: "", t: 0 };
     const tagKeys = { left: false, right: false, down: false, jump: false };
     let jumpQueued = false;
+    const fx = Fun.pops();
+    let frameDt = 1 / 60, phewT = 0, chatT = 5, warned = false;
+    // a comic word just above a body
+    function popOver(b, text, colour, size){ const [x, y] = proj(b.x + b.w / 2, b.y - 12, ACTOR_Z0); fx.pop(text, x, y, colour, size || 30); }
 
     function makeBody(x, y, w, h){
       return { x, y, w, h, vx: 0, vy: 0, onGround: false, on: null, wallL: false, wallR: false, dropT: 0 };
@@ -157,6 +161,7 @@
       spawnRobot();
       robots[0].x = 20; robots[0].y = 470;
       tagFlash = { text: "", t: 0 };
+      fx.clear(); phewT = 0; chatT = 5; warned = false;
     }
 
     function updatePlayer(dt){
@@ -169,12 +174,13 @@
 
       if (jumpQueued) {
         jumpQueued = false;
-        if (p.onGround || p.coyote > 0) { p.vy = -640; p.coyote = 0; }
+        if (p.onGround || p.coyote > 0) { p.vy = -640; p.coyote = 0; p.squash = 0.75; Fun.sfx.pop(); }
         else if (p.wallL || p.wallR) {
           // wall jump: kick off the wall, away from it
           p.vy = -600; p.vx = (p.wallL ? 1 : -1) * 340; p.wallLock = 0.16; p.jumps = 1;
+          popOver(p, "WALL JUMP!", "#7fe3ff", 26); Fun.sfx.boing();
         }
-        else if (p.jumps > 0) { p.vy = -560; p.jumps = 0; }
+        else if (p.jumps > 0) { p.vy = -560; p.jumps = 0; p.squash = 0.8; popOver(p, "Double!", "#ffe14d", 24); Fun.sfx.boing(); }
       }
       if (!tagKeys.jump && p.vy < -200) p.vy = -200; // let go early for a small hop
       if (tagKeys.down && p.on && !SOLIDS.includes(p.on)) p.dropT = 0.25;
@@ -182,7 +188,15 @@
 
       // slide slowly down walls you're pushing into
       if (!p.onGround && p.vy > 120 && ((p.wallL && input < 0) || (p.wallR && input > 0))) p.vy = 120;
+      const wasGround = p.onGround, fall = p.vy;
       moveBody(p, dt);
+      if (!wasGround && p.onGround && fall > 380) {
+        p.squash = 1.4;
+        const [x, y] = proj(p.x + p.w / 2, p.y + p.h, ACTOR_Z0);
+        fx.burst(x, y, "rgba(255,230,190,0.9)", 8, 90, 60);
+      }
+      p.squash = (p.squash || 1) + (1 - (p.squash || 1)) * Math.min(1, dt * 12);
+      p.scared = Math.max(0, (p.scared || 0) - dt);
     }
 
     /* ----- robot brain: a map of every jump and drop a robot can make ----- */
@@ -360,16 +374,28 @@
     }
 
     function tagStep(dt){
-      if (tagCountdown > 0) { tagCountdown -= dt; return; }
+      if (tagCountdown > 0) { tagCountdown -= dt; if (tagCountdown <= 0) { popOver(player, "RUN!", "#7bd68a", 40); Fun.sfx.beep(); } return; }
       tagTime += dt;
       const wanted = Math.min(MAX_ROBOTS, 1 + Math.floor(tagTime / NEW_ROBOT_EVERY));
-      if (robots.length < wanted) { spawnRobot(); tagFlash = { text: "⚠ A new robot joined!", t: 2 }; }
+      if (robots.length < wanted) { spawnRobot(); tagFlash = { text: "⚠ A new robot joined!", t: 2 }; popOver(robots[robots.length - 1], "I'm here! 🤖", "#ff9a9a", 24); Fun.sfx.beep(); }
+      if (!warned && TAG_SECONDS - tagTime <= 30) { warned = true; popOver(player, "30 seconds left!", "#ffe14d", 28); Fun.sfx.ding(); }
+      // the robots chat a bit while they chase you
+      chatT -= dt; phewT = Math.max(0, phewT - dt);
+      if (chatT <= 0) {
+        chatT = 6 + Math.random() * 6;
+        const r = robots[Math.floor(Math.random() * robots.length)];
+        popOver(r, ["BEEP BOOP!", "Tag time!", "Come back!", "I'm SO fast!", "Zzzt!", "Wait for me!"][Math.floor(Math.random() * 6)], "#ffffff", 22);
+      }
       if (tagFlash.t > 0) tagFlash.t -= dt;
       updatePlayer(dt);
       robots.forEach(r => updateRobot(r, dt));
       const shrunk = { x: player.x + 3, y: player.y + 3, w: player.w - 6, h: player.h - 6 };
       // a robot can't tag you through a wall or from under a platform
       if (robots.some(r => overlap(shrunk, r) && !wallBetween(player, r))) { endTag(false); return; }
+      // a robot zoomed right past you
+      const close = robots.some(r => Math.hypot(r.x - player.x, r.y - player.y) < 52);
+      if (close) player.scared = 0.6;
+      if (close && phewT <= 0) { phewT = 5; popOver(player, "Phew!", "#ffffff", 24); }
       if (tagTime >= TAG_SECONDS) endTag(true);
     }
 
@@ -420,30 +446,65 @@
       ctx.beginPath(); ctx.ellipse(cx, cy, b.w * 0.75, 5, 0, 0, Math.PI * 2); ctx.fill();
     }
     function drawRobot(ctx, r){
-      const base = `hsl(${r.hue} 15% 70%)`;
-      drawBox(ctx, r.x, r.y + 4, r.w, r.h - 4, ACTOR_Z0, ACTOR_Z1,
-        { front: base, top: `hsl(${r.hue} 15% 84%)`, side: `hsl(${r.hue} 14% 50%)`, bottom: `hsl(${r.hue} 14% 40%)` });
+      const hue = r.hue, Z0 = ACTOR_Z0, Z1 = ACTOR_Z1;
+      const col = l => `hsl(${hue} 18% ${l}%)`;
+      const look = player.x + player.w / 2 > r.x + r.w / 2 ? 1 : -1;
+      const roll = (r.x / 6) % (Math.PI * 2);
+      // a wheel underneath
+      drawBox(ctx, r.x + 3, r.y + r.h - 7, r.w - 6, 7, Z0 + 4, Z1 - 4, { front: "#2a2e3a", top: "#3a3f4f", side: "#1c1f28", bottom: "#111" });
+      // the body, and a head with a visor
+      drawBox(ctx, r.x, r.y + 11, r.w, r.h - 18, Z0, Z1, { front: col(68), top: col(84), side: col(48), bottom: col(38) });
+      drawBox(ctx, r.x + 3, r.y, r.w - 6, 11, Z0 + 2, Z1 - 2, { front: col(76), top: col(88), side: col(54), bottom: col(44) });
+      // an arm reaching for you
+      const reach = Math.abs(player.x - r.x) < 150 ? 7 : 2;
+      drawBox(ctx, look > 0 ? r.x + r.w : r.x - reach, r.y + 14 + Math.sin(tagFrame * 0.3) * 1.5, reach, 4, Z0 + 8, Z1 - 8, { front: col(58), top: col(76), side: col(44), bottom: col(34) });
       onFront(ctx, () => {
-        ctx.strokeStyle = "#1b1f2a"; ctx.lineWidth = 2;
-        ctx.strokeRect(r.x, r.y + 4, r.w, r.h - 4);
-        ctx.fillStyle = "#1b1f2a"; ctx.fillRect(r.x + 4, r.y + 9, r.w - 8, 7);
+        const cx = r.x + r.w / 2;
+        ctx.fillStyle = "#1b1f2a"; ctx.fillRect(r.x + 5, r.y + 2.5, r.w - 10, 6);
         ctx.fillStyle = (tagFrame >> 3) % 2 ? "#ff3b3b" : "#ff7a7a";
-        const ex = Math.max(-3, Math.min(3, (player.x - r.x) / 40));
-        ctx.fillRect(r.x + 8 + ex, r.y + 11, 4, 3); ctx.fillRect(r.x + 14 + ex, r.y + 11, 4, 3);
-        ctx.beginPath(); ctx.moveTo(r.x + r.w / 2, r.y + 4); ctx.lineTo(r.x + r.w / 2, r.y - 4); ctx.stroke();
+        const ex = look * 1.5;
+        ctx.fillRect(cx - 6 + ex, r.y + 4, 4, 3); ctx.fillRect(cx + 2 + ex, r.y + 4, 4, 3);
+        // grumpy eyebrows
+        ctx.strokeStyle = "#ff3b3b"; ctx.lineWidth = 1.4; ctx.beginPath();
+        ctx.moveTo(cx - 7 + ex, r.y + 1.5); ctx.lineTo(cx - 2 + ex, r.y + 3.5); ctx.moveTo(cx + 7 + ex, r.y + 1.5); ctx.lineTo(cx + 2 + ex, r.y + 3.5); ctx.stroke();
+        // a grill mouth on the belly, a bolt, and the wheel's spokes
+        ctx.fillStyle = "rgba(0,0,0,0.35)";
+        for (let i = 0; i < 4; i++) ctx.fillRect(r.x + 6 + i * 4, r.y + 16, 2, 5);
+        ctx.strokeStyle = "rgba(255,255,255,0.35)"; ctx.lineWidth = 1.2; ctx.beginPath();
+        for (let i = 0; i < 3; i++) { const a = roll + i * 2.09; ctx.moveTo(cx, r.y + r.h - 3.5); ctx.lineTo(cx + Math.cos(a) * 3.5, r.y + r.h - 3.5 + Math.sin(a) * 3.5); }
+        ctx.stroke();
+        // the antenna, with a blinking light
+        ctx.strokeStyle = "#1b1f2a"; ctx.lineWidth = 2;
+        ctx.beginPath(); ctx.moveTo(cx, r.y); ctx.lineTo(cx + Math.sin(tagFrame * 0.2) * 2, r.y - 7); ctx.stroke();
         ctx.fillStyle = (tagFrame >> 4) % 2 ? "#ffe14d" : "#ff3b3b";
-        ctx.beginPath(); ctx.arc(r.x + r.w / 2, r.y - 5, 3, 0, Math.PI * 2); ctx.fill();
+        ctx.beginPath(); ctx.arc(cx + Math.sin(tagFrame * 0.2) * 2, r.y - 8, 3, 0, Math.PI * 2); ctx.fill();
       });
     }
     function drawPlayer(ctx, p){
-      drawBox(ctx, p.x, p.y, p.w, p.h, ACTOR_Z0, ACTOR_Z1,
-        { front: "#ffd400", top: "#fff07a", side: "#c9a400", bottom: "#9c7f00" });
+      const Z0 = ACTOR_Z0, Z1 = ACTOR_Z1;
+      const sq = p.squash || 1, feet = p.y + p.h, cx = p.x + p.w / 2;
+      const running = p.onGround && Math.abs(p.vx) > 30;
+      const ph = running ? tagFrame * 0.45 : 0;
+      const H = p.h / sq, k = H / 30, W = p.w * Math.min(1.25, sq);
+      const legH = 7 * k, bodyH = 9 * k, headH = 14 * k;
+      const yLeg = feet - legH, yBody = yLeg - bodyH, yHead = yBody - headH;
+      const air = !p.onGround;
+      // legs (they run), arms (they swing), a red shirt, and a big yellow head
+      const lift = i => running ? Math.max(0, Math.sin(ph + i * Math.PI)) * 3 : air ? (i ? 2 : 0) : 0;
+      [0, 1].forEach(i => drawBox(ctx, cx - 7 + i * 8, yLeg - lift(i), 6, legH, Z0 + 6, Z1 - 6, { front: "#2b4fd6", top: "#4a6cf0", side: "#1d379c", bottom: "#142a78" }));
+      drawBox(ctx, cx - W * 0.36, yBody, W * 0.72, bodyH, Z0 + 3, Z1 - 3, { front: "#ff3b2f", top: "#ff7a6f", side: "#c4241a", bottom: "#8e1a12" });
+      const swing = running ? Math.sin(ph) * 3 : air ? -4 : 0;
+      drawBox(ctx, cx - W * 0.36 - 4, yBody + 1 + swing, 4, 8 * k, Z0 + 8, Z1 - 8, { front: "#ffd400", top: "#fff07a", side: "#c9a400", bottom: "#9c7f00" });
+      drawBox(ctx, cx + W * 0.36, yBody + 1 - swing, 4, 8 * k, Z0 + 8, Z1 - 8, { front: "#ffd400", top: "#fff07a", side: "#c9a400", bottom: "#9c7f00" });
+      drawBox(ctx, cx - W / 2, yHead, W, headH, Z0, Z1, { front: "#ffd400", top: "#fff07a", side: "#c9a400", bottom: "#9c7f00" });
       onFront(ctx, () => {
-        ctx.strokeStyle = "#3a2a00"; ctx.lineWidth = 2; ctx.strokeRect(p.x, p.y, p.w, p.h);
-        ctx.fillStyle = "#1b1f2a";
-        const fx = p.face * 3;
-        ctx.beginPath(); ctx.arc(p.x + 8 + fx, p.y + 11, 2.6, 0, Math.PI * 2); ctx.arc(p.x + 15 + fx, p.y + 11, 2.6, 0, Math.PI * 2); ctx.fill();
-        ctx.fillStyle = "#ff3b2f"; ctx.fillRect(p.x - 1, p.y + 3, p.w + 2, 4); // headband
+        ctx.strokeStyle = "#3a2a00"; ctx.lineWidth = 1.5; ctx.strokeRect(cx - W / 2, yHead, W, headH);
+        ctx.fillStyle = "#ff3b2f"; ctx.fillRect(cx - W / 2 - 1, yHead + 1, W + 2, 3.5); // headband
+        // the headband's ends flap behind you
+        ctx.beginPath(); const bx = cx - p.face * (W / 2), fl = Math.sin(tagFrame * 0.5) * 2;
+        ctx.moveTo(bx, yHead + 2); ctx.lineTo(bx - p.face * 8, yHead + fl); ctx.lineTo(bx - p.face * 7, yHead + 5 + fl); ctx.closePath(); ctx.fill();
+        const mood = p.tagged ? "dizzy" : air ? "wow" : p.scared > 0 ? "sad" : "happy";
+        Fun.face(ctx, cx + p.face * 2, yHead + 8.5 * k, 6.5 * k, mood, tagFrame / 60, p.face * 0.7, air ? -0.3 : 0);
       });
     }
     // the game fills the screen now, so draw it at the real size to keep it sharp
@@ -489,12 +550,19 @@
       const actors = [...robots.map(r => ({ b: r, robot: true })), { b: player, robot: false }];
       actors.forEach(a => drawShadow(ctx, a.b));
       actors.sort((m, n) => eyeDist(n.b) - eyeDist(m.b));
-      actors.forEach(a => a.robot ? drawRobot(ctx, a.b) : drawPlayer(ctx, a.b));
+      // drawn a bit bigger than they really are, so you can see their faces (standing on the same spot)
+      actors.forEach(a => {
+        const [fx0, fy0] = proj(a.b.x + a.b.w / 2, a.b.y + a.b.h, ACTOR_Z0);
+        ctx.save(); ctx.translate(fx0, fy0); ctx.scale(1.35, 1.35); ctx.translate(-fx0, -fy0);
+        if (a.robot) drawRobot(ctx, a.b); else drawPlayer(ctx, a.b);
+        ctx.restore();
+      });
 
       if (tagCountdown > 0) {
         ctx.fillStyle = "#fff"; ctx.font = "800 120px 'Bricolage Grotesque', sans-serif"; ctx.textAlign = "center";
         ctx.fillText(String(Math.ceil(tagCountdown)), TW / 2, TH / 2 - 40);
       }
+      fx.draw(ctx, frameDt);
       if (tagFlash.t > 0) {
         ctx.fillStyle = "#fff"; ctx.font = "800 37px 'Bricolage Grotesque', sans-serif"; ctx.textAlign = "center";
         ctx.fillText(tagFlash.text, TW / 2, 53);
@@ -512,7 +580,7 @@
     function tagLoop(now){
       if (!tagOpen) return;
       const dt = Math.min(1 / 30, (now - tagLast) / 1000 || 0);
-      tagLast = now;
+      tagLast = now; frameDt = dt;
       tagFrame++;
       if (tagRunning) tagStep(dt);
       drawTag();
@@ -532,6 +600,8 @@
 
     function endTag(won){
       tagRunning = false;
+      if (won) { popOver(player, "YOU ESCAPED! 🏆", "#ffe14d", 34); Fun.sfx.tada(); }
+      else { player.tagged = true; popOver(player, "TAGGED! 😱", "#ff6b6b", 36); Fun.shake(tagCanvas); Fun.sfx.wah(); }
       const secs = Math.floor(tagTime);
       const wasBest = secs > (store.tagBest || 0);
       if (wasBest) store.tagBest = secs;
@@ -598,6 +668,7 @@
     tagCanvas.tabIndex = 0;
 
     document.getElementById("tagCloseBtn").addEventListener("click", () => Hub.leave());
+    Fun.soundButton(document.getElementById("tagCloseBtn"));
     tagPlayBtn.addEventListener("click", startTag);
 
     return { open: openTag, close: closeTag };

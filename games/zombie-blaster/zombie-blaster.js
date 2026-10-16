@@ -153,6 +153,7 @@
       zbSpawnT = 0;
       zbPhase = "wave";
       zbFlash = { text: `🌊 Wave ${zbWave}!`, t: 2 };
+      Fun.sfx.beep();
     }
 
     function spawnZombie(){
@@ -181,6 +182,15 @@
       b.x = Math.max(-lim, Math.min(lim, b.x)); b.z = Math.max(-lim, Math.min(lim, b.z));
     }
     function addPuff(x, y, z, kind, text){ puffs.push({ x, y, z, kind, text, t: 0 }); }
+    // comic words over a spot in the world
+    const fx = Fun.pops();
+    let fxDt = 1 / 60, chatT = 3;
+    function popAt(x, y, z, text, colour, size){
+      const c = camSpace(x, y, z);
+      if (c[2] < NEAR) return;
+      const [sx, sy] = toScreen(c);
+      fx.pop(text, sx, sy, colour, size || 28);
+    }
 
     function updateHero(dt){
       const h = hero;
@@ -215,13 +225,14 @@
             if (off < bestOff) { bestOff = off; dir = toZ; }
           });
         }
+        Fun.sfx.pop();
         shots.push({ x: gx, z: gz, vx: Math.sin(dir) * SHOT_SPEED, vz: Math.cos(dir) * SHOT_SPEED, life: 1.1, r: 0.14 });
       }
       pickups = pickups.filter(p => {
         p.t += dt;
         if (Math.hypot(p.x - h.x, p.z - h.z) < 0.9) {
           h.hearts = Math.min(MAX_HEARTS, h.hearts + 1);
-          addPuff(p.x, 0.8, p.z, "spark", "+❤️");
+          addPuff(p.x, 0.8, p.z, "spark", "+❤️"); Fun.sfx.coin();
           return false;
         }
         return p.t < 12;
@@ -230,7 +241,7 @@
 
     function updateZombies(dt){
       zombies.forEach(zb => {
-        zb.hit = Math.max(0, zb.hit - dt);
+        zb.hit = Math.max(0, zb.hit - dt); zb.dizzy = Math.max(0, (zb.dizzy || 0) - dt);
         if (zb.rise > 0) { zb.rise = Math.max(0, zb.rise - dt); return; }
         const dx = hero.x - zb.x, dz = hero.z - zb.z, d = Math.hypot(dx, dz) || 1;
         const ux = dx / d, uz = dz / d;
@@ -251,6 +262,8 @@
       const grabbed = zombies.some(z => z.rise <= 0 && Math.hypot(z.x - hero.x, z.z - hero.z) < z.r + hero.r + 0.1);
       if (grabbed && hero.inv <= 0) {
         hero.hearts--; hero.inv = 1.6;
+        popAt(hero.x, 2.2, hero.z, ["OUCH!", "Get off!", "EWW, slimy!", "Gross!"][hero.hearts % 4], "#ff6b6b", 32);
+        Fun.shake(zbCanvas); Fun.sfx.bonk();
         // shove everyone nearby back so you can get away
         zombies.forEach(z => {
           const dx = z.x - hero.x, dz = z.z - hero.z, d = Math.hypot(dx, dz) || 1;
@@ -265,6 +278,8 @@
       const pts = ZOMBIE_TYPES[zb.type].points;
       zbScore += pts;
       addPuff(zb.x, 0.9 * zb.size, zb.z, "poof", "+" + pts);
+      popAt(zb.x, 2.3 * zb.size, zb.z, ["SPLAT!", "GOOPED!", "POP!", "SPLOOSH!", "BYE!"][Math.floor(Math.random() * 5)], "#9dff7a", 30);
+      Fun.sfx.splat();
       if (hero.hearts < MAX_HEARTS && Math.random() < 0.08) pickups.push({ x: zb.x, z: zb.z, t: 0 });
     }
     function updateShots(dt){
@@ -274,7 +289,7 @@
         if (PROPS.some(p => Math.hypot(p.x - s.x, p.z - s.z) < p.r + s.r)) { addPuff(s.x, 1, s.z, "spark"); return false; }
         const zb = zombies.find(z => z.rise < 0.5 && Math.hypot(z.x - s.x, z.z - s.z) < z.r + s.r + 0.1);
         if (!zb) return true;
-        zb.hp--; zb.hit = 0.12;
+        zb.hp--; zb.hit = 0.12; zb.dizzy = 0.8;
         zb.x += s.vx / SHOT_SPEED * 0.35; zb.z += s.vz / SHOT_SPEED * 0.35; // knocked back a little
         if (zb.hp <= 0) zapZombie(zb); else addPuff(s.x, 1, s.z, "spark");
         return false;
@@ -297,9 +312,17 @@
         zbScore += bonus;
         hero.hearts = Math.min(MAX_HEARTS, hero.hearts + 1);
         zbFlash = { text: `✅ Wave ${zbWave} cleared! +${bonus} and a ❤️`, t: 2.8 };
+        Fun.sfx.tada();
         zbPhase = "break"; zbBreak = 3;
       }
       updateZombies(dt);
+      // zombies mumble silly things
+      chatT -= dt;
+      if (chatT <= 0 && zombies.length) {
+        chatT = 3 + Math.random() * 4;
+        const z = zombies[Math.floor(Math.random() * zombies.length)];
+        if (z.rise <= 0) popAt(z.x, 2.4 * z.size, z.z, ["Braaains!", "Hungry…", "Hug me!", "Mmm, snacks!", "I need a nap", "Wait up!", "Uuurgh", "Is it lunch?"][Math.floor(Math.random() * 8)], "#ffffff", 20);
+      }
       if (!zbRunning) return;
       updateShots(dt);
     }
@@ -634,6 +657,13 @@
       // wonky eyebrows
       ctx.beginPath(); ctx.moveTo(-0.19, -1.72); ctx.lineTo(-0.03, -1.68); ctx.moveTo(0.05, -1.7); ctx.lineTo(0.17, -1.74); ctx.stroke();
       ctx.fillStyle = "#fff"; ctx.fillRect(-0.06, -1.45, 0.05, 0.05); ctx.fillRect(0.03, -1.46, 0.05, 0.05);
+      if (zb.dizzy > 0) {   // knocked silly: stars spin round the head
+        ctx.fillStyle = "#ffe14d";
+        for (let i = 0; i < 3; i++) {
+          const a = zbClock * 7 + i * 2.1, x = Math.cos(a) * 0.32, y = -1.95 + Math.sin(a) * 0.08;
+          ctx.beginPath(); for (let k = 0; k < 10; k++) { const r = k % 2 ? 0.03 : 0.07, b = k * Math.PI / 5; ctx.lineTo(x + Math.cos(b) * r, y + Math.sin(b) * r); } ctx.fill();
+        }
+      }
       if (zb.hp < zb.max) {
         ctx.fillStyle = "rgba(0,0,0,0.6)"; ctx.fillRect(-0.3, -2.12, 0.6, 0.08);
         ctx.fillStyle = "#6dff6d"; ctx.fillRect(-0.3, -2.12, 0.6 * zb.hp / zb.max, 0.08);
@@ -811,6 +841,7 @@
         v.addColorStop(0, "rgba(255,0,0,0)"); v.addColorStop(1, `rgba(255,30,30,${0.55 * danger * (0.75 + 0.25 * Math.sin(zbClock * 12))})`);
         ctx.fillStyle = v; ctx.fillRect(0, 0, ZW, ZH);
       }
+      fx.draw(ctx, fxDt);
       drawRadar(ctx);
       if (zbFlash.t > 0) {
         ctx.globalAlpha = Math.min(1, zbFlash.t * 2);
@@ -829,7 +860,7 @@
     function zbLoop(now){
       if (!zbOpen) return;
       const dt = Math.min(1 / 30, (now - zbLast) / 1000 || 0);
-      zbLast = now;
+      zbLast = now; fxDt = dt;
       zbFrame++;
       if (zbRunning) zbStep(dt);
       drawZb();
@@ -846,6 +877,7 @@
     }
     function endZb(){
       zbRunning = false;
+      Fun.sfx.wah();
       const bestScore = zbScore > (store.zombieBest || 0);
       if (bestScore) store.zombieBest = zbScore;
       if (zbWave > (store.zombieWave || 0)) store.zombieWave = zbWave;
@@ -918,6 +950,7 @@
     zbCanvas.tabIndex = 0;
 
     document.getElementById("zbCloseBtn").addEventListener("click", () => Hub.leave());
+    Fun.soundButton(document.getElementById("zbCloseBtn"));
     zbPlayBtn.addEventListener("click", startZb);
 
     return { open: openZb, close: closeZb };

@@ -162,11 +162,15 @@
 
     /* ---------------- casting, biting, reeling ---------------- */
     function say(t, secs){ msg = { text: t, t: secs || 2 }; }
+    // comic words out in the world (drawn with the camera), and a fish that talks back while you reel
+    const fx = Fun.pops();
+    let fxDt = 1 / 60, tauntT = 1.5;
+    const popW = (text, x, y, colour, size) => fx.pop(text, x, y, colour, size || 30);
 
     function press(){
       holding = true;
       if (state === "idle") { state = "charging"; powerT = 0; }
-      else if (state === "waiting") { say("😬 Too early! The fish swam away.", 2); scareFish(); }
+      else if (state === "waiting") { say("😬 Too early! The fish swam away.", 2); popW("Too early! 🙈", bob.x, SC.SURFACE - 40, "#ff8a8a"); Fun.sfx.nope(); scareFish(); }
       else if (state === "bite") startReel();
     }
     function release(){
@@ -190,11 +194,13 @@
       const from = rodTip();
       bob = { x0: from.x, y0: from.y, x, y: SC.SURFACE, t: 0, flying: true, dip: 0 };
       state = "flying";
+      Fun.sfx.whoosh(); popW(power > 0.9 ? "MEGA CAST!" : "Whoosh!", from.x + 40, from.y - 20, "#ffffff", power > 0.9 ? 34 : 26);
     }
 
     function landed(){
       bob.flying = false;
       splashes.push({ x: bob.x, y: SC.SURFACE, t: 0 });
+      Fun.sfx.splash(); popW("Plop!", bob.x, SC.SURFACE - 30, "#bfe8ff", 24);
       const zone = Math.max(0, SC.zoneAt(bob.x));
       const depth = Math.min(SC.seabedY(bob.x) - 18, SC.SURFACE + 40 + (SC.seabedY(bob.x) - SC.SURFACE) * 0.7);
       hook = { x: bob.x, y: SC.SURFACE + 4, depth };
@@ -223,6 +229,7 @@
       if (hunter) reel.ambush = { fish: hunter, at: 1.2 + Math.random() * 2.5 };
       state = "reeling";
       say("❗ Hold to reel it in!", 1.2);
+      popW("GOTCHA!", bob.x, SC.SURFACE - 50, "#ffe14d", 36); Fun.sfx.zap(); tauntT = 1.5;
     }
 
     // the big fish swims in, gulps down your fish, and now it's on your hook
@@ -243,6 +250,7 @@
       A.done = true;
       splashes.push({ x: actor.x, y: SC.SURFACE, t: 0, big: true });
       chomp = { x: actor.x, y: actor.y, t: 0 };
+      Fun.sfx.chomp(); Fun.sfx.splat();
       say(`😱 A ${A.fish.name} ate your ${reel.fish.name}! Reel it in!`, 2.6);
       actor = { fish: A.fish, x: H.x, y: H.y, dir: H.dir };
       reel.eaten = reel.fish.name;
@@ -257,6 +265,11 @@
       R.t += dt;
       updateAmbush(dt);
       if (state !== "reeling") return;
+      tauntT -= dt;
+      if (tauntT <= 0 && actor) {
+        tauntT = 2 + Math.random() * 2;
+        popW(["Blub blub!", "Catch me!", "Nope!", "Let me go!", "I'm slippery!", "Wheee!", "Not today!"][Math.floor(Math.random() * 7)], actor.x, actor.y - 30, "#ffffff", 20);
+      }
       R.retarget -= dt;
       if (R.retarget <= 0) {
         R.fishTarget = Math.max(0.05, Math.min(0.95, R.fishPos + (Math.random() - 0.5) * (0.4 + R.diff)));
@@ -274,7 +287,7 @@
       R.progress += on ? 0.3 * dt : -0.19 * dt * (1 + R.diff * 0.5);
       if (hook) hook.x = bob.x - (bob.x - SC.SHORE_X - 20) * Math.max(0, R.progress) * 0.5;
       if (R.progress >= 1) caught();
-      else if (R.progress <= 0) { say("💨 It got away! Try again.", 2.2); scareFish(); }
+      else if (R.progress <= 0) { say("💨 It got away! Try again.", 2.2); if (actor) popW("See ya! 👋", actor.x, actor.y - 30, "#ffffff", 26); Fun.sfx.wah(); scareFish(); }
     }
 
     function caught(){
@@ -293,6 +306,7 @@
       Hub.saveStore();
       Hub.checkBadges();
       splashes.push({ x: hook ? hook.x : bob.x, y: SC.SURFACE, t: 0, big: true });
+      Fun.sfx.splash(); Fun.sfx.tada();
       state = "caught";
       bob = null; hook = null; reel = null; actor = null;
       showCatch(fish, cm, isNew, rec, newRods, eaten);
@@ -434,11 +448,11 @@
       if (state === "waiting") {
         timers.t += dt;
         if (timers.nibbles.length && timers.t >= timers.nibbles[0]) { timers.nibbles.shift(); bob.dip = 5; splashes.push({ x: bob.x, y: SC.SURFACE, t: 0, small: true }); }
-        if (timers.t >= timers.wait) { state = "bite"; timers.bite = 0.85 + rod().speed * 0.4; bob.dip = 14; splashes.push({ x: bob.x, y: SC.SURFACE, t: 0 }); }
+        if (timers.t >= timers.wait) { state = "bite"; timers.bite = 0.85 + rod().speed * 0.4; bob.dip = 14; splashes.push({ x: bob.x, y: SC.SURFACE, t: 0 }); Fun.sfx.ding(); }
       } else if (state === "bite") {
         timers.bite -= dt;
         bob.dip = 12 + Math.sin(clock * 30) * 3;
-        if (timers.bite <= 0) { say("💨 Too slow! It took the bait and left.", 2.2); scareFish(); }
+        if (timers.bite <= 0) { say("💨 Too slow! It took the bait and left.", 2.2); popW("Bye-bye worm! 🪱", bob.x, SC.SURFACE - 40, "#ffb3c7"); Fun.sfx.nope(); scareFish(); }
       } else if (state === "reeling") updateReel(dt);
       if (bob && !bob.flying && state !== "bite") bob.dip *= Math.pow(0.02, dt);
 
@@ -565,6 +579,7 @@
         const x = landX(power);
         ctx.fillStyle = "rgba(255,255,255,0.7)"; ctx.beginPath(); ctx.moveTo(x, SC.SURFACE - 18); ctx.lineTo(x - 7, SC.SURFACE - 30); ctx.lineTo(x + 7, SC.SURFACE - 30); ctx.fill();
       }
+      fx.draw(ctx, fxDt);
       ctx.restore();
       SC.drawNight(ctx, L);
 
@@ -615,7 +630,7 @@
     function loop(now){
       if (!open) return;
       const dt = Math.min(1 / 30, (now - last) / 1000 || 0);
-      last = now;
+      last = now; fxDt = dt;
       if (panel.hidden || state === "caught") step(dt); else clock += dt;
       draw();
       updateHud();
@@ -659,6 +674,7 @@
     $("fsBookBtn").addEventListener("click", showBook);
     $("fsRodsBtn").addEventListener("click", showRods);
     $("fsCloseBtn").addEventListener("click", () => Hub.leave());
+    Fun.soundButton($("fsCloseBtn"));
 
     return { open: openGame, close: closeGame };
   }
