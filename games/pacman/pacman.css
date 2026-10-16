@@ -1,9 +1,9 @@
-/* Pac-Man: a tall maze, with an arrow pad on touch screens. */
-.pac-box{ width: min(100%, calc((100vh - 110px) * 19 / 21)); }
-@media (pointer: coarse){ .pac-box{ width: min(100%, calc((100vh - 200px) * 19 / 21)); } }
+/* Pac-Man: the maze in 3D, with an arrow pad on touch screens. */
+.pac-box{ width: min(100%, calc((100vh - 110px) * 5 / 4)); }
+@media (pointer: coarse){ .pac-box{ width: min(100%, calc((100vh - 200px) * 5 / 4)); } }
 #pacCanvas:focus{ outline: none; }
 #pacCanvas{
-  display: block; width: 100%; aspect-ratio: 19 / 21; height: auto;
+  display: block; width: 100%; aspect-ratio: 5 / 4; height: auto;
   border-radius: 12px; border: 2px solid rgba(255,255,255,0.25);
   background: #000; touch-action: none;
 }
@@ -23,6 +23,6 @@
     width: auto; display: grid; grid-template-columns: auto auto; align-items: center; gap: 6px 16px;
   }
   .pac-box .game-hud{ grid-column: 1 / -1; }
-  .pac-box .game-stage{ width: calc((100vh - 60px) * 19 / 21); width: calc((100dvh - 60px) * 19 / 21); }
+  .pac-box .game-stage{ width: calc((100vh - 60px) * 5 / 4); width: calc((100dvh - 60px) * 5 / 4); }
   .pac-pad{ grid-template-columns: repeat(3, 54px); }
 }

@@ -207,7 +207,8 @@
     </section>`;
 
     const $ = id => document.getElementById(id);
-    const overlay = $("ttOverlay"), canvas = $("ttCanvas"), ctx = canvas.getContext("2d");
+    const overlay = $("ttOverlay"), canvas = $("ttCanvas");
+    let ctx = canvas.getContext("2d");
     const panel = $("ttPanel"), panelTitle = $("ttPanelTitle"), panelText = $("ttPanelText");
     const results = $("ttResults"), garage = $("ttGarage"), playBtn = $("ttPlayBtn"), garageBtn = $("ttGarageBtn");
     const timeEl = $("ttTime"), lapEl = $("ttLap"), posEl = $("ttPos");
@@ -268,6 +269,9 @@
     let open = false, state = "garage"; // garage · countdown · racing · done
     let last = 0, raceT = 0, countT = 0, cars = [], me = null, sparks = [], msg = null;
     const keys = { left: false, right: false, gas: false, brake: false };
+    const fx = Fun.pops();
+    let bonkT = 0, scrapeT = 0, lastPos = null, lastLit = 0;
+    const popMid = (text, colour, size, y) => fx.pop(text, W / 2, y || H * 0.62, colour, size || 38);
 
     function makeCar(opts, row, lane){
       const prog = -50 - row * 70;
@@ -298,7 +302,7 @@
         me
       ];
       cars.forEach(c => { if (!c.me) { c.robot = true; c.lane = c.lat; c.maxV = 540 * c.skill; } });
-      sparks = []; msg = null; raceT = 0; countT = 3.2;
+      sparks = []; msg = null; raceT = 0; countT = 3.2; lastLit = 0; lastPos = null; camA = null; fx.clear();
       say(`${C.layout.emoji} ${C.layout.name}`, 3.2);
       state = "countdown";
       panel.hidden = true;
@@ -314,7 +318,7 @@
       if (c.rail.zone.kind === "loop") c.lat *= Math.pow(0.02, dt);
       if (rel >= c.rail.len) {
         c.rail = null;
-        if (c.me) say(c.lastZone === "loop" ? "🌀 LOOP!" : "🚀 Nice jump!", 1.1);
+        if (c.me) { say(c.lastZone === "loop" ? "🌀 LOOP!" : "🚀 Nice jump!", 1.1); popMid(c.lastZone === "loop" ? "WHEEE!" : "AIR TIME!", "#7fe3ff"); Fun.sfx.boing(); }
       }
       const p = C.at(c.prog, c.lat);
       c.x = p.x; c.y = p.y; c.angle = p.angle; c.z = c.rail ? p.z : 0;
@@ -363,11 +367,12 @@
         let da = s.angle - c.angle;
         da = Math.atan2(Math.sin(da), Math.cos(da));
         if (Math.abs(da) < Math.PI / 2) c.angle += da * Math.min(1, 6 * dt);
+        if (Math.abs(c.v) > 220 && scrapeT <= 0) { scrapeT = 3; popMid("Scrrrch!", "#ffb15c", 28, H * 0.7); }
         if (Math.abs(c.v) > 120 && Math.random() < 0.6) sparks.push({ x: c.x - s.nx * Math.sign(lat) * 10, y: c.y - s.ny * Math.sign(lat) * 10, vx: (Math.random() - 0.5) * 120, vy: (Math.random() - 0.5) * 120, t: 0.35 });
       }
       c.lat = (c.x - s.x) * s.nx + (c.y - s.y) * s.ny;
 
-      if (s.boost && c.v > 0) { if (c.boostT <= 0) say("⚡ BOOST!", 0.8); c.boostT = 1.4; }
+      if (s.boost && c.v > 0) { if (c.boostT <= 0) { say("⚡ BOOST!", 0.8); popMid("ZOOM!", "#ffe14d", 44); Fun.sfx.zap(); } c.boostT = 1.4; }
 
       // the jump and the loop: fast enough and you ride it, too slow and you go back for another try
       const zone = s.zone;
@@ -378,6 +383,7 @@
           else {
             say(zone.kind === "loop" ? "😬 Too slow for the loop! Hit the ⚡ booster first." : "😬 Too slow to jump! Hit the ⚡ booster first.", 2.2);
             backTo(c, zone.start - 60);
+            Fun.sfx.nope(); popMid("Oopsie!", "#ff8a8a", 34);
           }
         } else if (into >= 8 && into < zone.end - zone.start - 6) {
           backTo(c, zone.start - 60); // drove in backwards
@@ -415,6 +421,7 @@
         if (d > 0 && d < 30) {
           a.x += dx / d * (30 - d); a.y += dy / d * (30 - d);
           a.v *= 0.92; b.v *= 0.95;
+          if (bonkT <= 0) { bonkT = 1.2; popMid(["BONK!", "BUMP!", "Oi!"][Math.floor(Math.random() * 3)], "#ff9f43", 34); Fun.sfx.bonk(); }
         }
       }));
     }
@@ -442,7 +449,9 @@
     function step(dt){
       if (state === "countdown") {
         countT -= dt;
-        if (countT <= 0) { state = "racing"; say("GO GO GO! 🏁", 1); }
+        const lit = Math.min(3, Math.floor(3.2 - countT) + 1);
+        if (lit !== lastLit) { lastLit = lit; Fun.sfx.beep(); }
+        if (countT <= 0) { state = "racing"; say("GO GO GO! 🏁", 1); Fun.sfx.honk(); lastPos = null; }
         return;
       }
       if (state !== "racing" && state !== "done") return;
@@ -455,6 +464,13 @@
         lapsAndFinish(c);
       });
       bumpCars();
+      bonkT -= dt; scrapeT -= dt;
+      if (state === "racing" && me) {
+        const pos = standings().indexOf(me);
+        if (lastPos !== null && pos < lastPos) { popMid(pos === 0 ? "1st PLACE! 🥇" : "PASSED! 😎", "#7bd68a", 36, H * 0.5); Fun.sfx.coin(); }
+        else if (lastPos !== null && pos > lastPos) { popMid("Beep beep! 🤖", "#ffffff", 28, H * 0.5); Fun.sfx.honk(); }
+        lastPos = pos;
+      }
       sparks.forEach(p => { p.x += p.vx * dt; p.y += p.vy * dt; p.t -= dt; });
       sparks = sparks.filter(p => p.t > 0);
       if (msg && (msg.t -= dt) <= 0) msg = null;
@@ -469,6 +485,7 @@
       order.sort((a, b) => (a.finishT ?? a.guessT) - (b.finishT ?? b.guessT));
       const place = order.indexOf(me) + 1;
       const won = place === 1;
+      if (won) { Fun.sfx.tada(); popMid("WINNER! 🏆", "#ffe14d", 50, H * 0.45); } else Fun.sfx.ding();
       const id = C.layout.id;
       const newBest = !T.bestTimes[id] || me.finishT < T.bestTimes[id];
       if (won) { T.wins = (T.wins || 0) + 1; if (T.robots === "hard") T.hardWins = (T.hardWins || 0) + 1; }
@@ -497,7 +514,129 @@
     }
 
     /* ---------------- drawing ---------------- */
+    /* ---------------- the 3D chase camera ----------------
+       The track is drawn from straight above into a hidden picture, turned so you always drive "up" it.
+       Then that picture is laid down as a floor in perspective, one screen row at a time (the trick old
+       racing games used), and the cars are stood up on it with a shadow and some thickness. */
+    const K = 0.7;  // the hidden picture is drawn a bit smaller than the screen needs, which is plenty and much quicker
+    const OW = 1200 * K, OH = 1200 * K, OCX = 600 * K, OCY = 960 * K, MZ = 0.62 * K;
+    const HZ = 140, FOC = 480, CAMH = 118 * K, BACK = 230 * K;
+    const off = document.createElement("canvas"); off.width = OW; off.height = OH;
+    const octx = off.getContext("2d");
+    let camA = null, frameDt = 1 / 60;
+    // puffy clouds far below the track, fixed in the world so they slide past
+    const BELOW = Array.from({ length: 70 }, (_, i) => ({ x: ((i * 7919) % 97) / 97 * 6000 - 1500, y: ((i * 104729) % 89) / 89 * 6000 - 1500, r: 90 + (i * 37) % 120 }));
+    function draw3D(){
+      const focus = me || cars[0];
+      if (!focus) return;
+      const want = focus.angle;
+      if (camA === null) camA = want;
+      camA += Math.atan2(Math.sin(want - camA), Math.cos(want - camA)) * Math.min(1, frameDt * 4.5);
+      const th = -camA - Math.PI / 2, cs = Math.cos(th), sn = Math.sin(th);
+      const fx0 = focus.x, fy0 = focus.y;
+
+      // 1) the world from above, into the hidden picture
+      const main = ctx;
+      ctx = octx;
+      ctx.setTransform(1, 0, 0, 1, 0, 0);
+      ctx.fillStyle = "#b8e2ff"; ctx.fillRect(0, 0, OW, OH);
+      ctx.setTransform(MZ * cs, MZ * sn, -MZ * sn, MZ * cs, OCX, OCY);
+      ctx.translate(-fx0, -fy0);
+      ctx.fillStyle = "rgba(255,255,255,0.75)";
+      BELOW.forEach(b => {
+        const x = b.x + clock * 6, y = b.y;
+        if (Math.abs(x - fx0) > 2600 || Math.abs(y - fy0) > 2600) return;
+        ctx.beginPath(); ctx.arc(x, y, b.r, 0, 7); ctx.arc(x + b.r * 0.8, y + 20, b.r * 0.7, 0, 7); ctx.arc(x - b.r * 0.7, y + 25, b.r * 0.6, 0, 7); ctx.fill();
+      });
+      ctx.lineJoin = "round"; ctx.lineCap = "butt";
+      ctx.save(); ctx.translate(34, 46); ctx.strokeStyle = "rgba(30,60,110,0.22)"; ctx.lineWidth = HALF * 2 + 14; ctx.stroke(ROAD); ctx.restore();
+      drawRoad(ROAD);
+      ctx.strokeStyle = "rgba(255,225,170,0.6)"; ctx.lineWidth = 3; ctx.setLineDash([26, 22]); ctx.stroke(LINE); ctx.setLineDash([]);
+      drawJoints(false);
+      drawSpecials();
+      ctx.save(); ctx.translate(16, 22); ctx.strokeStyle = "rgba(40,20,0,0.35)"; ctx.lineWidth = HALF * 2 + 14; ctx.stroke(DECK); ctx.restore();
+      drawRoad(DECK);
+      drawJoints(true);
+      sparks.forEach(p => { ctx.fillStyle = p.t > 0.2 ? "#fff3a0" : "#ff9f1c"; ctx.fillRect(p.x - 3, p.y - 3, 6, 6); });
+      ctx = main;
+
+      // 2) the sky above the horizon, with clouds that slide as you turn
+      ctx.setTransform(1, 0, 0, 1, 0, 0);
+      const sky = ctx.createLinearGradient(0, 0, 0, HZ + 40);
+      sky.addColorStop(0, "#3f8fe8"); sky.addColorStop(1, "#cdeaff");
+      ctx.fillStyle = sky; ctx.fillRect(0, 0, W, HZ + 40);
+      const sun = (((-camA * 300) % (W * 2)) + W * 2) % (W * 2) - W / 2;
+      const sg = ctx.createRadialGradient(sun, 50, 4, sun, 50, 90);
+      sg.addColorStop(0, "rgba(255,250,220,1)"); sg.addColorStop(0.2, "rgba(255,240,180,0.8)"); sg.addColorStop(1, "rgba(255,240,180,0)");
+      ctx.fillStyle = sg; ctx.fillRect(sun - 90, 0, 180, 140);
+      ctx.fillStyle = "rgba(255,255,255,0.9)";
+      for (let k = 0; k < 9; k++) {
+        const x = ((((k * 260 - camA * 500) % (W + 300)) + W + 300) % (W + 300)) - 150, y = 40 + (k * 37) % 70, r = 22 + (k * 13) % 20;
+        ctx.beginPath(); ctx.arc(x, y, r, 0, 7); ctx.arc(x + r, y + 6, r * 0.8, 0, 7); ctx.arc(x - r, y + 8, r * 0.7, 0, 7); ctx.fill();
+      }
+      // a floating island or two on the horizon
+      ctx.fillStyle = "#6fbf5a";
+      [0.4, 2.3, 4.1].forEach((p, k) => {
+        const x = ((((p * 400 - camA * 420) % (W + 400)) + W + 400) % (W + 400)) - 200, w = 70 + k * 20;
+        ctx.fillStyle = "#8a6a4a"; ctx.beginPath(); ctx.moveTo(x - w / 2, HZ - 14); ctx.lineTo(x + w / 2, HZ - 14); ctx.lineTo(x, HZ + 14); ctx.fill();
+        ctx.fillStyle = "#6fbf5a"; ctx.fillRect(x - w / 2, HZ - 20, w, 7);
+      });
+
+      // 3) the floor in perspective
+      ctx.fillStyle = "#cdeaff"; ctx.fillRect(0, HZ, W, H - HZ);
+      ctx.imageSmoothingEnabled = true;
+      for (let y = HZ + 1; y < H; y++) {
+        const z = CAMH * FOC / (y - HZ), z2 = CAMH * FOC / (y + 1 - HZ);
+        const row = OCY + BACK - z;
+        if (row < 0) continue;
+        const half = (W / 2) * z / FOC;
+        ctx.drawImage(off, OCX - half, row, half * 2, Math.max(1, z - z2), 0, y, W, 1);
+      }
+      const haze = ctx.createLinearGradient(0, HZ, 0, HZ + 90);
+      haze.addColorStop(0, "rgba(205,234,255,1)"); haze.addColorStop(1, "rgba(205,234,255,0)");
+      ctx.fillStyle = haze; ctx.fillRect(0, HZ, W, 90);
+
+      // 4) the cars, stood up on the floor: far ones first
+      const shown = [];
+      cars.forEach(c => {
+        const dx = c.x - fx0, dy = c.y - fy0;
+        const ox = OCX + MZ * (dx * cs - dy * sn), oy = OCY + MZ * (dx * sn + dy * cs);
+        const z = OCY + BACK - oy;
+        if (z < 30) return;
+        shown.push({ c, z, sx: W / 2 + (ox - OCX) * FOC / z, sy: HZ + CAMH * FOC / z, s: FOC / z * MZ });
+      });
+      shown.sort((a, b) => b.z - a.z).forEach(({ c, sx, sy, s }) => {
+        const lift = c.z * 70 * s;
+        ctx.fillStyle = `rgba(0,0,0,${0.32 - c.z * 0.15})`;
+        ctx.beginPath(); ctx.ellipse(sx, sy + 4 * s, 26 * s, 13 * s * 0.6, 0, 0, 7); ctx.fill();
+        // the car's sides: a dark copy of its shape a little lower, then the car on top
+        const place = dy => { ctx.translate(sx, sy - lift + dy - 6 * s); ctx.scale(s, s * 0.5); ctx.rotate(c.angle + th); };
+        ctx.save(); place(7 * s);
+        ctx.fillStyle = "rgba(20,22,30,0.85)"; roundRect(ctx, -23, -12, 46, 24, 7); ctx.fill();
+        ctx.restore();
+        ctx.save(); place(0); drawCar(ctx, c.model, c.colour, c.boostT > 0); ctx.restore();
+        // a little driver's head peeking out, and a name tag over the robots
+        ctx.fillStyle = c.me ? "#ffd21f" : "#c8ccd4";
+        ctx.beginPath(); ctx.arc(sx, sy - lift - 14 * s, 5 * s, 0, 7); ctx.fill();
+        if (!c.me && s > 0.35) {
+          ctx.font = `800 ${Math.round(Math.max(11, 16 * s))}px 'Bricolage Grotesque', sans-serif`; ctx.textAlign = "center";
+          ctx.lineWidth = 4; ctx.strokeStyle = "rgba(0,0,0,0.6)"; ctx.fillStyle = "#fff";
+          ctx.strokeText("🤖 " + c.name, sx, sy - lift - 26 * s); ctx.fillText("🤖 " + c.name, sx, sy - lift - 26 * s);
+        }
+      });
+      // speed lines at the sides when you're flying along
+      if (me && me.v > 420) {
+        ctx.strokeStyle = `rgba(255,255,255,${Math.min(0.6, (me.v - 420) / 300)})`; ctx.lineWidth = 3;
+        for (let k = 0; k < 10; k++) {
+          const side = k % 2 ? 1 : -1, y = HZ + 60 + ((k * 53 + clock * 900) % (H - HZ - 60));
+          const x = W / 2 + side * (W * 0.42 + (y - HZ) * 0.15);
+          ctx.beginPath(); ctx.moveTo(x, y); ctx.lineTo(x + side * 40, y + 30); ctx.stroke();
+        }
+      }
+    }
+
     function draw(){
+      if (T.view !== "top") { draw3D(); drawOverlay(); return; }
       const focus = me || cars[0];
       ZOOM = canvas.clientWidth && canvas.clientWidth < 600 ? 1.05 : 0.78; // closer up on small screens, so the cars aren't tiny
       ctx.setTransform(1, 0, 0, 1, 0, 0);
@@ -549,8 +688,14 @@
 
       ctx.setTransform(1, 0, 0, 1, 0, 0);
       TurboTrackSky.drawAbove(ctx, { x: camX, y: camY }, ZOOM, W, H, clock);
+      drawOverlay();
+    }
+    // what goes on top in both views: the map, the lights, words and the speed
+    function drawOverlay(){
+      ctx.setTransform(1, 0, 0, 1, 0, 0);
       drawMinimap();
       if (state === "countdown") drawLights();
+      fx.draw(ctx, frameDt);
       if (msg) {
         ctx.font = "800 30px 'Bricolage Grotesque', sans-serif"; ctx.textAlign = "center";
         ctx.lineWidth = 6; ctx.strokeStyle = "rgba(0,0,0,0.7)"; ctx.fillStyle = "#fff";
@@ -688,7 +833,7 @@
       if (!open) return;
       const dt = Math.min(1 / 30, (now - last) / 1000 || 0);
       clock = now / 1000;
-      last = now;
+      last = now; frameDt = dt;
       step(dt);
       draw();
       updateHud();
@@ -751,6 +896,14 @@
     canvas.tabIndex = 0;
 
     $("ttCloseBtn").addEventListener("click", () => Hub.leave());
+    // the camera: chasing behind your car in 3D, or looking straight down
+    const viewBtn = document.createElement("button");
+    viewBtn.type = "button"; viewBtn.className = "btn ghost small";
+    const showView = () => { viewBtn.textContent = T.view === "top" ? "🎥 Top" : "🎥 3D"; viewBtn.title = "Switch the camera"; };
+    viewBtn.addEventListener("click", () => { T.view = T.view === "top" ? "3d" : "top"; camA = null; Hub.saveStore(); showView(); canvas.focus(); });
+    showView();
+    $("ttCloseBtn").before(viewBtn);
+    Fun.soundButton($("ttCloseBtn"));
     playBtn.addEventListener("click", newRace);
     garageBtn.addEventListener("click", () => { newPreviewRace(); showGarage(); });
 

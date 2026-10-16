@@ -131,7 +131,7 @@
   /* ---------------- sounds (made by the browser) ---------------- */
   let ac = null;
   function blip(f0, f1, dur, vol, type, delay){
-    if (Q().mute) return;
+    if (store.sound === false) return;
     const AC = window.AudioContext || window.webkitAudioContext;
     if (!AC) return;
     if (!ac) ac = new AC();
@@ -1020,7 +1020,7 @@
     function renderLab(L){
       const i = LABS.indexOf(L);
       page.innerHTML = `
-        <div class="qm-title"><h2></h2><button class="btn ghost small qm-mute" type="button" aria-label="Sound on or off">${Q().mute ? "🔇" : "🔊"}</button></div>
+        <div class="qm-title"><h2></h2><button class="btn ghost small qm-mute" type="button" aria-label="Sound on or off">${store.sound === false ? "🔇" : "🔊"}</button></div>
         <div class="qm-chat">
           <button class="qm-catbtn" type="button" aria-label="Professor Whiskers: next">${CAT_SVG}</button>
           <div class="qm-bubble"><span class="qm-say"></span><div class="qm-bubble-foot"><span class="qm-dots"></span><button class="qm-next" type="button" aria-label="Next">▶</button></div></div>
@@ -1036,7 +1036,7 @@
       page.querySelector("h2").textContent = `${L.icon} ${L.title}`;
       L.missions.forEach((m, k) => { page.querySelectorAll(".qm-missions li")[k].lastElementChild.textContent = m.text; });
       page.querySelector(".qm-real").textContent = L.real;
-      page.querySelector(".qm-mute").addEventListener("click", e => { Q().mute = !Q().mute; Hub.saveStore(); e.currentTarget.textContent = Q().mute ? "🔇" : "🔊"; });
+      page.querySelector(".qm-mute").addEventListener("click", e => { store.sound = store.sound === false; Hub.saveStore(); e.currentTarget.textContent = store.sound === false ? "🔇" : "🔊"; });
       page.querySelector('[data-k="prev"]').addEventListener("click", () => go(LABS[i - 1].id));
       page.querySelector('[data-k="next"]').addEventListener("click", () => go(i === LABS.length - 1 ? "quiz" : LABS[i + 1].id));
       page.querySelector(".qm-catbtn").addEventListener("click", nextChat);

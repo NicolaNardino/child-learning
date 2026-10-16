@@ -230,15 +230,33 @@
   const WOOD = [168, 134, 82], ROCK = [134, 134, 138];
   const items = [stick, coalItem, clayBall, brickItem, tool(WOOD, "pick"), tool(ROCK, "pick"), tool(WOOD, "axe"), tool(ROCK, "axe"), tool(WOOD, "shovel"), tool(ROCK, "shovel")];
 
+  // the animals: a pink pig and a white chicken, each with a face on the front of its head
+  const PIG_PAL = [[240, 160, 170], [232, 150, 160], [246, 172, 180], [226, 142, 152]];
+  const pigSkin = make((x, y) => paint(PIG_PAL, grain(x, y, 191)));
+  const pigFace = make((x, y) => {
+    if ((x === 3 || x === 4 || x === 11 || x === 12) && (y === 5 || y === 6)) return (x === 4 || x === 11) && y === 6 ? pack(20, 20, 24) : pack(250, 250, 250);
+    if (x >= 5 && x <= 10 && y >= 8 && y <= 11) return (x === 6 || x === 9) && (y === 9 || y === 10) ? pack(150, 70, 84) : pack(250, 186, 194);
+    return paint(PIG_PAL, grain(x, y, 191));
+  });
+  const CHICK_PAL = [[248, 248, 248], [236, 236, 238], [252, 252, 250], [228, 228, 232]];
+  const chickBody = make((x, y) => paint(CHICK_PAL, grain(x, y, 193)));
+  const chickFace = make((x, y) => {
+    if ((x === 3 || x === 12) && (y === 4 || y === 5)) return pack(20, 20, 24);
+    if (x >= 5 && x <= 10 && y >= 6 && y <= 8) return y === 8 ? pack(214, 130, 20) : pack(246, 170, 40);
+    if (x >= 6 && x <= 9 && y >= 9 && y <= 12) return pack(214, 40, 44);
+    return paint(CHICK_PAL, grain(x, y, 193));
+  });
+  const beak = make((x, y) => paint([[246, 170, 40], [232, 150, 30], [250, 186, 60]], grain(x, y, 195)));
   const white = make(() => pack(255, 255, 255));
   const ocean = make(() => pack(52, 108, 214));
 
   const TEX = [dirt, grassTop, grassSide, stone, cobble, logSide, logTop, leaves, planks, sand, brick, glass, water, tallGrass, poppy, dandelion, white, ocean, glow, torch,
-    craftTop, craftSide, furnFront, furnSide, furnTop, coalOre, clay, crack, ...items];
+    craftTop, craftSide, furnFront, furnSide, furnTop, coalOre, clay, crack, ...items, pigSkin, pigFace, chickBody, chickFace, beak];
   const T = { DIRT: 0, GRASS_TOP: 1, GRASS_SIDE: 2, STONE: 3, COBBLE: 4, LOG_SIDE: 5, LOG_TOP: 6, LEAVES: 7, PLANKS: 8, SAND: 9, BRICK: 10, GLASS: 11, WATER: 12, TALLGRASS: 13, POPPY: 14, DANDELION: 15, WHITE: 16, OCEAN: 17, GLOW: 18, TORCH: 19,
     CRAFT_TOP: 20, CRAFT_SIDE: 21, FURN_FRONT: 22, FURN_SIDE: 23, FURN_TOP: 24, COAL_ORE: 25, CLAY: 26, CRACK: 27,
-    STICK: 28, COAL: 29, CLAY_BALL: 30, BRICK_ITEM: 31, WOOD_PICK: 32, STONE_PICK: 33, WOOD_AXE: 34, STONE_AXE: 35, WOOD_SHOVEL: 36, STONE_SHOVEL: 37 };
-  const TILE_COLS = 6, TILE_ROWS = 7;
+    STICK: 28, COAL: 29, CLAY_BALL: 30, BRICK_ITEM: 31, WOOD_PICK: 32, STONE_PICK: 33, WOOD_AXE: 34, STONE_AXE: 35, WOOD_SHOVEL: 36, STONE_SHOVEL: 37,
+    PIG: 38, PIG_FACE: 39, CHICK: 40, CHICK_FACE: 41, BEAK: 42 };
+  const TILE_COLS = 6, TILE_ROWS = 8;
 
   // all the textures side by side in one picture (raw bytes, for the graphics card)
   function atlasData(){

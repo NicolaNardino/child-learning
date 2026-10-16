@@ -226,9 +226,11 @@
       }
     }
     function dig(){
+      if (pokeMob()) return;
       const t = aim();
       if (!t || t.y === 0) return; // the very bottom layer can't be dug
       breakAt(t);
+      Fun.sfx.pop();
       swing = 0.001;
       store.blocksBroken = (store.blocksBroken || 0) + 1;
       Hub.checkBadges(); saveSoon();
@@ -237,6 +239,7 @@
     function mineStep(dt){
       if (!keys.mine) { mining = null; return; }
       if (!survival) { mineT -= dt; if (mineT <= 0) { dig(); mineT = 0.22; } return; }
+      if (pokeMob()) { mining = null; return; }
       const t = aim();
       if (!t || t.y === 0) { mining = null; return; }
       const i = at(t.x, t.y, t.z);
@@ -290,9 +293,128 @@
         refreshHotbar();
       }
       setBlock(x, y, z, id);
+      Fun.sfx.thunk();
       swing = 0.001;
       store.blocksPlaced = (store.blocksPlaced || 0) + 1;
       Hub.checkBadges(); saveSoon();
+    }
+
+    /* ---------------- the animals: pigs and chickens wander about (poke one and it runs off squealing!) ---------------- */
+    const mobs = [];
+    const MOB = {
+      pig:     { half: 0.38, h: 0.95, speed: 1.3, sound: "oink",  say: ["Oink!", "Oink oink!", "Snort!", "Hey, that tickles!"], emoji: "🐷", colour: [0.94, 0.62, 0.66] },
+      chicken: { half: 0.24, h: 0.95, speed: 1.6, sound: "cluck", say: ["Bawk!", "Cluck cluck!", "Bok bok!", "BAWK?!"],          emoji: "🐔", colour: [0.97, 0.97, 0.97] }
+    };
+    let pokeCd = 0, chatT = 8, mobCheckT = 0;
+    window.__blockMobs = mobs;   // for tests
+    function mobCollides(m, x, y, z){
+      const H = MOB[m.kind].half, hh = MOB[m.kind].h;
+      for (let yy = Math.floor(y); yy <= Math.floor(y + hh - 0.001); yy++)
+        for (let zz = Math.floor(z - H); zz <= Math.floor(z + H); zz++)
+          for (let xx = Math.floor(x - H); xx <= Math.floor(x + H); xx++) if (solidAt(xx, yy, zz)) return true;
+      return false;
+    }
+    // a grassy spot to stand on, or -1
+    function grassAt(x, z){
+      for (let y = WH - 1; y > 0; y--) {
+        const id = idAt(x, y, z);
+        if (!id || KIND[id] === K.PLANT) continue;
+        return id === ID.GRASS ? y + 1 : -1;
+      }
+      return -1;
+    }
+    function placeMob(m){
+      for (let tries = 0; tries < 40; tries++) {
+        const a = Math.random() * Math.PI * 2, r = 6 + Math.random() * 20;
+        const x = Math.floor(p.x + Math.cos(a) * r), z = Math.floor(p.z + Math.sin(a) * r);
+        if (x < 1 || z < 1 || x >= WW - 1 || z >= WD - 1) continue;
+        const g = grassAt(x, z);
+        if (g < 0) continue;
+        Object.assign(m, { x: x + 0.5, y: g, z: z + 0.5, vy: 0, yaw: Math.random() * 6.28, want: Math.random() * 6.28, walk: 0, moving: false, t: Math.random() * 3, flee: 0, hurt: 0, squash: 1, flap: false, onGround: true });
+        return true;
+      }
+      return false;
+    }
+    function spawnMobs(){
+      mobs.length = 0;
+      for (let k = 0; k < 8; k++) { const m = { kind: k % 2 ? "chicken" : "pig" }; if (placeMob(m)) mobs.push(m); }
+    }
+    function updateMobs(dt){
+      pokeCd = Math.max(0, pokeCd - dt);
+      // animals left far behind come back near you
+      if ((mobCheckT -= dt) <= 0) { mobCheckT = 3; mobs.forEach(m => { if (Math.hypot(m.x - p.x, m.z - p.z) > 60 || m.y < 1) placeMob(m); }); }
+      mobs.forEach(m => {
+        const M = MOB[m.kind];
+        m.hurt -= dt; m.flee -= dt; m.t -= dt;
+        m.squash += (1 - m.squash) * Math.min(1, dt * 10);
+        if (m.flee > 0) { m.want = Math.atan2(m.x - p.x, m.z - p.z); m.moving = true; }
+        else if (m.t <= 0) { m.t = 2 + Math.random() * 4; m.moving = Math.random() < 0.6; m.want = Math.random() * Math.PI * 2; }
+        const da = Math.atan2(Math.sin(m.want - m.yaw), Math.cos(m.want - m.yaw));
+        m.yaw += da * Math.min(1, dt * (m.flee > 0 ? 10 : 4));
+        const speed = m.moving ? (m.flee > 0 ? 4.2 : M.speed) : 0;
+        if (speed) {
+          const nx = m.x + Math.sin(m.yaw) * speed * dt, nz = m.z + Math.cos(m.yaw) * speed * dt;
+          // don't wander into water or off the edge of the world
+          const wet = idAt(Math.floor(nx), Math.floor(m.y), Math.floor(nz)) === ID.WATER || idAt(Math.floor(nx), Math.floor(m.y) - 1, Math.floor(nz)) === ID.WATER;
+          if (wet || nx < 1 || nz < 1 || nx > WW - 1 || nz > WD - 1) { m.want = m.yaw + Math.PI; m.t = 1.5; }
+          else {
+            const tryMove = (x, z) => {
+              if (!mobCollides(m, x, m.y, z)) { m.x = x; m.z = z; return; }
+              if (m.onGround && !mobCollides(m, x, m.y + 1.05, z)) { m.vy = 6.6; m.onGround = false; return; }   // hop up a step
+              m.want = m.yaw + Math.PI * (0.5 + Math.random()); m.t = 1;
+            };
+            tryMove(nx, m.z); tryMove(m.x, nz);
+          }
+          m.walk += dt * speed * 5;
+        }
+        // falling (a chicken flaps and floats down)
+        m.vy -= 22 * dt;
+        m.flap = m.kind === "chicken" && !m.onGround && m.vy < 0;
+        if (m.flap && m.vy < -2) m.vy = -2;
+        if (m.flap) m.walk += dt * 12;
+        const ny = m.y + m.vy * dt;
+        if (mobCollides(m, m.x, ny, m.z)) {
+          if (m.vy < 0) { if (m.vy < -6) m.squash = 1.3; m.y = Math.floor(ny) + 1; m.onGround = true; }
+          m.vy = 0;
+        } else { m.y = ny; m.onGround = false; }
+      });
+      // now and then an animal near you says something
+      if ((chatT -= dt) <= 0) {
+        chatT = 7 + Math.random() * 9;
+        const near = mobs.filter(m => Math.hypot(m.x - p.x, m.z - p.z) < 12);
+        if (near.length) { const m = near[Math.floor(Math.random() * near.length)], M = MOB[m.kind]; tell(`${M.emoji} ${M.say[Math.floor(Math.random() * 2)]}`); Fun.sfx[M.sound](); }
+      }
+    }
+    // is the crosshair on an animal (nearer than any block)? Then give it a poke: it jumps and runs away.
+    function pokeMob(){
+      const cp = Math.cos(pitch), dx = cp * Math.sin(yaw), dy = Math.sin(pitch), dz = cp * Math.cos(yaw);
+      const ox = p.x, oy = p.y + EYE, oz = p.z;
+      const t = aim();
+      const blockD = t ? Math.hypot(t.x + 0.5 - ox, t.y + 0.5 - oy, t.z + 0.5 - oz) - 0.5 : REACH;
+      let best = null, bestT = Math.min(REACH, blockD);
+      mobs.forEach(m => {
+        const H = MOB[m.kind].half + 0.05, lo = [m.x - H, m.y, m.z - H], hi = [m.x + H, m.y + MOB[m.kind].h, m.z + H];
+        let t0 = 0, t1 = bestT;
+        const o = [ox, oy, oz], d = [dx, dy, dz];
+        for (let i = 0; i < 3; i++) {
+          if (Math.abs(d[i]) < 1e-9) { if (o[i] < lo[i] || o[i] > hi[i]) { t1 = -1; break; } continue; }
+          let a = (lo[i] - o[i]) / d[i], b = (hi[i] - o[i]) / d[i];
+          if (a > b) [a, b] = [b, a];
+          t0 = Math.max(t0, a); t1 = Math.min(t1, b);
+        }
+        if (t1 >= t0 && t0 < bestT) { bestT = t0; best = m; }
+      });
+      if (!best) return false;
+      if (pokeCd > 0) return true;
+      pokeCd = 0.35;
+      const M = MOB[best.kind];
+      best.flee = 3; best.vy = 5.5; best.onGround = false; best.hurt = 0.25; best.squash = 0.8;
+      tell(`${M.emoji} ${M.say[Math.floor(Math.random() * M.say.length)]}`);
+      Fun.sfx[M.sound]();
+      swing = 0.001;
+      for (let n = 0; n < 10; n++) bits.push({ x: best.x, y: best.y + 0.6, z: best.z, vx: (Math.random() - 0.5) * 3, vy: Math.random() * 3 + 1, vz: (Math.random() - 0.5) * 3,
+        r: M.colour[0], g: M.colour[1], b: M.colour[2], size: 0.06 + Math.random() * 0.05, life: 0.4 + Math.random() * 0.3 });
+      return true;
     }
 
     // little flames rising off every torch near you
@@ -354,6 +476,7 @@
       for (let k = 0; k < 3; k++) move(dt / 3); // little steps, so you can't fall through a block
       if (p.fly && p.y > 70) p.y = 70;
       mineStep(dt);
+      updateMobs(dt);
       const high = Math.floor(p.y);
       if (high > (store.blocksHigh || 0)) { store.blocksHigh = high; Hub.checkBadges(); saveSoon(); }
     }
@@ -519,6 +642,7 @@
       const s = store.blockPos;
       spawn();
       if (s && s.length === 5 && !collides(s[0], s[1], s[2])) { p.x = s[0]; p.y = s[1]; p.z = s[2]; yaw = s[3]; pitch = s[4]; }
+      spawnMobs();
     }
     function lockMouse(){
       if (document.pointerLockElement === canvas) return;
@@ -606,7 +730,7 @@
       waterEl.style.opacity = String(0.3 + 0.7 * sky.day);
       renderer.draw({
         eye: [p.x, eyeY, p.z], yaw, pitch, time: now / 1000, swing, held: true, underwater: under, sky,
-        target: target && !ui.isOpen() ? [target.x, target.y, target.z] : null, particles: bits,
+        target: target && !ui.isOpen() ? [target.x, target.y, target.z] : null, particles: bits, mobs,
         crack: mining && mining.t > 0 ? { x: mining.x, y: mining.y, z: mining.z, progress: Math.min(1, mining.t / mining.need) } : null
       });
       if (frame % 8 === 0) {
@@ -709,6 +833,7 @@
     });
 
     document.getElementById("blCloseBtn").addEventListener("click", () => Hub.leave());
+    Fun.soundButton(document.getElementById("blCloseBtn"));
 
     return { open, close };
   }

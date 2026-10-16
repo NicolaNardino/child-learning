@@ -133,7 +133,7 @@
   /* ---------------- sounds ---------------- */
   let ac = null;
   function audio(){
-    if (store.pongMute) return null;
+    if (store.sound === false) return null;
     if (!ac) { const AC = window.AudioContext || window.webkitAudioContext; if (!AC) return null; ac = new AC(); }
     if (ac.state === "suspended") ac.resume();
     return ac;
@@ -232,8 +232,9 @@
         box.appendChild(b);
       });
     }
-    function renderMute(){ muteBtn.textContent = store.pongMute ? "🔇" : "🔊"; }
-    muteBtn.addEventListener("click", () => { store.pongMute = !store.pongMute; Hub.saveStore(); renderMute(); });
+    // one sound switch for all the games
+    function renderMute(){ muteBtn.textContent = store.sound === false ? "🔇" : "🔊"; }
+    muteBtn.addEventListener("click", () => { store.sound = store.sound === false; Hub.saveStore(); renderMute(); });
 
     function hud(){
       scoreEl.textContent = `You ${score.P} : ${score.O} Bot`;
@@ -347,6 +348,10 @@
       if (rally.bounces >= 2) point(rally.hitter, "missed");
     }
 
+    // Pong-Bot talks: a speech pop over its head
+    const fx = Fun.pops();
+    let fxDt = 1 / 60;
+    function botSays(text, colour){ proj(bot.x - 0.28, 1.9, OZ + 0.45); fx.pop(text, P.x, P.y, colour || "#ffffff", 22); }
     function point(winner, why){
       mode = "point"; timer = 0;
       score[winner]++;
@@ -356,9 +361,11 @@
       if (winner === "P") {
         say(why === "missed" ? ["Winner!", "Great shot!", "Ace!", "Nice one!"][(Math.random() * 4) | 0] : "Your point!", WHY[why] + (count >= 8 ? ` · ${count}-shot rally!` : ""), true);
         cheer = 1.4; bot.mood = -1;
+        botSays(["Error 404!", "Does not compute!", "Lucky shot!", "My circuits! 😵", "Beep… boop… ouch", "Not fair!"][Math.floor(Math.random() * 6)], "#9fd8ff");
       } else {
         say("Point to Pong-Bot", WHY[why], false);
         bot.mood = 1;
+        botSays(["Beep! Too easy!", "Calculated! 🤖", "Robot power!", "Boop boop!", "Try harder, human!", "Hehe"][Math.floor(Math.random() * 6)], "#ffb3a8");
       }
       sndPoint(winner === "P");
       hud();
@@ -407,6 +414,7 @@
       ball.spin = (smash ? 30 : 14) * s;
       pad.push = 1;
       rally.hitter = side; rally.bounces = 0; rally.netted = false; rally.count++;
+      if (rally.count === 10 || rally.count === 20 || rally.count === 30) { proj(0, 2.1, 4.5); fx.pop(rally.count === 10 ? "OOOOH! 👀" : rally.count === 20 ? "WOW! 20 hits! 🤩" : "LEGENDARY! 🔥", P.x, P.y, "#ffe14d", 30); cheer = 1; }
       rally.pred = predict(side === "P" ? "O" : "P");
       if (side === "P") botPlan();
       sndPaddle(smash);
@@ -823,12 +831,13 @@
       drawSparks();
       drawPaddle(me, true);
       if (stage === 4) showBall();
+      fx.draw(ctx, fxDt);
       drawMsg();
     }
 
     function loop(now){
       if (!open) return;
-      const dt = Math.min(0.05, (now - last) / 1000); last = now;
+      const dt = Math.min(0.05, (now - last) / 1000); last = now; fxDt = dt;
       update(dt);
       draw();
       requestAnimationFrame(loop);
