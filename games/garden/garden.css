@@ -1,0 +1,33 @@
+/* Garden Grow fills the screen like the other 3D games, with the tools and seeds underneath. */
+.gg-screen .game-box{ width: min(100%, calc((100vh - 190px) * 16 / 9)); width: min(100%, calc((100dvh - 190px) * 16 / 9)); }
+@media (max-height: 500px){
+  .gg-screen .game-box{ width: min(100%, calc((100vh - 130px) * 16 / 9)); width: min(100%, calc((100dvh - 130px) * 16 / 9)); }
+  .gg-screen .game-help{ display: none; }
+}
+.gg-canvas:focus{ outline: none; }
+.gg-canvas{
+  display: block; width: 100%; aspect-ratio: 16 / 9; height: auto;
+  border-radius: 12px; border: 2px solid rgba(255,255,255,0.25);
+  background: #6cc04a; touch-action: none; cursor: pointer;
+}
+.gg-panel{ background: rgba(10,30,20,0.6); }
+.gg-cash{ color: #7bd68a; }
+.gg-bar, .gg-seeds{ display: flex; flex-wrap: wrap; gap: 6px; justify-content: center; margin-top: 8px; }
+.gg-seeds{ margin-top: 6px; min-height: 30px; }
+.gg-bar .gg-on, .gg-seeds .gg-on{ background: #ffe14d; color: #1b1d24; border-color: #ffe14d; }
+.gg-sell{ min-width: 100px; }
+.gg-none{ color: rgba(255,255,255,0.75); font-size: 14px; align-self: center; }
+.gg-shop{
+  position: absolute; right: 10px; top: 10px; bottom: 10px; width: min(360px, 70%);
+  background: rgba(20,32,24,0.94); border: 2px solid #3f9e3a; border-radius: 12px;
+  display: flex; flex-direction: column; color: #fff; z-index: 3;
+}
+.gg-shop-head{ display: flex; align-items: center; gap: 8px; padding: 8px 10px; border-bottom: 1px solid rgba(255,255,255,0.15); }
+.gg-shop-head span{ flex: 1; text-align: right; font-size: 12px; opacity: 0.8; }
+.gg-shop-list{ overflow-y: auto; padding: 6px; }
+.gg-row{ display: flex; align-items: center; gap: 8px; padding: 5px 4px; border-bottom: 1px solid rgba(255,255,255,0.08); }
+.gg-row.gg-out{ opacity: 0.45; }
+.gg-em{ font-size: 24px; width: 30px; text-align: center; }
+.gg-name{ flex: 1; font-weight: 700; font-size: 14px; display: flex; flex-direction: column; }
+.gg-name small{ font-weight: 600; font-size: 11px; }
+.gg-stock{ font-size: 12px; opacity: 0.85; min-width: 54px; text-align: right; }
