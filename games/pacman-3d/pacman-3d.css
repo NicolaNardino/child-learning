@@ -1,0 +1,28 @@
+/* Pac-Man 3D: inside the maze, with an arrow pad on touch screens. */
+.p3d-box{ width: min(100%, calc((100vh - 110px) * 5 / 4)); }
+@media (pointer: coarse){ .p3d-box{ width: min(100%, calc((100vh - 200px) * 5 / 4)); } }
+#p3dCanvas:focus{ outline: none; }
+#p3dCanvas{
+  display: block; width: 100%; aspect-ratio: 5 / 4; height: auto;
+  border-radius: 12px; border: 2px solid rgba(255,255,255,0.25);
+  background: #000; touch-action: none;
+}
+.p3d-panel{ background: rgba(0,0,0,0.65); }
+.p3d-pad{ display: none; grid-template-columns: repeat(3, 64px); gap: 6px; justify-content: center; }
+.p3d-pad .btn{ padding: 12px 0; font-size: 18px; color: #fff; border-color: rgba(255,255,255,0.4); user-select: none; -webkit-user-select: none; touch-action: none; }
+.p3d-pad [data-dir="up"]{ grid-column: 2; }
+.p3d-pad [data-dir="left"]{ grid-column: 1; grid-row: 2; }
+.p3d-pad [data-dir="down"]{ grid-column: 2; grid-row: 2; }
+.p3d-pad [data-dir="right"]{ grid-column: 3; grid-row: 2; }
+@media (pointer: coarse){
+  .p3d-pad{ display: grid; }
+}
+/* phone held sideways: the steering pad sits next to the maze instead of under it */
+@media (pointer: coarse) and (max-height: 500px) and (orientation: landscape){
+  .p3d-box{
+    width: auto; display: grid; grid-template-columns: auto auto; align-items: center; gap: 6px 16px;
+  }
+  .p3d-box .game-hud{ grid-column: 1 / -1; }
+  .p3d-box .game-stage{ width: calc((100vh - 60px) * 5 / 4); width: calc((100dvh - 60px) * 5 / 4); }
+  .p3d-pad{ grid-template-columns: repeat(3, 54px); }
+}
