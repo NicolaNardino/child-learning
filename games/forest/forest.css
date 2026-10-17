@@ -24,3 +24,5 @@
 .nf-em{ font-size: 26px; }
 .nf-name{ flex: 1; font-weight: 700; display: flex; flex-direction: column; }
 .nf-name small{ font-weight: 500; font-size: 12px; opacity: 0.85; }
+/* the HUD, pops and glowing eyes are drawn on a second canvas over the 3D one */
+.nf-ui{ position: absolute; left: 0; top: 0; width: 100%; height: 100%; pointer-events: none; border-radius: 12px; }
