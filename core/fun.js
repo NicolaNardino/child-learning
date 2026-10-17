@@ -2,10 +2,11 @@
      Fun.pops()          comic words ("BONK!") and sparkles drawn on a canvas: { pop, burst, draw, clear }
      Fun.sfx.name()      little sounds made by the browser: pop, boing, bonk, zap, whoosh, ding, tada, nope,
                          splat, chomp, coin, crash, honk, wah, waka, beep, splash,
-                         oink, cluck, thunk
+                         oink, cluck, thunk, oof
      Fun.face(ctx, ...)  a cartoon face with blinking eyes that look around, and a mouth for the mood
      Fun.soundButton(el) a 🔊/🔇 button put just before el (all the games share the one setting)
      Fun.shake(el)       wobbles an element, for a crash or a hit
+     Fun.hint(stage)     a tip that pops up at the top of a game for a few seconds: { show(text, ms), hide() }
    Sounds are on unless Hub.store.sound is false. */
 (function(){
   "use strict";
@@ -100,6 +101,7 @@
     oink: () => { blip(260, 180, 0.12, 0.16, "sawtooth"); blip(240, 160, 0.14, 0.12, "sawtooth", 0.14); },
     cluck: () => { blip(900, 600, 0.05, 0.1, "square"); blip(1100, 700, 0.05, 0.08, "square", 0.08); blip(800, 500, 0.08, 0.08, "square", 0.17); },
     thunk: () => { blip(240, 110, 0.08, 0.2, "triangle"); noise(0.05, 0.1, 600, 300); },
+    oof: () => { blip(360, 150, 0.16, 0.18, "square"); },
     beep: () => { blip(880, 880, 0.06, 0.07, "square"); blip(660, 660, 0.06, 0.07, "square", 0.08); },
     splash: () => { noise(0.4, 0.3, 2000, 300); blip(600, 200, 0.12, 0.08, "sine", 0.03); }
   };
@@ -146,5 +148,17 @@
     el.classList.remove("fun-shake"); void el.offsetWidth; el.classList.add("fun-shake");
   }
 
-  window.Fun = { pops, sfx, face, soundButton, shake };
+  // a tip that shows for a moment at the top of a game, like "Press Esc to get your mouse back"
+  function hint(stage){
+    const el = document.createElement("div");
+    el.className = "fun-hint"; el.hidden = true;
+    stage.appendChild(el);
+    let timer = 0;
+    return {
+      show(text, ms){ el.textContent = text; el.hidden = false; el.classList.remove("on"); void el.offsetWidth; el.classList.add("on"); clearTimeout(timer); timer = setTimeout(() => { el.hidden = true; }, ms || 3500); },
+      hide(){ el.hidden = true; clearTimeout(timer); }
+    };
+  }
+
+  window.Fun = { pops, sfx, face, soundButton, shake, hint };
 })();

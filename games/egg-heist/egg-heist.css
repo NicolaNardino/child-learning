@@ -1,0 +1,15 @@
+/* Egg Heist fills the screen, like the other 3D games. */
+#ehOverlay .game-box{ width: min(100%, calc((100vh - 110px) * 16 / 9)); width: min(100%, calc((100dvh - 110px) * 16 / 9)); }
+@media (pointer: coarse){ #ehOverlay .game-box{ width: min(100%, calc((100vh - 170px) * 16 / 9)); width: min(100%, calc((100dvh - 170px) * 16 / 9)); } }
+@media (max-height: 500px){
+  #ehOverlay .game-box{ width: min(100%, calc((100vh - 100px) * 16 / 9)); width: min(100%, calc((100dvh - 100px) * 16 / 9)); }
+}
+#ehCanvas:focus{ outline: none; }
+#ehCanvas{
+  display: block; width: 100%; aspect-ratio: 16 / 9; height: auto;
+  border-radius: 12px; border: 2px solid rgba(255,255,255,0.25);
+  background: #79cf55; touch-action: none;
+}
+.eh-panel{ background: rgba(10,20,45,0.6); }
+.eh-cash{ color: #7bd68a; }
+#ehRebirth{ color: #ffe14d; border-color: #ffe14d; }

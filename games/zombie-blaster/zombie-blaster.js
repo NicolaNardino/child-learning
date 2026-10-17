@@ -951,7 +951,8 @@
     };
     window.addEventListener("keydown", e => {
       if (!zbOpen) return;
-      if (e.key === "Escape") { Hub.leave(); return; }
+      // Esc first lets the mouse go (the browser does that); only an Esc after that leaves the game
+      if (e.key === "Escape") { if (looking() || performance.now() - unlockedAt < 400) { if (looking()) document.exitPointerLock(); return; } Hub.leave(); return; }
       const k = ZB_KEYMAP[e.code];
       if (!k || !zbRunning) return;
       e.preventDefault();
@@ -965,6 +966,12 @@
     // click the game and the mouse turns your head (the browser hides the pointer until Esc);
     // without that, point with the mouse and hold the button to keep blasting there
     const looking = () => document.pointerLockElement === zbCanvas;
+    let unlockedAt = 0;
+    const tip = Fun.hint(zbCanvas.parentElement);
+    document.addEventListener("pointerlockchange", () => {
+      if (looking()) tip.show("🖱️ Press Esc to get your mouse back");
+      else { unlockedAt = performance.now(); tip.hide(); }
+    });
     function trackMouse(e){
       if (looking()) {
         if (zbRunning) hero.a += e.movementX * 0.0032;

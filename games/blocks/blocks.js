@@ -60,7 +60,7 @@
             <button class="btn ghost small" id="blNewBtn" type="button">🌱 New world</button>
           </div>
         </div>
-        <div class="game-help">W A S D to move · mouse or ← → ↑ ↓ to look · Space to jump or swim up · left click to dig · right click to build · 1–9, 0, – or the mouse wheel to pick a block · F to fly (Space up, Shift down) · E for your inventory · T for another time of day</div>
+        <div class="game-help">W A S D to move · mouse or ← → ↑ ↓ to look · Space to jump or swim up · left click to dig · right click to build · 1–9, 0, – or the mouse wheel to pick a block · F to fly (Space up, Shift down) · E for your inventory · T for another time of day · Esc or P to pause and free your mouse</div>
         <div class="game-touch bl-touch">
           <button class="btn ghost" data-bkey="left" type="button" aria-label="Step left">◀</button>
           <button class="btn ghost" data-bkey="forward" type="button" aria-label="Walk forward">▲</button>
@@ -750,7 +750,14 @@
     };
     window.addEventListener("keydown", e => {
       if (!isOpen) return;
-      if (e.key === "Escape") { if (ui.isOpen()) { ui.close(); e.preventDefault(); } else Hub.leave(); return; }
+      if (e.key === "Escape") {
+        e.preventDefault();
+        if (ui.isOpen()) ui.close();
+        else if (running) pause();
+        else if (performance.now() - unlockedAt > 400) Hub.leave();   // (not the same Esc that just let the mouse go)
+        return;
+      }
+      if (e.code === "KeyP" && running && !ui.isOpen()) { pause(); return; }
       if (!running) return;
       if (e.code === "KeyE") { if (!e.repeat) toggleBag(); return; }
       if (ui.isOpen()) return;   // the screen has the mouse; keys wait
@@ -771,11 +778,27 @@
     window.addEventListener("blur", releaseKeys);
 
     // mouse: once the pointer is locked, moving it turns you; left digs, right builds
-    let lockedAt = 0;
+    let lockedAt = 0, unlockedAt = 0;
+    const tip = Fun.hint(canvas.parentElement);
     document.addEventListener("pointerlockchange", () => {
       lockedAt = performance.now();
       if (ui.isOpen() && document.pointerLockElement === canvas) document.exitPointerLock(); // a screen is open: keep the mouse free
+      if (document.pointerLockElement === canvas) tip.show("🖱️ Press Esc to get your mouse back");
+      else {
+        unlockedAt = performance.now(); tip.hide();
+        // the mouse got let go (Esc, or another window): pause, like Minecraft does
+        if (isOpen && running && !ui.isOpen()) pause();
+      }
     });
+    function pause(){
+      running = false;
+      releaseKeys(); mining = null;
+      if (document.pointerLockElement === canvas) document.exitPointerLock();
+      playBtn.textContent = "▶ Keep playing";
+      panelText.textContent = "⏸ Paused. Your mouse is free again! Press ▶ Keep playing to jump back in, or ✕ Exit to leave.";
+      panel.hidden = false;
+      playBtn.focus();
+    }
     document.addEventListener("mousemove", e => {
       if (!isOpen || !running || document.pointerLockElement !== canvas) return;
       // some browsers send one huge fake movement just as the pointer locks: skip it
