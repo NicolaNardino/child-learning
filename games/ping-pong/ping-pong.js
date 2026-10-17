@@ -1,4 +1,4 @@
-/* Ping Pong 3D: table tennis against Pong-Bot, seen from behind your end of the table.
+/* Ping Pong 3D: table tennis against Pong-Bot, seen through your own eyes at your end of the table.
    Move the mouse (or a finger) and your paddle follows it; the ball bounces off it by itself.
    Swing fast for a harder shot, hit with the edge of the paddle to aim to the side,
    and swing down at a high ball to smash it. First to 11 wins (by 2 clear points).
@@ -91,12 +91,18 @@
   }
 
   /* ---------------- the camera ---------------- */
+  // the camera is your head: it stands just behind your paddle and moves with you
   const W = 960, H = 540;
-  const CAM = [0, 1.72, -3.05], LOOK = [0, 0.6, 0.85];
-  const F = (H / 2) / Math.tan(25 * Math.PI / 180);
-  const fwd = norm([LOOK[0] - CAM[0], LOOK[1] - CAM[1], LOOK[2] - CAM[2]]);
-  const right = norm([fwd[2], 0, -fwd[0]]);                 // world up × forward
-  const up = [fwd[1] * right[2] - fwd[2] * right[1], fwd[2] * right[0] - fwd[0] * right[2], fwd[0] * right[1] - fwd[1] * right[0]];
+  const EYE_H = 1.42, EYE_BACK = 0.85;
+  const F = (H / 2) / Math.tan(31 * Math.PI / 180);
+  let CAM = [0, EYE_H, PZ - EYE_BACK], fwd, right, up;
+  function aimCam(cam, look){
+    CAM = cam;
+    fwd = norm([look[0] - cam[0], look[1] - cam[1], look[2] - cam[2]]);
+    right = norm([fwd[2], 0, -fwd[0]]);                 // world up × forward
+    up = [fwd[1] * right[2] - fwd[2] * right[1], fwd[2] * right[0] - fwd[0] * right[2], fwd[0] * right[1] - fwd[1] * right[0]];
+  }
+  aimCam(CAM, [0, 0.8, 1.4]);
   function norm(v){ const l = Math.hypot(v[0], v[1], v[2]); return [v[0] / l, v[1] / l, v[2] / l]; }
 
   const P = { x: 0, y: 0, s: 0 };
@@ -110,13 +116,6 @@
     out.y = H / 2 - (dx * up[0] + dy * up[1] + dz * up[2]) * s;
     out.s = s; out.vis = zc > 0.35;
     return out;
-  }
-  // the other way round: the point under the screen pixel (sx, sy) on the upright wall at depth z
-  function unproj(sx, sy, z){
-    const a = (sx - W / 2) / F, c = -(sy - H / 2) / F;
-    const d = [fwd[0] + right[0] * a + up[0] * c, fwd[1] + right[1] * a + up[1] * c, fwd[2] + right[2] * a + up[2] * c];
-    const t = (z - CAM[2]) / d[2];
-    return { x: CAM[0] + d[0] * t, y: CAM[1] + d[1] * t };
   }
   function poly(ctx, pts){
     ctx.beginPath();
@@ -544,14 +543,15 @@
       proj(3.6, 2.6, 7.5); drawBoard(P.x, P.y, P.s);
 
       // the floor
-      poly(ctx, [[-7, 0, -2.5], [7, 0, -2.5], [7, 0, 7.5], [-7, 0, 7.5]]);
+      const nz = CAM[2] + 0.5;   // the nearest bit of floor you can see
+      poly(ctx, [[-7, 0, nz], [7, 0, nz], [7, 0, 7.5], [-7, 0, 7.5]]);
       const fl = ctx.createLinearGradient(0, proj(0, 0, 7.5).y, 0, H);
       fl.addColorStop(0, "#6e2a22"); fl.addColorStop(1, "#b5482f");
       ctx.fillStyle = fl; ctx.fill();
-      ctx.fillRect(0, proj(0, 0, -2.5).y - 1, W, H);
+      ctx.fillRect(0, proj(0, 0, nz).y - 1, W, H);
       // floor boards
       ctx.strokeStyle = "rgba(0,0,0,0.12)";
-      for (let x = -7; x <= 7; x += 0.5) line3(ctx, [x, 0, -2.5], [x, 0, 7.5], 0.01);
+      for (let x = -7; x <= 7; x += 0.5) line3(ctx, [x, 0, nz], [x, 0, 7.5], 0.01);
       // a pool of light under the table
       proj(0, 0, 0);
       const pool = ctx.createRadialGradient(P.x, P.y, 0, P.x, P.y, 3.2 * P.s);
@@ -578,8 +578,8 @@
       });
       // the boards round the court
       boards([-4.6, 4.3], [4.6, 4.3]);
-      boards([-4.6, -2.4], [-4.6, 4.3]);
-      boards([4.6, 4.3], [4.6, -2.4]);
+      boards([-4.6, nz], [-4.6, 4.3]);
+      boards([4.6, 4.3], [4.6, nz]);
 
       // spotlights from the ceiling
       ctx.save(); ctx.globalCompositeOperation = "lighter";
@@ -729,7 +729,7 @@
       proj(pad.x, pad.y, z);
       const cx = P.x, cy = P.y, sc = P.s, r = PR * sc;
       ctx.save();
-      ctx.globalAlpha = mine ? 0.82 : 1;
+      ctx.globalAlpha = mine ? 0.62 : 1;   // see-through, so it never hides the ball
       ctx.translate(cx, cy); ctx.rotate(pad.tilt * s);
       // the handle
       const hg = ctx.createLinearGradient(-0.02 * sc, 0, 0.02 * sc, 0);
@@ -812,6 +812,37 @@
       ctx.restore();
     }
 
+    // your head follows your paddle (not all the way), and leans in when you step in for a short ball
+    let headX = 0;
+    function placeHead(dt){
+      headX += (me.x * 0.55 - headX) * Math.min(1, dt * 7);
+      const sway = Math.sin(clock * 1.7) * 0.004;
+      aimCam([headX, EYE_H + sway + (me.y - 1) * 0.12, me.z - EYE_BACK], [headX * 0.25, 0.8 + (me.y - 1) * 0.2, 1.4]);
+    }
+    // your arm, from the bottom corner of the screen up to the paddle's handle
+    function drawArm(){
+      const z = me.z;
+      proj(me.x + 0.02, me.y - PR * 1.45, z - 0.02); const hx = P.x, hy = P.y, hs = P.s;
+      const sx = W * 0.8 + headX * 40, sy = H + 60;
+      const nx = -(hy - sy), ny = hx - sx, nl = Math.hypot(nx, ny) || 1;
+      const w0 = 70, w1 = Math.max(10, 0.045 * hs);
+      const g = ctx.createLinearGradient(sx, sy, hx, hy);
+      g.addColorStop(0, "#c98d64"); g.addColorStop(1, "#f1c49f");
+      ctx.fillStyle = g;
+      ctx.beginPath();
+      ctx.moveTo(sx + nx / nl * w0, sy + ny / nl * w0); ctx.lineTo(hx + nx / nl * w1, hy + ny / nl * w1);
+      ctx.lineTo(hx - nx / nl * w1, hy - ny / nl * w1); ctx.lineTo(sx - nx / nl * w0, sy - ny / nl * w0);
+      ctx.closePath(); ctx.fill();
+      // a T-shirt sleeve
+      const mx = sx + (hx - sx) * 0.25, my = sy + (hy - sy) * 0.25, wm = w0 + (w1 - w0) * 0.25 + 6;
+      ctx.fillStyle = "#2f6fdc";
+      ctx.beginPath();
+      ctx.moveTo(sx + nx / nl * (w0 + 8), sy + ny / nl * (w0 + 8)); ctx.lineTo(mx + nx / nl * wm, my + ny / nl * wm);
+      ctx.lineTo(mx - nx / nl * wm, my - ny / nl * wm); ctx.lineTo(sx - nx / nl * (w0 + 8), sy - ny / nl * (w0 + 8));
+      ctx.closePath(); ctx.fill();
+      // the fist round the handle
+      ctx.fillStyle = "#e9b48c"; ctx.beginPath(); ctx.ellipse(hx, hy, w1 * 1.5, w1 * 1.25, 0, 0, 7); ctx.fill();
+    }
     function draw(){
       ctx.setTransform(canvas.width / W, 0, 0, canvas.height / H, 0, 0);
       drawRoom();
@@ -829,8 +860,13 @@
       drawNet();
       if (stage === 3) showBall();
       drawSparks();
+      drawArm();
       drawPaddle(me, true);
       if (stage === 4) showBall();
+      // the edges of the room go a little dark, like real eyes see it
+      const v = ctx.createRadialGradient(W / 2, H / 2, H * 0.45, W / 2, H / 2, W * 0.62);
+      v.addColorStop(0, "rgba(0,0,0,0)"); v.addColorStop(1, "rgba(0,0,0,0.35)");
+      ctx.fillStyle = v; ctx.fillRect(0, 0, W, H);
       fx.draw(ctx, fxDt);
       drawMsg();
     }
@@ -839,6 +875,7 @@
       if (!open) return;
       const dt = Math.min(0.05, (now - last) / 1000); last = now; fxDt = dt;
       update(dt);
+      placeHead(dt);
       draw();
       requestAnimationFrame(loop);
     }
@@ -848,8 +885,9 @@
       const r = canvas.getBoundingClientRect();
       let sx = (e.clientX - r.left) / r.width * W, sy = (e.clientY - r.top) / r.height * H;
       if (e.pointerType === "touch") sy -= 70;     // keep the paddle above your finger
-      const p = unproj(sx, sy, me.z);
-      me.tx = p.x; me.ty = p.y; clampMe();
+      me.tx = (sx / W - 0.5) * 2.6;
+      me.ty = TY + 0.05 + (1 - sy / H) * 0.95;
+      clampMe();
     }
     canvas.addEventListener("pointermove", e => { if (mode !== "menu" && mode !== "over") pointerAt(e); });
     canvas.addEventListener("pointerdown", e => {
