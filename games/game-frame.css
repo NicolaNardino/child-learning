@@ -57,7 +57,8 @@
 .fun-hint{
   position: absolute; top: 12px; left: 50%; transform: translateX(-50%); z-index: 5; pointer-events: none;
   background: rgba(10,14,30,0.82); color: #fff; font-weight: 700; font-size: 15px; padding: 8px 16px; border-radius: 999px;
-  white-space: nowrap; max-width: 92%; overflow: hidden; text-overflow: ellipsis;
+  max-width: 92%; width: max-content; text-align: center;
 }
+@media (max-width: 900px), (max-height: 500px){ .fun-hint{ font-size: 12.5px; padding: 6px 12px; top: 8px; } }
 .fun-hint.on{ animation: fun-hint 3.5s ease-out forwards; }
 @keyframes fun-hint{ 0%{ opacity: 0; transform: translate(-50%, -8px); } 8%,85%{ opacity: 1; transform: translate(-50%, 0); } 100%{ opacity: 0; } }
