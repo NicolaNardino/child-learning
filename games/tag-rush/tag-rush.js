@@ -64,17 +64,13 @@
     const roundEl = $("trRound"), taggersEl = $("trTaggers"), timeEl = $("trTime");
 
     const W = 960, H = 540;
-    const FOCAL = 600, NEAR = 0.3, PITCH = 0.3, CAM_BACK = 10, CAM_UP = 6.5;
-    const SIN_P = Math.sin(PITCH), COS_P = Math.cos(PITCH);
-    const HORIZON = H / 2 - FOCAL * Math.tan(PITCH);
-    const LIGHT = (() => { const l = [0.4, 0.85, -0.35], n = Math.hypot(...l); return l.map(v => v / n); })();
+    const B = Blocky(ctx, W, H), { cam, polyPath, line3 } = B;
 
     let open = false, running = false, last = 0, clock = 0, frameDt = 1 / 60;
     let phase = "ready", phaseT = 0, round = 1, dir = 1, timeLeft = ROUND_TIME;
     let you = null, bots = [], taggers = [];
     let banner = { text: "", sub: "", t: 0 };
     const keys = { left: false, right: false, up: false, down: false, jump: false };
-    const cam = { x: 0, y: 0, z: 0, a: 0, s: 0, c: 1 };
     const fx = Fun.pops();
 
     /* ----- the people: a body is a blocky avatar with a spot, a speed and a way it faces ----- */
@@ -120,7 +116,6 @@
       you.me = true;
       bots = BOTS.map(b => makeBody(0, 0, b, b.name));
       newRound(true);
-      cam.a = 0;
     }
 
     /* ----- moving ----- */
@@ -212,7 +207,7 @@
     }
     function tagged(r){
       r.out = true;
-      const sp = toScreenAt(r.x, 3.2, r.z);
+      const sp = B.at(r.x, 3.2, r.z);
       if (r.me) {
         if (sp) fx.pop("TAGGED!", sp[0], sp[1], "#ff4a3d", 44);
         Fun.shake(canvas); Fun.sfx.bonk();
@@ -259,7 +254,7 @@
       [you, ...bots].forEach(r => {
         if (r.out || r.safe || !inGoal(r)) return;
         r.safe = true;
-        const sp = toScreenAt(r.x, 3.2, r.z);
+        const sp = B.at(r.x, 3.2, r.z);
         if (r.me) { if (sp) fx.pop("SAFE! 🎉", sp[0], sp[1], "#7bd68a", 38); Fun.sfx.coin(); }
         else if (sp) fx.pop("Safe!", sp[0], sp[1], "#bff5c8", 18);
       });
@@ -275,70 +270,9 @@
       }
     }
 
-    /* ----- 3D drawing: a camera up behind you, looking toward the far side ----- */
-    function placeCamera(dt){
-      const want = dir > 0 ? 0 : Math.PI;
-      const d = ((want - cam.a) % (Math.PI * 2) + Math.PI * 3) % (Math.PI * 2) - Math.PI;
-      cam.a += d * Math.min(1, dt * 3);
-      cam.s = Math.sin(cam.a); cam.c = Math.cos(cam.a);
-      const tx = you.x - cam.s * CAM_BACK, tz = you.z - cam.c * CAM_BACK;
-      const k = dt ? Math.min(1, dt * 8) : 1;
-      cam.x += (tx - cam.x) * k; cam.z += (tz - cam.z) * k;
-      cam.y += (you.y * 0.5 + CAM_UP - cam.y) * k;
-    }
-    function camSpace(x, y, z){
-      const dx = x - cam.x, dz = z - cam.z, h = y - cam.y;
-      const rx = dx * cam.c - dz * cam.s, fd = dx * cam.s + dz * cam.c;
-      return [rx, h * COS_P + fd * SIN_P, fd * COS_P - h * SIN_P];
-    }
-    const toScreen = q => [W / 2 + q[0] * FOCAL / q[2], H / 2 - q[1] * FOCAL / q[2]];
-    function toScreenAt(x, y, z){ const q = camSpace(x, y, z); return q[2] > NEAR ? toScreen(q) : null; }
-    // a flat shape in the world, cut off where it goes behind the camera
-    function polyPath(pts){
-      const q = pts.map(p => camSpace(p[0], p[1], p[2])), out = [];
-      for (let i = 0; i < q.length; i++) {
-        const a = q[i], b = q[(i + 1) % q.length], ain = a[2] >= NEAR, bin = b[2] >= NEAR;
-        if (ain) out.push(a);
-        if (ain !== bin) { const t = (NEAR - a[2]) / (b[2] - a[2]); out.push([a[0] + (b[0] - a[0]) * t, a[1] + (b[1] - a[1]) * t, NEAR]); }
-      }
-      if (out.length < 3) return false;
-      ctx.beginPath();
-      out.forEach((p, i) => { const [sx, sy] = toScreen(p); i ? ctx.lineTo(sx, sy) : ctx.moveTo(sx, sy); });
-      ctx.closePath();
-      return true;
-    }
-    function line3(a, b){
-      let p = camSpace(...a), q = camSpace(...b);
-      if (p[2] < NEAR && q[2] < NEAR) return;
-      if (p[2] < NEAR || q[2] < NEAR) {
-        const t = (NEAR - p[2]) / (q[2] - p[2]), m = p.map((v, i) => v + (q[i] - v) * t);
-        if (p[2] < NEAR) p = m; else q = m;
-      }
-      const s = toScreen(p), e = toScreen(q);
-      ctx.moveTo(s[0], s[1]); ctx.lineTo(e[0], e[1]);
-    }
-    const shadeCache = new Map();
-    function shade(hex, f){
-      const key = hex + f.toFixed(2);
-      if (!shadeCache.has(key)) {
-        const n = parseInt(hex.slice(1), 16), ch = v => Math.round(Math.min(255, v * f));
-        shadeCache.set(key, `rgb(${ch(n >> 16)},${ch((n >> 8) & 255)},${ch(n & 255)})`);
-      }
-      return shadeCache.get(key);
-    }
+    /* ----- 3D drawing (games/blocky.js): a camera up behind you, looking toward the far side ----- */
+    const placeCamera = dt => B.follow(you, dir > 0 ? 0 : Math.PI, dt);
 
-    function drawSky(){
-      const g = ctx.createLinearGradient(0, 0, 0, HORIZON);
-      g.addColorStop(0, "#3d8de0"); g.addColorStop(1, "#b9e1ff");
-      ctx.fillStyle = g; ctx.fillRect(0, 0, W, HORIZON + 2);
-      // blocky clouds drifting by
-      ctx.fillStyle = "rgba(255,255,255,0.9)";
-      for (let k = 0; k < 7; k++) {
-        const x = ((k * 190 + clock * 6 - cam.a * 300) % (W + 300) + W + 300) % (W + 300) - 150, y = 20 + (k * 41) % 90;
-        ctx.fillRect(x, y, 90 + (k % 3) * 30, 22); ctx.fillRect(x + 20, y - 14, 50, 16);
-      }
-      ctx.fillStyle = "#9fd0f5"; ctx.fillRect(0, HORIZON, W, H - HORIZON);
-    }
     function drawGround(){
       // the big grey baseplate, and the field painted on it
       if (polyPath([[-70, 0, -90], [70, 0, -90], [70, 0, 90], [-70, 0, 90]])) { ctx.fillStyle = "#a3a8ad"; ctx.fill(); }
@@ -363,88 +297,13 @@
         if (polyPath([[x, 1, -END - 1], [xo, 1, -END - 1], [xo, 1, END + 1], [x, 1, END + 1]])) { ctx.fillStyle = "#9aa1ab"; ctx.fill(); }
       });
       // shadows under everybody
-      [you, ...bots, ...taggers].forEach(b => {
-        const r = 0.7 / (1 + b.y * 0.3), pts = [];
-        for (let i = 0; i < 12; i++) { const a = i / 12 * Math.PI * 2; pts.push([b.x + Math.cos(a) * r, 0.02, b.z + Math.sin(a) * r]); }
-        if (polyPath(pts)) { ctx.fillStyle = `rgba(0,0,0,${0.3 / (1 + b.y * 0.4)})`; ctx.fill(); }
-      });
+      [you, ...bots, ...taggers].forEach(b => B.shadow(b.x, b.z, 0.7 / (1 + b.y * 0.3), 0.3 / (1 + b.y * 0.4)));
     }
 
-    // one box of an avatar: lx, ly, lz is the middle of its bottom in the body's own space, turned with the body
-    function boxFaces(b, lx, ly, lz, w, h, d, colour, pitch, out, isHead){
-      const c = Math.cos(b.face), s = Math.sin(b.face), cp = Math.cos(pitch || 0), sp = Math.sin(pitch || 0);
-      // swing (pitch) turns the box round its top, for arms and legs
-      const local = (x, y, z) => {
-        const yy = y - (ly + h), y2 = yy * cp - z * sp, z2 = yy * sp + z * cp;
-        return [x + lx, y2 + ly + h, z2 + lz];
-      };
-      const world = ([x, y, z]) => [b.x + x * c + z * s, b.y + y, b.z - x * s + z * c];
-      const X = [-w / 2, w / 2], Y = [ly, ly + h], Z = [-d / 2, d / 2];
-      const corner = (i, j, k) => world(local(X[i], Y[j], Z[k]));
-      const FACES = [
-        { n: [1, 0, 0], q: [[1, 0, 0], [1, 1, 0], [1, 1, 1], [1, 0, 1]] }, { n: [-1, 0, 0], q: [[0, 0, 0], [0, 0, 1], [0, 1, 1], [0, 1, 0]] },
-        { n: [0, 1, 0], q: [[0, 1, 0], [0, 1, 1], [1, 1, 1], [1, 1, 0]] }, { n: [0, -1, 0], q: [[0, 0, 0], [1, 0, 0], [1, 0, 1], [0, 0, 1]] },
-        { n: [0, 0, 1], q: [[0, 0, 1], [1, 0, 1], [1, 1, 1], [0, 1, 1]], front: true }, { n: [0, 0, -1], q: [[0, 0, 0], [0, 1, 0], [1, 1, 0], [1, 0, 0]] }
-      ];
-      const ctr = world(local(0, ly + h / 2, 0));
-      FACES.forEach(f => {
-        // the face's direction in the world: swung like the box, then turned with the body
-        const nx = f.n[0], ny = f.n[1] * cp - f.n[2] * sp, nz = f.n[1] * sp + f.n[2] * cp;
-        const wn = [nx * c + nz * s, ny, -nx * s + nz * c];
-        const pts = f.q.map(([i, j, k]) => corner(i, j, k));
-        const mid = pts.reduce((a, p) => [a[0] + p[0] / 4, a[1] + p[1] / 4, a[2] + p[2] / 4], [0, 0, 0]);
-        if (wn[0] * (cam.x - mid[0]) + wn[1] * (cam.y - mid[1]) + wn[2] * (cam.z - mid[2]) <= 0) return;
-        const light = 0.6 + 0.4 * Math.max(0, wn[0] * LIGHT[0] + wn[1] * LIGHT[1] + wn[2] * LIGHT[2]);
-        out.push({ pts, colour, light, face: isHead && f.front ? b : null, depth: camSpace(...ctr)[2] });
-      });
-    }
-    function drawAvatar(b){
-      const look = b.out ? { shirt: "#8a8f98", pants: "#5b606a", head: "#c9ccd2" } : b.look;
-      const run = b.y > 0 ? 0.6 : Math.sin(b.walk) * Math.min(1, Math.hypot(b.vx, b.vz) / 5) * 0.8;
-      const arms = b.y > 0 ? -2.6 : -run;   // arms swing against the legs, and go up when jumping
-      const parts = [];
-      boxFaces(b, -0.25, 0, 0, 0.48, 1, 0.48, look.pants, run, parts);
-      boxFaces(b, 0.25, 0, 0, 0.48, 1, 0.48, look.pants, -run, parts);
-      boxFaces(b, 0, 1, 0, 1, 1, 0.5, look.shirt, 0, parts);
-      boxFaces(b, -0.75, 1, 0, 0.48, 1, 0.48, look.head, arms, parts);
-      boxFaces(b, 0.75, 1, 0, 0.48, 1, 0.48, look.head, b.y > 0 ? -2.6 : run, parts);
-      boxFaces(b, 0, 2, 0, 0.62, 0.6, 0.62, look.head, 0, parts, true);
-      // the box parts: farther boxes first, and each box's faces together
-      parts.sort((p, q) => q.depth - p.depth);
-      parts.forEach(p => {
-        if (!polyPath(p.pts)) return;
-        ctx.fillStyle = shade(p.colour, p.light); ctx.fill();
-        ctx.strokeStyle = "rgba(0,0,0,0.15)"; ctx.lineWidth = 1; ctx.stroke();
-        if (p.face) drawFace(p.pts, p.face);
-      });
-    }
-    // the classic smiley, painted on the front of the head
-    function drawFace(pts, b){
-      // pts: bottom-left, bottom-right, top-right, top-left of the front face (as seen from the front)
-      const at = (u, v) => {
-        const bot = pts[0].map((x, i) => x + (pts[1][i] - x) * u), top = pts[3].map((x, i) => x + (pts[2][i] - x) * u);
-        const p = bot.map((x, i) => x + (top[i] - x) * v), q = camSpace(...p);
-        return q[2] > NEAR ? toScreen(q) : null;
-      };
-      const e1 = at(0.33, 0.62), e2 = at(0.67, 0.62), m = [0.25, 0.35, 0.5, 0.65, 0.75].map((u, i) => at(u, 0.38 - Math.sin(i / 4 * Math.PI) * 0.12));
-      if (!e1 || !e2 || m.some(p => !p)) return;
-      const size = Math.max(1.2, Math.hypot(e2[0] - e1[0], e2[1] - e1[1]) * 0.18);
-      ctx.fillStyle = "#1b1f2a";
-      [e1, e2].forEach(e => { ctx.beginPath(); ctx.ellipse(e[0], e[1], size * 0.6, size, 0, 0, 7); ctx.fill(); });
-      ctx.strokeStyle = "#1b1f2a"; ctx.lineWidth = Math.max(1, size * 0.6); ctx.lineCap = "round";
-      ctx.beginPath(); m.forEach((p, i) => i ? ctx.lineTo(p[0], p[1]) : ctx.moveTo(p[0], p[1]));
-      if (b.out) { ctx.beginPath(); ctx.moveTo(m[0][0], m[2][1]); ctx.lineTo(m[4][0], m[2][1]); }   // a flat mouth when you're out
-      ctx.stroke(); ctx.lineCap = "butt";
-    }
+    const GREY = { shirt: "#8a8f98", pants: "#5b606a", head: "#c9ccd2" };
     function drawLabel(b){
-      const sp = toScreenAt(b.x, b.y + 3.2, b.z);
-      if (!sp) return;
-      const q = camSpace(b.x, b.y, b.z), size = Math.round(Math.max(10, Math.min(20, 220 / q[2])));
-      ctx.font = `800 ${size}px 'Bricolage Grotesque', sans-serif`; ctx.textAlign = "center";
       const text = b.out ? "OUT" : b.safe ? "✅ " + b.name : b.name;
-      ctx.lineWidth = 4; ctx.strokeStyle = "rgba(0,0,0,0.55)"; ctx.strokeText(text, sp[0], sp[1]);
-      ctx.fillStyle = b.name === "TAGGER" ? "#ff6b5c" : b.me ? "#ffe14d" : b.out ? "#c9ccd2" : "#ffffff";
-      ctx.fillText(text, sp[0], sp[1]);
+      B.label(b.x, b.y + 3.2, b.z, text, b.name === "TAGGER" ? "#ff6b5c" : b.me ? "#ffe14d" : b.out ? "#c9ccd2" : "#ffffff");
     }
 
     let scale = 1;
@@ -456,10 +315,10 @@
     function draw(){
       fitCanvas();
       ctx.setTransform(scale, 0, 0, scale, 0, 0);
-      drawSky();
+      B.sky(clock);
       drawGround();
-      const people = [you, ...bots, ...taggers].map(b => ({ b, d: camSpace(b.x, 1, b.z)[2] })).filter(p => p.d > NEAR);
-      people.sort((p, q) => q.d - p.d).forEach(p => drawAvatar(p.b));
+      const people = [you, ...bots, ...taggers].map(b => ({ b, d: B.depth(b.x, 1, b.z) })).filter(p => p.d > B.NEAR);
+      people.sort((p, q) => q.d - p.d).forEach(p => { const list = []; p.b.sad = p.b.out; B.avatar(list, p.b, p.b.out ? GREY : p.b.look); B.paint(list); });
       people.forEach(p => drawLabel(p.b));
       // a red edge when a tagger is right behind you
       if (running && !you.safe && !you.out) {
