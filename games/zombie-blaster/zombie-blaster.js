@@ -1,5 +1,6 @@
-/* Zombie Blaster: a 3D-style shooter. Silly zombies climb out of a moonlit graveyard
-   and you blast them with a goo blaster. Waves get bigger, faster and tougher. */
+/* Zombie Blaster: a first-person shooter. Zombies climb out of a moonlit graveyard and you
+   see it all through your own eyes, goo blaster in hand and a torch lighting the way.
+   Waves get bigger, faster and tougher. */
 (function(){
   "use strict";
   const store = Hub.store;
@@ -33,7 +34,7 @@
             <button class="btn" id="zbPlayBtn" type="button">▶ Play</button>
           </div>
         </div>
-        <div class="game-help">← → or A D to turn · ↑ W to walk · ↓ S to back up · Q E to sidestep · Space to blast ahead · point the mouse and click to blast there!</div>
+        <div class="game-help">Click the game to look around with the mouse · W A S D to walk · ← → or Q E to turn · click or Space to blast · Esc lets go of the mouse</div>
         <div class="game-touch">
           <button class="btn ghost" data-zkey="left" type="button" aria-label="Turn left">↶</button>
           <button class="btn ghost" data-zkey="up" type="button" aria-label="Walk forward">▲</button>
@@ -64,14 +65,14 @@
 
     const ZW = 960, ZH = 540;
     const ARENA = 22;                 // the graveyard runs from -22 to 22 both ways
-    const CAM_BACK = 5, CAM_H = 2.6, PITCH = 0.12, FOCAL = 560, NEAR = 0.3;
+    const EYE_H = 1.65, PITCH = 0.03, FOCAL = 560, NEAR = 0.25; // the camera is your eyes
     const SIN_P = Math.sin(PITCH), COS_P = Math.cos(PITCH);
     const HORIZON = ZH / 2 - FOCAL * Math.tan(PITCH);
     const ZB_MOVE = 5.2, ZB_TURN = 2.6, SHOT_SPEED = 24, SHOT_EVERY = 0.2, MAX_HEARTS = 5;
     const ZOMBIE_TYPES = {
-      walker: { hp: 2, speed: 1.5, size: 1,    shirt: "#3d7bd9", points: 10 },
-      runner: { hp: 1, speed: 2.9, size: 0.82, shirt: "#ff8a2a", points: 15 },
-      brute:  { hp: 6, speed: 1.1, size: 1.35, shirt: "#8d4ad9", points: 30 }
+      walker: { hp: 2, speed: 1.5, size: 1,    shirt: "#3e5675", points: 10 },
+      runner: { hp: 1, speed: 2.9, size: 0.82, shirt: "#7a4a2c", points: 15 },
+      brute:  { hp: 6, speed: 1.1, size: 1.35, shirt: "#4d3b5c", points: 30 }
     };
 
     // a seeded random, so the graveyard looks the same every game
@@ -137,7 +138,7 @@
     let zbScore = 0, zbWave = 0, zbToSpawn = 0, zbSpawnT = 0, zbPhase = "break", zbBreak = 0;
     let zbFlash = { text: "", t: 0 };
     const zbKeys = { left: false, right: false, up: false, down: false, strafeL: false, strafeR: false, fire: false };
-    const cam = { x: 0, z: 0, s: 0, c: 1 };
+    const cam = { x: 0, y: EYE_H, z: 0, s: 0, c: 1 };
     let zbMouse = null; // where the mouse is on the game screen, or null when it's away
 
     function resetZb(){
@@ -330,7 +331,7 @@
     /* ----- 3D drawing: a camera that follows behind you ----- */
     function camSpace(x, y, z){
       const dx = x - cam.x, dz = z - cam.z;
-      const rx = dx * cam.c - dz * cam.s, fd = dx * cam.s + dz * cam.c, h = y - CAM_H;
+      const rx = dx * cam.c - dz * cam.s, fd = dx * cam.s + dz * cam.c, h = y - cam.y;
       return [rx, h * COS_P + fd * SIN_P, fd * COS_P - h * SIN_P];
     }
     function toScreen(p){ return [ZW / 2 + p[0] * FOCAL / p[2], ZH / 2 - p[1] * FOCAL / p[2]]; }
@@ -362,7 +363,7 @@
       // follow the line from the camera through the mouse until it reaches goo height
       const cx = (mx - ZW / 2) / FOCAL, cy = (ZH / 2 - my) / FOCAL;
       const up = cy * COS_P - SIN_P, fd = cy * SIN_P + COS_P;
-      let t = up < 0 ? (1 - CAM_H) / up : Infinity;
+      let t = up < 0 ? (1 - cam.y) / up : Infinity;
       t = Math.max(8 / fd, Math.min(40 / fd, t)); // never behind you, never past the fog
       return [cam.x + (cx * cam.c + fd * cam.s) * t, cam.z + (fd * cam.c - cx * cam.s) * t];
     }
@@ -377,7 +378,7 @@
     function nearHillY(ang){ return HORIZON - 14 - 12 * Math.sin(ang * 3 + 1) - 7 * Math.sin(ang * 7) - 4 * Math.sin(ang * 13 + 2); }
     function drawSky(ctx){
       const sky = ctx.createLinearGradient(0, 0, 0, HORIZON);
-      sky.addColorStop(0, "#0b0d2b"); sky.addColorStop(1, "#46377a");
+      sky.addColorStop(0, "#04050f"); sky.addColorStop(0.7, "#161a36"); sky.addColorStop(1, "#2e2b4f");
       ctx.fillStyle = sky; ctx.fillRect(0, 0, ZW, HORIZON + 1);
       STARS.forEach(st => {
         const x = skyX(st.ang);
@@ -465,7 +466,7 @@
 
     function drawGround(ctx){
       const g = ctx.createLinearGradient(0, HORIZON, 0, ZH);
-      g.addColorStop(0, "#232a3a"); g.addColorStop(0.35, "#1f3a2a"); g.addColorStop(1, "#2f5e30");
+      g.addColorStop(0, "#1b2030"); g.addColorStop(0.35, "#17261c"); g.addColorStop(1, "#263f22");
       ctx.fillStyle = g; ctx.fillRect(0, HORIZON, ZW, ZH - HORIZON);
       // dirt and grass patches lying flat on the ground
       PATCHES.forEach(pt => {
@@ -478,13 +479,6 @@
         ctx.beginPath(); ctx.ellipse(sx, sy, w, w * Math.min(0.5, 2.8 / p[2]), 0, 0, Math.PI * 2); ctx.fill();
       });
       ctx.globalAlpha = 1;
-      ctx.strokeStyle = "rgba(150,230,150,0.10)"; ctx.lineWidth = 1;
-      ctx.beginPath();
-      for (let k = -ARENA; k <= ARENA; k += 2) {
-        zbLine(ctx, k, 0, -ARENA, k, 0, ARENA);
-        zbLine(ctx, -ARENA, 0, k, ARENA, 0, k);
-      }
-      ctx.stroke();
       // spooky mist hanging low over the far graves
       const fog = ctx.createLinearGradient(0, HORIZON - 30, 0, HORIZON + 70);
       fog.addColorStop(0, "rgba(150,140,210,0)"); fog.addColorStop(0.45, "rgba(150,140,210,0.22)"); fog.addColorStop(1, "rgba(150,140,210,0)");
@@ -590,7 +584,7 @@
     }
     function drawZombie(ctx, zb){
       const T = ZOMBIE_TYPES[zb.type];
-      const skin = zb.hit > 0 ? "#ffffff" : "#86d16f";
+      const skin = zb.hit > 0 ? "#ffffff" : "#8a9f78";
       ctx.scale(zb.size, zb.size);
       if (zb.rise > 0) {
         // climbing out of the ground
@@ -669,34 +663,66 @@
         ctx.fillStyle = "#6dff6d"; ctx.fillRect(-0.3, -2.12, 0.6 * zb.hp / zb.max, 0.08);
       }
     }
-    function drawHero(ctx){
-      const h = hero;
-      if (h.inv > 0 && (zbFrame >> 2) % 2) return; // blink after getting grabbed
-      drawShadowAt(ctx, 0.4);
-      const step = h.moving ? Math.sin(h.walk) : 0;
-      ctx.fillStyle = "#2b4c8c";
-      ctx.fillRect(-0.18, -0.55 + Math.max(0, step) * 0.07, 0.15, 0.55 - Math.max(0, step) * 0.07);
-      ctx.fillRect(0.03, -0.55 + Math.max(0, -step) * 0.07, 0.15, 0.55 - Math.max(0, -step) * 0.07);
-      ctx.fillStyle = "#f4f4f4"; ctx.fillRect(-0.2, -0.07, 0.19, 0.07); ctx.fillRect(0.01, -0.07, 0.19, 0.07);
-      // hoodie, arms and backpack
-      ctx.strokeStyle = "#e8453c"; ctx.lineWidth = 0.12; ctx.lineCap = "round";
-      ctx.beginPath(); ctx.moveTo(-0.24, -0.92); ctx.lineTo(-0.3, -0.66); ctx.moveTo(0.24, -0.92); ctx.lineTo(0.36, -0.8); ctx.stroke();
-      ctx.fillStyle = "#e8453c"; roundRect(ctx, -0.26, -1.02, 0.52, 0.52, 0.1); ctx.fill();
-      ctx.fillStyle = "#ffc928"; roundRect(ctx, -0.18, -0.98, 0.36, 0.36, 0.07); ctx.fill();
-      ctx.fillStyle = "#e0a800"; ctx.fillRect(-0.12, -0.78, 0.24, 0.08);
-      // goo blaster
-      ctx.fillStyle = "#1b1f2a"; roundRect(ctx, 0.28, -0.94, 0.22, 0.16, 0.04); ctx.fill();
-      ctx.fillStyle = "#3be0c4"; ctx.beginPath(); ctx.arc(0.39, -0.86, 0.055, 0, Math.PI * 2); ctx.fill();
+    // your own hands and goo blaster at the bottom of the screen: they sway as you walk and kick back when you blast
+    function drawBlaster(ctx){
+      const h = hero, sw = h.moving ? Math.sin(h.walk * 0.5) : 0, bob = h.moving ? Math.abs(Math.cos(h.walk * 0.5)) : 0;
+      const kick = h.flash > 0 ? h.flash / 0.07 : 0;
+      ctx.save();
+      ctx.translate(ZW * 0.66 + sw * 10, ZH + 8 + bob * 9 + kick * 16);
+      ctx.rotate(-0.08 + kick * 0.05);
+      // the sleeve of your hoodie coming in from the corner
+      let g = ctx.createLinearGradient(120, -40, 260, 60);
+      g.addColorStop(0, "#9e2a24"); g.addColorStop(1, "#4a1210");
+      ctx.fillStyle = g;
+      ctx.beginPath(); ctx.moveTo(150, -70); ctx.quadraticCurveTo(220, -60, 330, 20); ctx.lineTo(330, 80); ctx.lineTo(120, 80); ctx.quadraticCurveTo(110, -20, 150, -70); ctx.fill();
+      // the blaster's body: dark metal, lit by the moon from the top
+      g = ctx.createLinearGradient(0, -170, 0, -60);
+      g.addColorStop(0, "#5b6170"); g.addColorStop(0.35, "#2c303a"); g.addColorStop(1, "#121419");
+      ctx.fillStyle = g;
+      ctx.beginPath(); ctx.moveTo(-34, -150); ctx.lineTo(40, -176); ctx.lineTo(150, -120); ctx.lineTo(170, -60); ctx.lineTo(40, -40); ctx.lineTo(-30, -96); ctx.closePath(); ctx.fill();
+      ctx.strokeStyle = "rgba(255,255,255,0.12)"; ctx.lineWidth = 2;
+      ctx.beginPath(); ctx.moveTo(-30, -148); ctx.lineTo(40, -172); ctx.lineTo(146, -118); ctx.stroke();
+      // the barrel, pointing in towards the middle of the screen
+      g = ctx.createLinearGradient(0, -175, 0, -140);
+      g.addColorStop(0, "#6c7282"); g.addColorStop(1, "#1a1d24");
+      ctx.fillStyle = g;
+      ctx.beginPath(); ctx.moveTo(-90, -168); ctx.lineTo(-20, -186); ctx.lineTo(-8, -150); ctx.lineTo(-80, -140); ctx.closePath(); ctx.fill();
+      ctx.fillStyle = "#07080b"; ctx.beginPath(); ctx.ellipse(-86, -154, 7, 14, 0.25, 0, Math.PI * 2); ctx.fill();
+      // the glass tank of glowing goo, sloshing as you move
+      g = ctx.createLinearGradient(30, -160, 110, -100);
+      g.addColorStop(0, "rgba(170,255,120,0.95)"); g.addColorStop(1, "rgba(40,140,40,0.95)");
+      ctx.fillStyle = g;
+      ctx.beginPath(); ctx.ellipse(70, -128 + sw * 2, 34, 20, -0.3, 0, Math.PI * 2); ctx.fill();
+      ctx.fillStyle = "rgba(255,255,255,0.35)"; ctx.beginPath(); ctx.ellipse(58, -138, 12, 5, -0.3, 0, Math.PI * 2); ctx.fill();
+      ctx.strokeStyle = "#1a1d24"; ctx.lineWidth = 4; ctx.beginPath(); ctx.ellipse(70, -128, 35, 21, -0.3, 0, Math.PI * 2); ctx.stroke();
+      // your hand round the grip
+      g = ctx.createRadialGradient(120, -70, 5, 120, -60, 70);
+      g.addColorStop(0, "#e7b48e"); g.addColorStop(1, "#8a5638");
+      ctx.fillStyle = g;
+      ctx.beginPath(); ctx.moveTo(80, -86); ctx.quadraticCurveTo(120, -110, 170, -84); ctx.quadraticCurveTo(190, -40, 160, -6); ctx.lineTo(100, -6); ctx.quadraticCurveTo(70, -40, 80, -86); ctx.fill();
+      ctx.strokeStyle = "rgba(90,50,30,0.55)"; ctx.lineWidth = 2;
+      [-62, -46, -30].forEach(y => { ctx.beginPath(); ctx.moveTo(86, y); ctx.quadraticCurveTo(110, y - 6, 132, y + 2); ctx.stroke(); });
+      // muzzle flash
       if (h.flash > 0) {
-        const g = ctx.createRadialGradient(0.42, -0.98, 0, 0.42, -0.98, 0.3);
-        g.addColorStop(0, "rgba(180,255,140,0.95)"); g.addColorStop(1, "rgba(180,255,140,0)");
-        ctx.fillStyle = g; ctx.beginPath(); ctx.arc(0.42, -0.98, 0.3, 0, Math.PI * 2); ctx.fill();
+        g = ctx.createRadialGradient(-92, -156, 0, -92, -156, 90);
+        g.addColorStop(0, "rgba(240,255,210,1)"); g.addColorStop(0.3, "rgba(150,255,100,0.8)"); g.addColorStop(1, "rgba(120,255,80,0)");
+        ctx.fillStyle = g; ctx.beginPath(); ctx.arc(-92, -156, 90, 0, Math.PI * 2); ctx.fill();
       }
-      // head with a backwards cap
-      ctx.fillStyle = "#f2c49b"; ctx.beginPath(); ctx.arc(-0.2, -1.2, 0.05, 0, Math.PI * 2); ctx.arc(0.2, -1.2, 0.05, 0, Math.PI * 2); ctx.fill();
-      ctx.fillStyle = "#5a3a22"; ctx.beginPath(); ctx.arc(0, -1.2, 0.2, 0, Math.PI * 2); ctx.fill();
-      ctx.fillStyle = "#2f9bff"; ctx.beginPath(); ctx.arc(0, -1.24, 0.21, Math.PI, 0); ctx.fill();
-      ctx.fillStyle = "#1f6fd0"; ctx.beginPath(); ctx.ellipse(0, -1.24, 0.16, 0.06, 0, 0, Math.PI); ctx.fill();
+      ctx.restore();
+    }
+    // night: only what your torch lights up is clear, the rest sinks into the dark
+    function drawTorchlight(ctx){
+      const h = hero, sw = h.moving ? Math.sin(h.walk * 0.5) * 14 : 0;
+      const x = ZW / 2 + sw, y = ZH / 2 + 30;
+      const g = ctx.createRadialGradient(x, y, 60, x, y, ZW * 0.62);
+      g.addColorStop(0, "rgba(2,4,12,0)"); g.addColorStop(0.4, "rgba(2,4,12,0.5)"); g.addColorStop(1, "rgba(2,4,12,0.9)");
+      ctx.fillStyle = g; ctx.fillRect(0, 0, ZW, ZH);
+      // a warm glow where the torch beam lands
+      ctx.globalCompositeOperation = "lighter";
+      const w = ctx.createRadialGradient(x, y + 40, 10, x, y + 40, 260);
+      w.addColorStop(0, "rgba(255,230,170,0.10)"); w.addColorStop(1, "rgba(255,230,170,0)");
+      ctx.fillStyle = w; ctx.fillRect(0, 0, ZW, ZH);
+      ctx.globalCompositeOperation = "source-over";
     }
     function drawGoo(ctx){
       const g = ctx.createRadialGradient(0, 0, 0, 0, 0, 0.22);
@@ -761,7 +787,9 @@
       fitZbCanvas();
       ctx.setTransform(zbScale, 0, 0, zbScale, 0, 0);
       cam.s = Math.sin(h.a); cam.c = Math.cos(h.a);
-      cam.x = h.x - cam.s * CAM_BACK; cam.z = h.z - cam.c * CAM_BACK;
+      // you are the camera: it bobs a little with every step
+      cam.x = h.x; cam.z = h.z;
+      cam.y = EYE_H + (h.moving ? Math.abs(Math.sin(h.walk * 0.5)) * 0.06 : 0);
       drawSky(ctx);
       drawGround(ctx);
 
@@ -790,7 +818,6 @@
       pickups.forEach(p => add(p.x, 0, p.z, ctx => drawHeartPickup(ctx, p)));
       shots.forEach(s => add(s.x, 1, s.z, drawGoo));
       puffs.forEach(p => add(p.x, p.y, p.z, ctx => drawPuff(ctx, p)));
-      add(h.x, 0, h.z, drawHero);
       items.sort((a, b) => b.zz - a.zz);
       items.forEach(it => {
         ctx.globalAlpha = Math.max(0, Math.min(1, (48 - it.zz) / 22)); // fade into the fog
@@ -820,8 +847,10 @@
       });
       ctx.globalAlpha = 1;
 
+      drawTorchlight(ctx);
+      drawBlaster(ctx);
       // aiming circle where your goo flies: on the mouse, or straight ahead
-      const [ax, ay] = zbMouse || toScreen(camSpace(h.x + cam.s * 12, 1, h.z + cam.c * 12));
+      const [ax, ay] = zbMouse || [ZW / 2, ZH / 2];
       ctx.strokeStyle = "rgba(255,255,255,0.75)"; ctx.lineWidth = 2;
       ctx.beginPath(); ctx.arc(ax, ay, 9, 0, Math.PI * 2);
       ctx.moveTo(ax - 15, ay); ctx.lineTo(ax - 5, ay); ctx.moveTo(ax + 5, ay); ctx.lineTo(ax + 15, ay);
@@ -877,6 +906,7 @@
     }
     function endZb(){
       zbRunning = false;
+      letGo();
       Fun.sfx.wah();
       const bestScore = zbScore > (store.zombieBest || 0);
       if (bestScore) store.zombieBest = zbScore;
@@ -898,7 +928,7 @@
       zbOverlay.hidden = false;
       document.body.style.overflow = "hidden";
       zbPanelTitle.textContent = "🧟 Zombie Blaster";
-      zbPanelText.textContent = "Silly zombies are climbing out of the graveyard! Blast them with your goo blaster before they grab you. Clear a wave to win back a heart. Watch the radar so nobody sneaks up behind you!"
+      zbPanelText.textContent = "Zombies are climbing out of the graveyard, and this time you're right there in it! Click to look around with the mouse and blast them with your goo blaster before they grab you. Clear a wave to win back a heart. Watch the radar so nobody sneaks up behind you!"
         + (store.zombieBest ? ` Your best: ${store.zombieBest}.` : "");
       zbPlayBtn.textContent = "▶ Play";
       zbPanel.hidden = false;
@@ -909,14 +939,15 @@
     function closeZb(){
       zbOpen = false;
       zbRunning = false;
+      letGo();
       zbOverlay.hidden = true;
       document.body.style.overflow = "";
       }
 
     const ZB_KEYMAP = {
-      ArrowLeft: "left", KeyA: "left", ArrowRight: "right", KeyD: "right",
+      ArrowLeft: "left", KeyQ: "left", ArrowRight: "right", KeyE: "right",
       ArrowUp: "up", KeyW: "up", ArrowDown: "down", KeyS: "down",
-      KeyQ: "strafeL", KeyE: "strafeR", Space: "fire", KeyJ: "fire"
+      KeyA: "strafeL", KeyD: "strafeR", Space: "fire", KeyJ: "fire"
     };
     window.addEventListener("keydown", e => {
       if (!zbOpen) return;
@@ -931,17 +962,33 @@
       if (k) zbKeys[k] = false;
     });
     window.addEventListener("blur", () => Object.keys(zbKeys).forEach(k => { zbKeys[k] = false; }));
-    // point with the mouse and hold the button to keep blasting there
+    // click the game and the mouse turns your head (the browser hides the pointer until Esc);
+    // without that, point with the mouse and hold the button to keep blasting there
+    const looking = () => document.pointerLockElement === zbCanvas;
     function trackMouse(e){
+      if (looking()) {
+        if (zbRunning) hero.a += e.movementX * 0.0032;
+        zbMouse = null;
+        return;
+      }
       const r = zbCanvas.getBoundingClientRect();
       zbMouse = [(e.clientX - r.left) / r.width * ZW, (e.clientY - r.top) / r.height * ZH];
     }
     zbCanvas.addEventListener("pointermove", trackMouse);
-    zbCanvas.addEventListener("pointerdown", e => { trackMouse(e); if (zbRunning) { e.preventDefault(); zbKeys.fire = true; } });
+    zbCanvas.addEventListener("pointerdown", e => {
+      trackMouse(e);
+      if (!zbRunning) return;
+      e.preventDefault(); zbKeys.fire = true;
+      if (e.pointerType === "mouse" && !looking() && zbCanvas.requestPointerLock) {
+        try { const p = zbCanvas.requestPointerLock(); if (p && p.catch) p.catch(() => {}); } catch (err) {}
+      }
+    });
     ["pointerup", "pointercancel", "pointerleave"].forEach(ev => zbCanvas.addEventListener(ev, e => {
+      if (ev === "pointerleave" && looking()) return;
       zbKeys.fire = false;
       if (ev === "pointerleave" || e.pointerType === "touch") zbMouse = null; // a finger lifted isn't pointing anymore
     }));
+    const letGo = () => { if (looking()) document.exitPointerLock(); };
     host.querySelectorAll("[data-zkey]").forEach(btn => {
       const k = btn.dataset.zkey;
       btn.addEventListener("pointerdown", e => { e.preventDefault(); zbKeys[k] = true; });
