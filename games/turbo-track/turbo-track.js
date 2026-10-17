@@ -196,7 +196,7 @@
             </div>
           </div>
         </div>
-        <div class="game-help">↑ or W to drive · ↓ or S to brake · ← → or A D to steer · hit the ⚡ boosters before the jump and the loop!</div>
+        <div class="game-help">↑ or W to drive · ↓ or S to brake · ← → or A D to steer · C to switch camera · hit the ⚡ boosters before the jump and the loop!</div>
         <div class="game-touch">
           <button class="btn ghost" data-key="left" type="button" aria-label="Steer left">◀</button>
           <button class="btn ghost" data-key="right" type="button" aria-label="Steer right">▶</button>
@@ -520,7 +520,9 @@
        racing games used), and the cars are stood up on it with a shadow and some thickness. */
     const K = 0.7;  // the hidden picture is drawn a bit smaller than the screen needs, which is plenty and much quicker
     const OW = 1200 * K, OH = 1200 * K, OCX = 600 * K, OCY = 960 * K, MZ = 0.62 * K;
-    const HZ = 140, FOC = 480, CAMH = 118 * K, BACK = 230 * K;
+    // chase: up behind your car; cockpit: down in the driver's seat, looking over the bonnet
+    const FOC = 480;
+    let HZ = 140, CAMH = 118 * K, BACK = 230 * K, wheelTurn = 0;
     const off = document.createElement("canvas"); off.width = OW; off.height = OH;
     const octx = off.getContext("2d");
     let camA = null, frameDt = 1 / 60;
@@ -529,9 +531,11 @@
     function draw3D(){
       const focus = me || cars[0];
       if (!focus) return;
-      const want = focus.angle;
+      const want = focus.angle, cockpit = T.view === "cockpit";
+      if (cockpit) { HZ = 215; CAMH = (30 + focus.z * 80) * K; BACK = 4 * K; }
+      else { HZ = 140; CAMH = 118 * K; BACK = 230 * K; }
       if (camA === null) camA = want;
-      camA += Math.atan2(Math.sin(want - camA), Math.cos(want - camA)) * Math.min(1, frameDt * 4.5);
+      camA += Math.atan2(Math.sin(want - camA), Math.cos(want - camA)) * Math.min(1, frameDt * (cockpit ? 16 : 4.5));
       const th = -camA - Math.PI / 2, cs = Math.cos(th), sn = Math.sin(th);
       const fx0 = focus.x, fy0 = focus.y;
 
@@ -609,6 +613,17 @@
         const lift = c.z * 70 * s;
         ctx.fillStyle = `rgba(0,0,0,${0.32 - c.z * 0.15})`;
         ctx.beginPath(); ctx.ellipse(sx, sy + 4 * s, 26 * s, 13 * s * 0.6, 0, 0, 7); ctx.fill();
+        if (cockpit) {
+          // down in the driver's seat you see the other cars from behind, not from above
+          ctx.save(); ctx.translate(sx, sy - lift); ctx.scale(s, s); drawCarBack(ctx, c); ctx.restore();
+          if (s > 0.3) {
+            const fs = Math.round(Math.min(18, Math.max(11, 12 * s)));
+            ctx.font = `800 ${fs}px 'Bricolage Grotesque', sans-serif`; ctx.textAlign = "center";
+            ctx.lineWidth = 4; ctx.strokeStyle = "rgba(0,0,0,0.6)"; ctx.fillStyle = "#fff";
+            ctx.strokeText("🤖 " + c.name, sx, sy - lift - 40 * s); ctx.fillText("🤖 " + c.name, sx, sy - lift - 40 * s);
+          }
+          return;
+        }
         // the car's sides: a dark copy of its shape a little lower, then the car on top
         const place = dy => { ctx.translate(sx, sy - lift + dy - 6 * s); ctx.scale(s, s * 0.5); ctx.rotate(c.angle + th); };
         ctx.save(); place(7 * s);
@@ -635,8 +650,92 @@
       }
     }
 
+    // a car seen from behind, standing on the road at (0, 0); it's 46 wide like the cars from above
+    function drawCarBack(ctx, c){
+      ctx.fillStyle = "#111318";
+      [-1, 1].forEach(side => { roundRect(ctx, side * 23 - (side > 0 ? 8 : 0), -11, 8, 11, 2); ctx.fill(); });
+      const body = ctx.createLinearGradient(0, -24, 0, -4);
+      body.addColorStop(0, c.colour); body.addColorStop(1, "#1a1a1a");
+      ctx.fillStyle = body; roundRect(ctx, -21, -22, 42, 16, 4); ctx.fill();
+      // the cabin, the back window and the driver's helmet
+      ctx.fillStyle = c.colour;
+      ctx.beginPath(); ctx.moveTo(-14, -22); ctx.lineTo(-10, -33); ctx.lineTo(10, -33); ctx.lineTo(14, -22); ctx.closePath(); ctx.fill();
+      ctx.fillStyle = "#a9d4ff"; ctx.beginPath(); ctx.moveTo(-11, -23); ctx.lineTo(-8, -31); ctx.lineTo(8, -31); ctx.lineTo(11, -23); ctx.closePath(); ctx.fill();
+      ctx.fillStyle = "#c8ccd4"; ctx.beginPath(); ctx.arc(0, -26, 4.5, Math.PI, 0); ctx.fill();
+      // a spoiler and the red back lights
+      ctx.fillStyle = "#222"; ctx.fillRect(-20, -27, 40, 3);
+      ctx.fillStyle = "#ff3030"; ctx.fillRect(-19, -18, 7, 4); ctx.fillRect(12, -18, 7, 4);
+      ctx.fillStyle = "#333"; ctx.fillRect(-6, -11, 12, 4);   // number plate
+      if (c.boostT > 0) {
+        const f = 6 + Math.random() * 6;
+        ctx.fillStyle = "#ffb11f"; ctx.beginPath(); ctx.moveTo(-4, -8); ctx.lineTo(4, -8); ctx.lineTo(0, -8 + f); ctx.fill();
+      }
+    }
+    // inside the car: the bonnet, the dashboard with a real speed dial, and your hands on the wheel
+    function drawCockpit(){
+      if (!me) return;
+      ctx.setTransform(1, 0, 0, 1, 0, 0);
+      const steer = state === "racing" ? (keys.right ? 1 : 0) - (keys.left ? 1 : 0) : 0;
+      wheelTurn += (steer * 0.9 - wheelTurn) * Math.min(1, frameDt * 9);
+      const shake = Math.abs(me.v) > 300 ? (Math.random() - 0.5) * Math.min(3, (Math.abs(me.v) - 300) / 80) : 0;
+      ctx.save(); ctx.translate(shake, shake * 0.5);
+      // the bonnet in your car's colour, with a shine down the middle
+      const hood = ctx.createLinearGradient(0, 380, 0, 470);
+      hood.addColorStop(0, me.colour); hood.addColorStop(1, "#111");
+      ctx.fillStyle = hood;
+      ctx.beginPath(); ctx.moveTo(150, H); ctx.quadraticCurveTo(250, 392, W / 2, 386); ctx.quadraticCurveTo(W - 250, 392, W - 150, H); ctx.closePath(); ctx.fill();
+      ctx.fillStyle = "rgba(255,255,255,0.22)";
+      ctx.beginPath(); ctx.moveTo(W / 2 - 40, 392); ctx.quadraticCurveTo(W / 2, 388, W / 2 + 40, 392); ctx.lineTo(W / 2 + 70, 450); ctx.lineTo(W / 2 - 70, 450); ctx.closePath(); ctx.fill();
+      // the window frame on both sides
+      ctx.fillStyle = "#16181f";
+      ctx.beginPath(); ctx.moveTo(0, 0); ctx.lineTo(70, 0); ctx.lineTo(10, H); ctx.lineTo(0, H); ctx.fill();
+      ctx.beginPath(); ctx.moveTo(W, 0); ctx.lineTo(W - 70, 0); ctx.lineTo(W - 10, H); ctx.lineTo(W, H); ctx.fill();
+      ctx.fillRect(0, 0, W, 14);
+      // the dashboard
+      const dash = ctx.createLinearGradient(0, 440, 0, H);
+      dash.addColorStop(0, "#2b2f3a"); dash.addColorStop(1, "#0c0d12");
+      ctx.fillStyle = dash;
+      ctx.beginPath(); ctx.moveTo(0, 470); ctx.quadraticCurveTo(W / 2, 425, W, 470); ctx.lineTo(W, H); ctx.lineTo(0, H); ctx.closePath(); ctx.fill();
+      // the speed dial
+      const kmh = Math.abs(me.v) / 4, top = 200, dx = W / 2 + 230, dy = 500;
+      ctx.fillStyle = "#07080c"; ctx.beginPath(); ctx.arc(dx, dy, 48, 0, 7); ctx.fill();
+      ctx.strokeStyle = "#3a3f4d"; ctx.lineWidth = 3; ctx.stroke();
+      ctx.strokeStyle = "#9aa3b2"; ctx.lineWidth = 2;
+      for (let k = 0; k <= 10; k++) {
+        const a = Math.PI * 0.75 + k / 10 * Math.PI * 1.5;
+        ctx.beginPath(); ctx.moveTo(dx + Math.cos(a) * 38, dy + Math.sin(a) * 38); ctx.lineTo(dx + Math.cos(a) * 45, dy + Math.sin(a) * 45); ctx.stroke();
+      }
+      const na = Math.PI * 0.75 + Math.min(1, kmh / top) * Math.PI * 1.5;
+      ctx.strokeStyle = me.boostT > 0 ? "#ffe14d" : "#ff4a3d"; ctx.lineWidth = 3;
+      ctx.beginPath(); ctx.moveTo(dx, dy); ctx.lineTo(dx + Math.cos(na) * 40, dy + Math.sin(na) * 40); ctx.stroke();
+      ctx.fillStyle = "#fff"; ctx.font = "700 13px 'IBM Plex Mono', monospace"; ctx.textAlign = "center";
+      ctx.fillText(Math.round(kmh), dx, dy + 26);
+      // a boost light
+      ctx.fillStyle = me.boostT > 0 ? "#ffe14d" : "#3a3420";
+      ctx.beginPath(); ctx.arc(W / 2 - 230, 492, 9, 0, 7); ctx.fill();
+      ctx.fillStyle = "#9aa3b2"; ctx.font = "700 11px 'IBM Plex Mono', monospace"; ctx.fillText("BOOST", W / 2 - 230, 516);
+      // the steering wheel, turning with your hands on it
+      ctx.translate(W / 2, H + 30); ctx.rotate(wheelTurn);
+      ctx.strokeStyle = "#1b1d24"; ctx.lineWidth = 24;
+      ctx.beginPath(); ctx.arc(0, 0, 140, 0, 7); ctx.stroke();
+      ctx.strokeStyle = "rgba(255,255,255,0.12)"; ctx.lineWidth = 3;
+      ctx.beginPath(); ctx.arc(0, 0, 148, Math.PI * 1.15, Math.PI * 1.85); ctx.stroke();
+      ctx.strokeStyle = "#23262f"; ctx.lineWidth = 18;   // the spokes and the middle
+      ctx.beginPath(); ctx.moveTo(-135, 0); ctx.lineTo(135, 0); ctx.moveTo(0, 0); ctx.lineTo(0, 135); ctx.stroke();
+      ctx.fillStyle = "#2c2f3a"; ctx.beginPath(); ctx.arc(0, 0, 44, 0, 7); ctx.fill();
+      ctx.fillStyle = "#c62828"; ctx.fillRect(-6, -152, 12, 24);   // the mark at the top of the wheel
+      [-1, 1].forEach(side => {
+        const a = Math.PI * 1.5 + side * 0.75, hx = Math.cos(a) * 140, hy = Math.sin(a) * 140;
+        ctx.fillStyle = "#2a2a30";   // racing gloves gripping the rim
+        ctx.beginPath(); ctx.ellipse(hx, hy, 30, 24, a + Math.PI / 2, 0, 7); ctx.fill();
+        ctx.fillStyle = "#454552";
+        ctx.beginPath(); ctx.ellipse(hx - side * 4, hy - 8, 16, 9, a + Math.PI / 2, 0, 7); ctx.fill();
+      });
+      ctx.restore();
+    }
+
     function draw(){
-      if (T.view !== "top") { draw3D(); drawOverlay(); return; }
+      if (T.view !== "top") { draw3D(); if (T.view === "cockpit") drawCockpit(); drawOverlay(); return; }
       const focus = me || cars[0];
       ZOOM = canvas.clientWidth && canvas.clientWidth < 600 ? 1.05 : 0.78; // closer up on small screens, so the cars aren't tiny
       ctx.setTransform(1, 0, 0, 1, 0, 0);
@@ -701,7 +800,7 @@
         ctx.lineWidth = 6; ctx.strokeStyle = "rgba(0,0,0,0.7)"; ctx.fillStyle = "#fff";
         ctx.strokeText(msg.text, W / 2, 70); ctx.fillText(msg.text, W / 2, 70);
       }
-      if (me && state === "racing") {
+      if (me && state === "racing" && T.view !== "cockpit") {
         const kmh = Math.round(Math.abs(me.v) / 4);
         ctx.font = "800 26px 'IBM Plex Mono', monospace"; ctx.textAlign = "left";
         ctx.lineWidth = 5; ctx.strokeStyle = "rgba(0,0,0,0.7)"; ctx.fillStyle = me.boostT > 0 ? "#ffe14d" : "#fff";
@@ -899,8 +998,14 @@
     // the camera: chasing behind your car in 3D, or looking straight down
     const viewBtn = document.createElement("button");
     viewBtn.type = "button"; viewBtn.className = "btn ghost small";
-    const showView = () => { viewBtn.textContent = T.view === "top" ? "🎥 Top" : "🎥 3D"; viewBtn.title = "Switch the camera"; };
-    viewBtn.addEventListener("click", () => { T.view = T.view === "top" ? "3d" : "top"; camA = null; Hub.saveStore(); showView(); canvas.focus(); });
+    // three cameras: in the driver's seat, chasing behind, or looking straight down
+    const VIEWS = { cockpit: "🎥 Driver", "3d": "🎥 Chase", top: "🎥 Top" };
+    const NEXT_VIEW = { cockpit: "3d", "3d": "top", top: "cockpit" };
+    if (!VIEWS[T.view] || !T.seenCockpit) { T.view = "cockpit"; T.seenCockpit = true; }   // try the new driver's seat first
+    const showView = () => { viewBtn.textContent = VIEWS[T.view]; viewBtn.title = "Switch the camera (C)"; };
+    const switchView = () => { T.view = NEXT_VIEW[T.view] || "cockpit"; camA = null; Hub.saveStore(); showView(); canvas.focus(); };
+    viewBtn.addEventListener("click", switchView);
+    window.addEventListener("keydown", e => { if (open && e.code === "KeyC" && !e.repeat) switchView(); });
     showView();
     $("ttCloseBtn").before(viewBtn);
     Fun.soundButton($("ttCloseBtn"));
