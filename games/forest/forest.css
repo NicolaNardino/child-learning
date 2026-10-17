@@ -1,0 +1,26 @@
+/* 99 Nights fills the screen like the other 3D games. */
+.nf-screen .game-box{ width: min(100%, calc((100vh - 110px) * 16 / 9)); width: min(100%, calc((100dvh - 110px) * 16 / 9)); }
+@media (pointer: coarse){ .nf-screen .game-box{ width: min(100%, calc((100vh - 170px) * 16 / 9)); width: min(100%, calc((100dvh - 170px) * 16 / 9)); } }
+@media (max-height: 500px){
+  .nf-screen .game-box{ width: min(100%, calc((100vh - 100px) * 16 / 9)); width: min(100%, calc((100dvh - 100px) * 16 / 9)); }
+}
+.nf-canvas:focus{ outline: none; }
+.nf-canvas{
+  display: block; width: 100%; aspect-ratio: 16 / 9; height: auto;
+  border-radius: 12px; border: 2px solid rgba(255,255,255,0.25);
+  background: #0b1230; touch-action: none;
+}
+.nf-panel{ background: rgba(5,10,25,0.7); }
+.nf-night{ color: #c9d7ff; }
+.nf-touch .btn{ min-width: 52px; padding: 12px 12px; }
+.nf-bench{
+  position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%); width: min(420px, 90%);
+  background: rgba(30,22,14,0.95); border: 2px solid #a8743c; border-radius: 12px; color: #fff; z-index: 3;
+}
+.nf-bench-head{ display: flex; align-items: center; gap: 8px; padding: 8px 10px; border-bottom: 1px solid rgba(255,255,255,0.15); }
+.nf-bench-head span{ flex: 1; text-align: right; font-size: 13px; }
+.nf-row{ display: flex; align-items: center; gap: 8px; padding: 8px 10px; border-bottom: 1px solid rgba(255,255,255,0.08); }
+.nf-row.nf-have{ opacity: 0.6; }
+.nf-em{ font-size: 26px; }
+.nf-name{ flex: 1; font-weight: 700; display: flex; flex-direction: column; }
+.nf-name small{ font-weight: 500; font-size: 12px; opacity: 0.85; }
