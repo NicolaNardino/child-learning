@@ -1,4 +1,4 @@
-/* Parkour Run: a 3D obby high up in the sky. Jump across orange, yellow, blue, green and black
+/* Parkour Run: a first-person 3D obby high up in the sky, seen through your own eyes. Jump across orange, yellow, blue, green and black
    blocks that climb up and drop down, don't touch the red kill bricks, and reach the trophy.
    Fall off or touch red and you go back to your last checkpoint flag. */
 (function(){
@@ -151,7 +151,7 @@
             <button class="btn" id="pkPlayBtn" type="button">▶ Play</button>
           </div>
         </div>
-        <div class="game-help">← → or A D to turn (or drag the screen) · ↑ W to run · ↓ S to back up · Q E to sidestep · Space to jump · R to go back to your flag</div>
+        <div class="game-help">Click the game to look around with the mouse · W A S D to run · ← → or Q E to turn · Space to jump · R to go back to your flag · Esc lets go of the mouse</div>
         <div class="game-touch">
           <button class="btn ghost" data-pkey="left" type="button" aria-label="Turn left">↶</button>
           <button class="btn ghost" data-pkey="up" type="button" aria-label="Run forward">▲</button>
@@ -174,7 +174,8 @@
     const deathsEl = document.getElementById("pkDeaths");
 
     const W = 960, H = 540;
-    const FOCAL = 620, NEAR = 0.2, CAM_BACK = 8, CAM_UP = 4.6, PITCH = 0.36, TURN = 2.4;
+    // the camera is your eyes, looking a little down so you can see where your feet will land
+    const FOCAL = 520, NEAR = 0.12, EYE = 1.7, PITCH = 0.32, TURN = 2.4;
     const SIN_P = Math.sin(PITCH), COS_P = Math.cos(PITCH);
     const HORIZON = H / 2 - FOCAL * Math.tan(PITCH);
     const LIGHT = (() => { const l = [0.35, 0.85, -0.4], n = Math.hypot(...l); return l.map(v => v / n); })();
@@ -188,13 +189,13 @@
     let frameDt = 1 / 60, deathText = "Oof!", screamed = false;
     const cam = { x: 0, y: 0, z: 0, a: 0, s: 0, c: 1 };
 
-    /* ----- the camera follows behind you ----- */
+    /* ----- the camera is your head: it bobs as you run and dips when you land ----- */
     function placeCamera(dt){
       cam.s = Math.sin(cam.a); cam.c = Math.cos(cam.a);
-      cam.x = player.x - cam.s * CAM_BACK;
-      cam.z = player.z - cam.c * CAM_BACK;
-      const wantY = player.y + CAM_UP;
-      cam.y = dt ? cam.y + (wantY - cam.y) * Math.min(1, dt * 7) : wantY; // smooth out the jumps
+      const run = Math.hypot(player.vx, player.vz) / RUN_SPEED;
+      const bob = player.onGround ? Math.abs(Math.sin(player.walk * 0.5)) * 0.07 * run : 0;
+      cam.x = player.x; cam.z = player.z;
+      cam.y = player.y + EYE + bob - ((player.squash || 1) - 1) * 0.5;
     }
     function camSpace(x, y, z){
       const dx = x - cam.x, dz = z - cam.z, h = y - cam.y;
@@ -283,66 +284,28 @@
       ctx.fillText("🏆", sx, sy);
       ctx.textBaseline = "alphabetic";
     }
-
-    /* ----- you: a blocky runner made of little boxes that turn with you ----- */
-    function drawPart(lx, ly, lz, w, h, d, colour, face){
-      const p = player, c = Math.cos(p.face), s = Math.sin(p.face);
-      const world = (x, y, z) => [p.x + x * c + z * s, p.y + y, p.z - x * s + z * c];
-      const X = [lx - w / 2, lx + w / 2], Y = [ly, ly + h], Z = [lz - d / 2, lz + d / 2];
-      const sides = [
-        { n: [1, 0, 0], q: [[1, 0, 0], [1, 0, 1], [1, 1, 1], [1, 1, 0]] }, { n: [-1, 0, 0], q: [[0, 0, 1], [0, 0, 0], [0, 1, 0], [0, 1, 1]] },
-        { n: [0, 1, 0], q: [[0, 1, 0], [1, 1, 0], [1, 1, 1], [0, 1, 1]] }, { n: [0, -1, 0], q: [[0, 0, 0], [0, 0, 1], [1, 0, 1], [1, 0, 0]] },
-        { n: [0, 0, 1], q: [[1, 0, 1], [0, 0, 1], [0, 1, 1], [1, 1, 1]], front: true }, { n: [0, 0, -1], q: [[0, 0, 0], [1, 0, 0], [1, 1, 0], [0, 1, 0]] }
-      ];
-      sides.forEach(f => {
-        const wn = [f.n[0] * c + f.n[2] * s, f.n[1], -f.n[0] * s + f.n[2] * c];
-        const mid = world(f.n[0] ? X[(f.n[0] + 1) / 2] : lx, f.n[1] ? Y[(f.n[1] + 1) / 2] : ly + h / 2, f.n[2] ? Z[(f.n[2] + 1) / 2] : lz);
-        if (wn[0] * (cam.x - mid[0]) + wn[1] * (cam.y - mid[1]) + wn[2] * (cam.z - mid[2]) <= 0) return;
-        if (!polyPath(f.q.map(([i, j, k]) => world(X[i], Y[j], Z[k])))) return;
-        ctx.fillStyle = shade(colour, lightFor(wn)); ctx.fill();
-        ctx.strokeStyle = shade(colour, 0.6); ctx.lineWidth = 1; ctx.stroke();
-        if (f.front && face) face(world, lz + d / 2 + 0.01);
+    // your two hands at the bottom of the screen, pumping as you run and thrown up when you jump
+    function drawHands(){
+      const run = Math.hypot(player.vx, player.vz) / RUN_SPEED, sw = Math.sin(player.walk * 0.5) * run;
+      const air = player.onGround ? 0 : Math.min(1, Math.abs(player.vy) / 10);
+      [-1, 1].forEach(side => {
+        const x = W / 2 + side * (300 - air * 40), y = H + 15 - air * 70 + side * sw * 38;
+        ctx.save(); ctx.translate(x, y); ctx.rotate(side * (0.5 - air * 0.3));
+        // the sleeve
+        ctx.fillStyle = "#2f8a4a"; ctx.beginPath(); ctx.ellipse(0, 70, 62, 80, 0, 0, 7); ctx.fill();
+        // the hand
+        const g = ctx.createRadialGradient(-side * 10, -20, 5, 0, 0, 60);
+        g.addColorStop(0, "#f6cba6"); g.addColorStop(1, "#b77c55");
+        ctx.fillStyle = g; ctx.beginPath(); ctx.ellipse(0, 0, 44, 54, 0, 0, 7); ctx.fill();
+        ctx.beginPath(); ctx.ellipse(side * 40, 4, 14, 26, side * 0.6, 0, 7); ctx.fill();   // thumb
+        ctx.strokeStyle = "rgba(120,70,40,0.45)"; ctx.lineWidth = 2;
+        [-18, -4, 10].forEach(fx0 => { ctx.beginPath(); ctx.moveTo(fx0, -50); ctx.lineTo(fx0 + 2, -26); ctx.stroke(); });
+        ctx.restore();
       });
-    }
-    function drawPlayer(){
-      if (deadT > 0) return;
-      const air = !player.onGround, sq = player.squash || 1;
-      const swing = player.onGround ? Math.sin(player.walk) * 0.2 : 0.15;
-      const Y = v => v / sq, Wd = v => v * Math.sqrt(sq);
-      // arms go up in the air when you jump: wheee!
-      const armY = air ? 1.45 : 0.85;
-      const parts = [
-        [-0.18, 0, swing, Wd(0.34), Y(0.8), 0.4, "#2fa84f"],                 // legs
-        [0.18, 0, -swing, Wd(0.34), Y(0.8), 0.4, "#2fa84f"],
-        [0, Y(0.8), 0, Wd(0.8), Y(0.8), 0.45, "#2f6fd6"],                      // body
-        [0, Y(0.95), -0.33, Wd(0.56), Y(0.6), 0.2, "#ff8a00"],                  // a backpack
-        [-0.56, Y(armY), -swing, 0.3, Y(0.75), 0.38, "#ffd21f"],               // arms
-        [0.56, Y(armY), swing, 0.3, Y(0.75), 0.38, "#ffd21f"],
-        [0, Y(1.6), 0, Wd(0.52), Y(0.5), 0.5, "#ffd21f", drawFace],             // head
-        [0, Y(2.1), 0, Wd(0.56), Y(0.12), 0.56, "#e8402f"],                     // a cap, on backwards
-        [0, Y(2.1), -0.38, Wd(0.4), Y(0.06), 0.26, "#e8402f"]
-      ];
-      // farthest part first
-      parts.map(pt => ({ pt, z: camSpace(player.x + pt[0] * Math.cos(player.face) + pt[2] * Math.sin(player.face), player.y + pt[1] + pt[4] / 2, player.z - pt[0] * Math.sin(player.face) + pt[2] * Math.cos(player.face))[2] }))
-        .sort((a, b) => b.z - a.z)
-        .forEach(({ pt }) => drawPart(...pt));
-    }
-    function drawFace(world, fz){
-      const sq = player.squash || 1, y0 = 1.6 / sq, k = 1 / sq;
-      const quad = (x0, y1, x1, y2) => polyPath([world(x0, y1, fz), world(x1, y1, fz), world(x1, y2, fz), world(x0, y2, fz)]);
-      // big cartoon eyes that look the way you're going
-      [-0.12, 0.12].forEach(x => {
-        ctx.fillStyle = "#ffffff"; if (quad(x - 0.075, y0 + 0.24 * k, x + 0.075, y0 + 0.42 * k)) ctx.fill();
-        ctx.fillStyle = "#1b1f2a"; if (quad(x - 0.035, y0 + 0.27 * k, x + 0.035, y0 + 0.37 * k)) ctx.fill();
-      });
-      // a grin, or an "o" when you're flying
-      ctx.fillStyle = "#1b1f2a";
-      if (!player.onGround) { if (quad(-0.05, y0 + 0.08 * k, 0.05, y0 + 0.18 * k)) ctx.fill(); }
-      else if (polyPath([world(-0.14, y0 + 0.17 * k, fz), world(0.14, y0 + 0.17 * k, fz), world(0.08, y0 + 0.09 * k, fz), world(-0.08, y0 + 0.09 * k, fz)])) ctx.fill();
     }
     // where a spot in the world is on the screen (or null when it's behind the camera)
     function screenAt(x, y, z){ const q = camSpace(x, y, z); return q[2] > NEAR ? toScreen(q) : null; }
-    function popOver(text, colour, size){ const sp = screenAt(player.x, player.y + 2.8, player.z); if (sp) fx.pop(text, sp[0], sp[1], colour, size || 34); }
+    function popOver(text, colour, size){ fx.pop(text, W / 2, H * 0.36, colour, size || 34); }
 
     /* ----- painting far to near: a block goes in front when the camera is on its side of the gap between them ----- */
     function frontOf(a, b, camP){
@@ -673,13 +636,18 @@
         if (sb[2] < 0 || sb[0] > W || sb[3] < 0 || sb[1] > H) return;
         items.push({ min: b.min, max: b.max, dist, sb, draw: () => drawBlock(b) });
       });
-      const pMin = [player.x - 0.75, player.y, player.z - 0.75], pMax = [player.x + 0.75, player.y + 2.1, player.z + 0.75];
-      items.push({ min: pMin, max: pMax, dist: CAM_BACK, sb: screenBox(pMin, pMax), draw: drawPlayer });
       paintOrder(items).forEach(it => {
         ctx.globalAlpha = Math.max(0.15, Math.min(1, (90 - it.dist) / 30)); // far blocks fade into the haze
         it.draw();
       });
       ctx.globalAlpha = 1;
+      drawHands();
+      // falling fast: the edges of your eyes blur with wind
+      if (player.vy < -14) {
+        const k = Math.min(1, (-player.vy - 14) / 14), v = ctx.createRadialGradient(W / 2, H / 2, H * 0.3, W / 2, H / 2, W * 0.6);
+        v.addColorStop(0, "rgba(255,255,255,0)"); v.addColorStop(1, `rgba(230,240,255,${0.5 * k})`);
+        ctx.fillStyle = v; ctx.fillRect(0, 0, W, H);
+      }
 
       fx.draw(ctx, frameDt);
       if (deadT > 0) {
@@ -715,8 +683,7 @@
       deaths++;
       deadT = 0.8;
       deathText = kill ? ["ZAPPED!", "Ouchie!", "Hot hot hot!", "Bzzzt!"][deaths % 4] : ["Oof!", "Whoopsie!", "Not again!", "SPLAT!", "Wheee… oops"][deaths % 5];
-      const sp = screenAt(player.x, player.y + 1, player.z);
-      if (sp) fx.burst(sp[0], sp[1], kill ? "#ff5a4a" : "#ffd21f", 22, 260);
+      fx.burst(W / 2, H / 2, kill ? "#ff5a4a" : "#ffd21f", 22, 260);
       Fun.shake(canvas);
       if (kill) Fun.sfx.zap(); else Fun.sfx.wah();
     }
@@ -742,8 +709,7 @@
         screamed = false;
         if (vyBefore < -12) {
           player.squash = 1.35;
-          const sp = screenAt(player.x, player.y, player.z);
-          if (sp) fx.burst(sp[0], sp[1], "rgba(255,255,255,0.9)", 10, 120, 40);
+          fx.burst(W / 2, H - 40, "rgba(255,255,255,0.9)", 10, 120, 40);
         }
       }
       if (!screamed && player.vy < -22) { screamed = true; popOver("AAAAH!", "#ffffff", 30); }
@@ -755,8 +721,7 @@
         stage = on.stage;
         flash = { text: `🚩 Checkpoint ${stage}!`, t: 1.8 };
         popOver("CHECKPOINT! 🎉", "#7bd68a", 32); Fun.sfx.tada();
-        const sp = screenAt(player.x, player.y + 1, player.z);
-        if (sp) fx.burst(sp[0], sp[1], "#7bd68a", 20, 220);
+        fx.burst(W / 2, H * 0.6, "#7bd68a", 20, 220);
       }
       if (on === finish) win();
     }
@@ -792,6 +757,7 @@
     }
     function win(){
       running = false;
+      letGo();
       Fun.sfx.tada(); popOver("YOU DID IT! 🏆", "#ffe14d", 40);
       store.parkourWins = (store.parkourWins || 0) + 1;
       const best = !store.parkourBest || runTime < store.parkourBest;
@@ -813,7 +779,7 @@
       overlay.hidden = false;
       document.body.style.overflow = "hidden";
       panelTitle.textContent = "🧗 Parkour Run";
-      panelText.textContent = "Jump across the blocks high up in the sky and reach the trophy! Don't touch the red kill bricks. If you fall or touch red, you go back to your last 🚩 flag."
+      panelText.textContent = "You're up in the sky, seeing it all through your own eyes! Click to look around with the mouse, jump across the blocks and reach the trophy. Don't touch the red kill bricks. If you fall or touch red, you go back to your last 🚩 flag."
         + (store.parkourBest ? ` Your best: ${fmtTime(store.parkourBest)}.` : "");
       playBtn.textContent = "▶ Play";
       panel.hidden = false;
@@ -824,14 +790,15 @@
     function closeGame(){
       open = false;
       running = false;
+      letGo();
       overlay.hidden = true;
       document.body.style.overflow = "";
     }
 
     const KEYMAP = {
-      ArrowLeft: "left", KeyA: "left", ArrowRight: "right", KeyD: "right",
+      ArrowLeft: "left", KeyQ: "left", ArrowRight: "right", KeyE: "right",
       ArrowUp: "up", KeyW: "up", ArrowDown: "down", KeyS: "down",
-      KeyQ: "strafeL", KeyE: "strafeR", Space: "jump"
+      KeyA: "strafeL", KeyD: "strafeR", Space: "jump"
     };
     function setKey(k, down){
       if (k === "jump" && down && !keys.jump) jumpQueued = true;
@@ -851,14 +818,23 @@
       if (k) keys[k] = false;
     });
     window.addEventListener("blur", () => Object.keys(keys).forEach(k => { keys[k] = false; }));
-    // drag the screen to turn the camera
+    // click with the mouse and it turns your head (until Esc); on a touch screen, drag to turn
+    const looking = () => document.pointerLockElement === canvas;
     let dragX = null;
-    canvas.addEventListener("pointerdown", e => { dragX = e.clientX; canvas.setPointerCapture(e.pointerId); });
+    canvas.addEventListener("pointerdown", e => {
+      if (e.pointerType === "mouse" && running && !looking() && canvas.requestPointerLock) {
+        try { const p = canvas.requestPointerLock(); if (p && p.catch) p.catch(() => {}); } catch (err) {}
+        return;
+      }
+      dragX = e.clientX; canvas.setPointerCapture(e.pointerId);
+    });
     canvas.addEventListener("pointermove", e => {
+      if (looking()) { if (running) cam.a += e.movementX * 0.0032; return; }
       if (dragX === null) return;
       cam.a += (e.clientX - dragX) / canvas.clientWidth * 4;
       dragX = e.clientX;
     });
+    const letGo = () => { if (looking()) document.exitPointerLock(); };
     ["pointerup", "pointercancel"].forEach(ev => canvas.addEventListener(ev, () => { dragX = null; }));
     host.querySelectorAll("[data-pkey]").forEach(btn => {
       const k = btn.dataset.pkey;
