@@ -1,0 +1,17 @@
+/* Endless Tower fills the screen like the other 3D games, with the shop underneath. */
+.tw-screen .game-box{ width: min(100%, calc((100vh - 160px) * 16 / 9)); width: min(100%, calc((100dvh - 160px) * 16 / 9)); }
+@media (max-height: 500px){
+  .tw-screen .game-box{ width: min(100%, calc((100vh - 120px) * 16 / 9)); width: min(100%, calc((100dvh - 120px) * 16 / 9)); }
+  .tw-screen .game-help{ display: none; }
+}
+.tw-canvas:focus{ outline: none; }
+.tw-canvas{
+  display: block; width: 100%; aspect-ratio: 16 / 9; height: auto;
+  border-radius: 12px; border: 2px solid rgba(255,255,255,0.25);
+  background: #58a8ff; touch-action: none; cursor: pointer;
+}
+.tw-panel{ background: rgba(10,20,45,0.6); }
+.tw-cash{ color: #7bd68a; }
+.tw-rebirth{ color: #ffe14d; border-color: #ffe14d; }
+.tw-shop{ display: flex; flex-wrap: wrap; gap: 6px; justify-content: center; margin-top: 8px; }
+.tw-shop .tw-drop{ min-width: 110px; }
