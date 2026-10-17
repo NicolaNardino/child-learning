@@ -6,6 +6,7 @@
      Fun.face(ctx, ...)  a cartoon face with blinking eyes that look around, and a mouth for the mood
      Fun.soundButton(el) a 🔊/🔇 button put just before el (all the games share the one setting)
      Fun.shake(el)       wobbles an element, for a crash or a hit
+     Fun.hint(stage)     a tip that pops up at the top of a game for a few seconds: { show(text, ms), hide() }
    Sounds are on unless Hub.store.sound is false. */
 (function(){
   "use strict";
@@ -146,5 +147,17 @@
     el.classList.remove("fun-shake"); void el.offsetWidth; el.classList.add("fun-shake");
   }
 
-  window.Fun = { pops, sfx, face, soundButton, shake };
+  // a tip that shows for a moment at the top of a game, like "Press Esc to get your mouse back"
+  function hint(stage){
+    const el = document.createElement("div");
+    el.className = "fun-hint"; el.hidden = true;
+    stage.appendChild(el);
+    let timer = 0;
+    return {
+      show(text, ms){ el.textContent = text; el.hidden = false; el.classList.remove("on"); void el.offsetWidth; el.classList.add("on"); clearTimeout(timer); timer = setTimeout(() => { el.hidden = true; }, ms || 3500); },
+      hide(){ el.hidden = true; clearTimeout(timer); }
+    };
+  }
+
+  window.Fun = { pops, sfx, face, soundButton, shake, hint };
 })();

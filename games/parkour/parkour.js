@@ -806,7 +806,8 @@
     }
     window.addEventListener("keydown", e => {
       if (!open) return;
-      if (e.key === "Escape") { Hub.leave(); return; }
+      // Esc first lets the mouse go (the browser does that); only an Esc after that leaves the game
+      if (e.key === "Escape") { if (looking() || performance.now() - unlockedAt < 400) { if (looking()) document.exitPointerLock(); return; } Hub.leave(); return; }
       if (e.code === "KeyR" && running && deadT <= 0) { respawn(); return; }
       const k = KEYMAP[e.code];
       if (!k || !running) return;
@@ -820,6 +821,12 @@
     window.addEventListener("blur", () => Object.keys(keys).forEach(k => { keys[k] = false; }));
     // click with the mouse and it turns your head (until Esc); on a touch screen, drag to turn
     const looking = () => document.pointerLockElement === canvas;
+    let unlockedAt = 0;
+    const tip = Fun.hint(canvas.parentElement);
+    document.addEventListener("pointerlockchange", () => {
+      if (looking()) tip.show("🖱️ Press Esc to get your mouse back");
+      else { unlockedAt = performance.now(); tip.hide(); }
+    });
     let dragX = null;
     canvas.addEventListener("pointerdown", e => {
       if (e.pointerType === "mouse" && running && !looking() && canvas.requestPointerLock) {
