@@ -246,3 +246,5 @@ nav.line{
   .race-car{ transition: none; }
   .race-car.zoom{ animation: none; }
 }
+/* a subject's own scene above the questions (Word Wizard's duel) */
+.nb-scene canvas{ display: block; width: 100%; aspect-ratio: 960 / 270; height: auto; border-radius: 12px; border: 2px solid var(--line-strong); }

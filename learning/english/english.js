@@ -317,6 +317,8 @@
       race20: ["👑", "Word Legend"], trial: ["⏱️", "Quick Thinker"], challenge: ["💪", "Big Brain"],
       century: ["💯", "Hundred Words"]
     },
-    topics: TOPICS
+    topics: TOPICS,
+    // the Wizard Duel above the questions: every right answer casts a spell at a word monster
+    scene: el => WizardDuel(el, store.english.duel = store.english.duel || {})
   });
 })();
