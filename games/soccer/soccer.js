@@ -592,7 +592,13 @@
       things.filter(t => t.d > B.NEAR || t.frame).sort((a, b) => b.d - a.d).forEach(t => {
         if (t.ball) drawBall();
         else if (t.frame) B.paint(goalFrame(t.frame));
-        else { const list = []; B.avatar(list, t.p, t.p.look); B.paint(list); }
+        else {
+          // anyone between the camera and you goes see-through, so they don't hide the game
+          const list = [], meD = B.depth(you.x, 1, you.z);
+          ctx.globalAlpha = t.p.me || t.d > meD ? 1 : clamp((t.d - 1.5) / 4, 0.25, 1);
+          B.avatar(list, t.p, t.p.look); B.paint(list);
+          ctx.globalAlpha = 1;
+        }
       });
       players.forEach(p => {
         if (B.depth(p.x, 3, p.z) < B.NEAR) return;
