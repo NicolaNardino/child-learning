@@ -33,19 +33,33 @@
 .f0-text{ color: var(--f0); font-weight: 700; } .f1-text{ color: var(--f1); font-weight: 700; } .f2-text{ color: var(--f2); font-weight: 700; }
 .f3-text{ color: var(--f3); font-weight: 700; } .f4-text{ color: var(--f4); font-weight: 700; } .f5-text{ color: var(--f5); font-weight: 700; }
 .f6-text{ color: var(--f6); font-weight: 700; } .f7-text{ color: var(--f7); font-weight: 700; } .f8-text{ color: var(--f8); font-weight: 700; }
-.tp-kb{ display: flex; flex-direction: column; gap: 4px; padding: 8px; border-radius: 10px; background: var(--paper); user-select: none; }
+/* the keyboard is tilted back in 3D, and its keys have sides you can see */
+.tp-kb{
+  display: flex; flex-direction: column; gap: 5px; padding: 10px 10px 14px; border-radius: 14px; user-select: none;
+  background: linear-gradient(#2a2f3a, #1b1f27); box-shadow: 0 14px 0 #11141a, 0 22px 30px rgba(0,0,0,0.45);
+  transform: perspective(900px) rotateX(24deg); transform-origin: 50% 100%; margin: -34px 2% 26px;
+}
 .tp-row{ display: flex; gap: 4px; }
 .tp-key{
   flex: 1 1 0; min-width: 0; height: clamp(26px, 5vw, 40px); border-radius: 6px; position: relative;
   display: flex; flex-direction: column; align-items: center; justify-content: center;
   font: 600 clamp(10px, 1.8vw, 15px) "IBM Plex Mono", monospace; color: #1a1a1a;
-  border-bottom: 3px solid rgba(0,0,0,0.25); opacity: 0.55;
+  box-shadow: 0 5px 0 rgba(0,0,0,0.45), inset 0 2px 0 rgba(255,255,255,0.45); opacity: 0.6;
+  transition: transform 0.08s, box-shadow 0.08s, opacity 0.1s;
 }
 .tp-key small{ font-size: 0.7em; line-height: 1; opacity: 0.8; }
 .tp-key.f0{ background: var(--f0); } .tp-key.f1{ background: var(--f1); } .tp-key.f2{ background: var(--f2); } .tp-key.f3{ background: var(--f3); }
 .tp-key.f4{ background: var(--f4); } .tp-key.f5{ background: var(--f5); } .tp-key.f6{ background: var(--f6); } .tp-key.f7{ background: var(--f7); } .tp-key.f8{ background: var(--f8); }
 .tp-key.bump::after{ content: ""; position: absolute; bottom: 5px; width: 30%; height: 2px; background: rgba(0,0,0,0.45); border-radius: 2px; }
-.tp-key.next{ opacity: 1; outline: 3px solid #fff; transform: translateY(-2px); box-shadow: 0 0 14px 3px rgba(255,255,255,0.55); z-index: 1; }
+.tp-key.next{ opacity: 1; outline: 3px solid #fff; z-index: 1; animation: tp-bob 0.7s ease-in-out infinite; box-shadow: 0 7px 0 rgba(0,0,0,0.45), 0 0 18px 4px rgba(255,255,255,0.6); }
+@keyframes tp-bob{ 0%,100%{ transform: translateY(-3px); } 50%{ transform: translateY(-7px); } }
+/* a key you press sinks in; a wrong one flashes red */
+.tp-key.hit{ animation: none; transform: translateY(5px); box-shadow: 0 0 0 rgba(0,0,0,0.45), 0 0 16px 4px rgba(120,255,120,0.8); opacity: 1; }
+.tp-key.miss{ animation: tp-miss 0.38s; background: #ff3b3b !important; opacity: 1; box-shadow: 0 0 0 rgba(0,0,0,0.45), 0 0 18px 5px rgba(255,60,60,0.9); transform: translateY(5px); }
+@keyframes tp-miss{ 0%,100%{ translate: 0; } 25%{ translate: -3px; } 75%{ translate: 3px; } }
+/* the race above the text */
+.tp-race{ display: block; width: 100%; aspect-ratio: 960 / 190; height: auto; border-radius: 10px; border: 2px solid var(--line-strong); }
+.tp-race[hidden]{ display: none; }
 .tp-result{ display: flex; flex-direction: column; align-items: center; gap: 8px; padding: 12px; border-radius: 10px; background: var(--paper); text-align: center; }
 .tp-stars{ font-size: 40px; color: var(--accent); letter-spacing: 6px; }
 .tp-result-text{ font-size: 14px; line-height: 1.5; }
