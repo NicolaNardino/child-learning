@@ -10,6 +10,8 @@
      data                          the object progress is saved in, inside Hub.store
      badgePrefix, badgeNames       trophy ids must be unique across apps; names can be swapped per subject
      wordy                         true for word questions, so they're not shown in the number font
+     scene                         optional: scene(el) builds something fun above the questions (like Word Wizard's duel)
+                                   and returns { answer(correct, streak), topic(id), open(), close() }
      verdicts                      optional { right: "Richtig!", wrong: "Nicht ganz – richtig ist" } for another language
      listenLabel                   optional: the 🔊 button's words, "🔊 Listen" unless it's another language
      topics: [{ id, label, icon, title, levelDesc: { warmup, practice, challenge }, hint, inputMode,
@@ -198,6 +200,8 @@
         </div>
       </section>
 
+      <section class="nb-scene" data-ref="scene" hidden></section>
+
       <section class="page" data-ref="practicePage">
         <h2 data-ref="topicTitle"></h2>
         ${card("p-")}
@@ -258,6 +262,8 @@
     let sessionAttempted = 0, sessionCorrect = 0;
     let currentProblem = null, answered = false;
     let isOpen = false;
+    const scene = cfg.scene ? cfg.scene($.scene) : null;
+    if (scene) $.scene.hidden = false;
 
     function topicNow(){ return TOPICS.find(t => t.id === currentTopicId); }
     function currentModeFor(topic){
@@ -440,6 +446,7 @@
       $.topicTitle.textContent = topic.title;
       $.levelDesc.textContent = topic.levelDesc[currentLevel];
       currentProblem = topic.generate(currentLevel, currentMode);
+      if (scene) scene.topic(topic.id);
       answered = false;
       paint(practice, currentProblem, topic);
       $.hintText.textContent = currentProblem.hint || topic.hint;
@@ -470,6 +477,7 @@
       }
       $.explain.innerHTML = currentProblem.explain();
       lock(practice, val);
+      if (scene) scene.answer(correct, d.streak);
       if (!raceStarted && !raceLocked) raceStarted = true;
       raceStep(correct);
       Hub.checkBadges();
@@ -587,6 +595,7 @@
         $.trialQuickFeedback.className = "trial-quick incorrect";
       }
       lock(trial, val);
+      if (scene) scene.answer(correct, 0);
       $.trialProgressFill.style.width = (trialIndex / TRIAL_LENGTH * 100) + "%";
       if (trialAdvanceTimeout) clearTimeout(trialAdvanceTimeout);
       // word answers get a little longer, so there's time to read the right one
@@ -767,6 +776,7 @@
 
     function open(){
       isOpen = true;
+      if (scene) scene.open();
       updateNameDisplay();
       renderTopicNav();
       if (trialActive) focusCard(trial);
@@ -775,6 +785,7 @@
     }
     function close(){
       isOpen = false;
+      if (scene) scene.close();
       if (trialActive) exitTimeTrial();
       if (canSpeak) speechSynthesis.cancel();
     }

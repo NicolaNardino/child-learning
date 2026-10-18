@@ -37,6 +37,12 @@
         </div>
         <div class="game-stage">
           <canvas id="soCanvas" width="960" height="540"></canvas>
+          <!-- on phones and tablets: a joystick to run with, and big PASS and SHOOT buttons over the pitch -->
+          <div class="so-stick" id="soStick" aria-label="Joystick: drag to run"><div class="so-knob" id="soKnob"></div></div>
+          <div class="so-btns">
+            <button class="so-btn so-pass" data-sokey="pass" type="button" aria-label="Pass">PASS</button>
+            <button class="so-btn so-shoot" data-sokey="shoot" type="button" aria-label="Shoot">SHOOT</button>
+          </div>
           <div class="game-panel so-panel" id="soPanel">
             <div class="game-panel-title" id="soPanelTitle">Blox Soccer</div>
             <div class="game-panel-text" id="soPanelText"></div>
@@ -44,14 +50,7 @@
           </div>
         </div>
         <div class="game-help">W A S D or the arrow keys to run (run into the ball to dribble) · hold Space to shoot, longer = harder · E to pass · run into the red player with the ball to tackle</div>
-        <div class="game-touch">
-          <button class="btn ghost" data-sokey="left" type="button" aria-label="Run left">◀</button>
-          <button class="btn ghost" data-sokey="up" type="button" aria-label="Run forward">▲</button>
-          <button class="btn ghost" data-sokey="down" type="button" aria-label="Run back">▼</button>
-          <button class="btn ghost" data-sokey="right" type="button" aria-label="Run right">▶</button>
-          <button class="btn ghost" data-sokey="pass" type="button" aria-label="Pass">PASS</button>
-          <button class="btn" data-sokey="shoot" type="button" aria-label="Shoot">SHOOT</button>
-        </div>
+
       </div>
     </section>`;
 
@@ -69,6 +68,7 @@
     let charging = false, charge = 0, camYaw = 0, cheer = 0;
     let banner = { text: "", sub: "", t: 0 };
     const keys = { left: false, right: false, up: false, down: false };
+    const stick = { x: 0, y: 0, on: false };   // the touch joystick: x right, y down, each -1 to 1
     const fx = Fun.pops();
 
     /* ----- the players ----- */
@@ -416,9 +416,12 @@
     /* ----- you ----- */
     function stepYou(dt){
       if (phase !== "play") { moveBody(you, 0, 0, 0, dt); return; }
-      const fwd = (keys.up ? 1 : 0) - (keys.down ? 1 : 0), side = (keys.right ? 1 : 0) - (keys.left ? 1 : 0);
+      let fwd = (keys.up ? 1 : 0) - (keys.down ? 1 : 0), side = (keys.right ? 1 : 0) - (keys.left ? 1 : 0), push = 1;
+      // the joystick: push it a little to jog, all the way to sprint
+      const m = Math.hypot(stick.x, stick.y);
+      if (stick.on && m > 0.15) { fwd = -stick.y; side = stick.x; push = Math.min(1, 0.35 + m * 0.75); }
       // the keys go the way the camera looks
-      moveBody(you, side * cam.c + fwd * cam.s, -side * cam.s + fwd * cam.c, ball.owner === you ? RUN * 0.92 : RUN, dt);
+      moveBody(you, side * cam.c + fwd * cam.s, -side * cam.s + fwd * cam.c, (ball.owner === you ? RUN * 0.92 : RUN) * push, dt);
       if (charging) charge = Math.min(1, charge + dt / 0.7);
     }
 
@@ -671,6 +674,7 @@
       running = true;
       panel.hidden = true;
       Object.keys(keys).forEach(k => { keys[k] = false; });
+      dropStick();
       canvas.focus();
     }
     function fullTime(){
@@ -728,7 +732,21 @@
       if (e.code === "Space" && open) { releaseShot(); return; }
       const k = KEYMAP[e.code]; if (k) keys[k] = false;
     });
-    window.addEventListener("blur", () => { Object.keys(keys).forEach(k => { keys[k] = false; }); charging = false; });
+    window.addEventListener("blur", () => { Object.keys(keys).forEach(k => { keys[k] = false; }); charging = false; stick.on = false; });
+    // the joystick follows your thumb (it can go a little outside the ring) and springs back when you let go
+    const stickEl = $("soStick"), knob = $("soKnob");
+    function moveStick(e){
+      const r = stickEl.getBoundingClientRect(), R = r.width / 2;
+      let dx = (e.clientX - r.left - R) / R, dy = (e.clientY - r.top - R) / R;
+      const m = Math.hypot(dx, dy);
+      if (m > 1) { dx /= m; dy /= m; }
+      stick.x = dx; stick.y = dy;
+      knob.style.transform = `translate(${dx * R * 0.6}px, ${dy * R * 0.6}px)`;
+    }
+    function dropStick(){ stick.on = false; stick.x = stick.y = 0; knob.style.transform = ""; stickEl.classList.remove("on"); }
+    stickEl.addEventListener("pointerdown", e => { e.preventDefault(); stick.on = true; stickEl.classList.add("on"); stickEl.setPointerCapture(e.pointerId); moveStick(e); });
+    stickEl.addEventListener("pointermove", e => { if (stick.on) moveStick(e); });
+    ["pointerup", "pointercancel", "lostpointercapture"].forEach(ev => stickEl.addEventListener(ev, dropStick));
     host.querySelectorAll("[data-sokey]").forEach(btn => {
       const k = btn.dataset.sokey;
       btn.addEventListener("pointerdown", e => {
