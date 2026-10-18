@@ -2,6 +2,8 @@
 
 Learning and games for a 5th grader. The home screen asks **Learning** or **Games**, and each one lists its apps and has its own 🏆 trophy shelf.
 
+▶️ **Play it here: https://nicolanardino.github.io/child-learning/**
+
 There's nothing to install and no build step. Just open `index.html` in a browser.
 
 ## 📚 Learning
