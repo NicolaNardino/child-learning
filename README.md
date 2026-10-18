@@ -94,6 +94,10 @@ The address bar keeps track of where you are: `#/` is home, `#/games` is a secti
 
 Progress is saved in this browser's `localStorage` under one key, shared by every app.
 
+### Smoke test
+
+Every pull request and every push to `main` runs a GitHub Actions check (`.github/workflows/smoke.yml`): it makes sure every script parses, then `tests/smoke.mjs` opens every Learning subject and every game in a headless Chromium, presses Play, and fails if any page throws an error. To run it yourself: `npm install --no-save playwright && npx playwright install chromium && node tests/smoke.mjs`.
+
 ### Adding a new app
 
 1. Make a folder, like `learning/spelling/` or `games/snake/`, with a `.js` file (and a `.css` file if it needs one).
