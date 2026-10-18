@@ -1,7 +1,9 @@
 /* Tipp-Meister: 10-Finger-Schreiben auf der Schweizer Tastatur (QWERTZ), in 80 Lektionen wie bei Typewriter:
    zuerst die Grundreihe, dann alle Buchstaben, Grossbuchstaben, Zahlen und Zeichen, und zuletzt Sätze und Texte.
    Die nächste Taste leuchtet auf der Bildschirm-Tastatur, in der Farbe des Fingers, der sie drückt.
-   Man darf jede Lektion wählen; bestanden ist sie mit höchstens 5 % Fehlern. */
+   Man darf jede Lektion wählen; bestanden ist sie mit höchstens 5 % Fehlern.
+   Dazu ein Autorennen in 3D: dein Auto fährt so schnell, wie du tippst, gegen Robo, der im Tempo für 3 Sterne
+   fährt. Viele richtige Tasten am Stück geben eine Combo mit Feuer. Die Tasten sinken beim Tippen ein. */
 (function(){
   "use strict";
   const store = Hub.store;
@@ -176,7 +178,9 @@
       { id: "type80",   icon: "👑", name: "Tipp-Meister",   desc: "Bestehe alle 80 Lektionen",          test: () => passed() >= COUNT },
       { id: "type100",  icon: "🚀", name: "100 Anschläge",  desc: "Schreibe 100 Anschläge pro Minute",  test: () => (T.topApm || 0) >= 100 },
       { id: "type150",  icon: "⚡", name: "150 Anschläge",  desc: "Schreibe 150 Anschläge pro Minute",  test: () => (T.topApm || 0) >= 150 },
-      { id: "typeZero", icon: "💎", name: "Null Fehler",    desc: "Eine Lektion ganz ohne Fehler",       test: () => !!T.perfect }
+      { id: "typeZero", icon: "💎", name: "Null Fehler",    desc: "Eine Lektion ganz ohne Fehler",       test: () => !!T.perfect },
+      { id: "typeRobo", icon: "🏎️", name: "Robo geschlagen", desc: "Gewinne ein Rennen gegen Robo",      test: () => (T.roboWins || 0) >= 1 },
+      { id: "typeCombo", icon: "🔥", name: "Feuer-Combo",   desc: "Tippe 50 Tasten am Stück richtig",    test: () => (T.topCombo || 0) >= 50 }
     ],
     mount
   });
@@ -198,6 +202,7 @@
           <h2 id="tpTitle"></h2>
           <div class="tp-stats mono"><span id="tpTime">0:00</span><span id="tpApm">0 A/min</span><span id="tpErr">0 Fehler</span></div>
         </div>
+        <canvas class="tp-race" id="tpRace" width="960" height="190" aria-hidden="true"></canvas>
         <div class="tp-text mono" id="tpText" tabindex="0" aria-label="Text zum Abschreiben"></div>
         <textarea class="tp-input" id="tpInput" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" aria-label="Hier tippen"></textarea>
         <div class="tp-hint" id="tpHint"></div>
@@ -212,6 +217,7 @@
         </div>
         <div class="card-foot">
           <button class="btn ghost small" id="tpRestart" type="button">↻ Neu starten</button>
+          <button class="btn ghost small" id="tpRaceBtn" type="button">🏎️ Rennen: an</button>
           <span class="level-desc">Tipp: Die Zeigefinger liegen auf f und j – dort spürst du kleine Rillen.</span>
         </div>
       </section>
@@ -219,6 +225,7 @@
     const $ = id => document.getElementById(id);
     const textEl = $("tpText"), input = $("tpInput"), kb = $("tpKb"), hint = $("tpHint");
     let L = null, text = "", pos = 0, errors = 0, wrongAt = new Set(), startT = 0, timer = null, done = false, isOpen = false;
+    let combo = 0;
 
     /* ----- die Bildschirm-Tastatur ----- */
     const keyEls = {};
@@ -237,6 +244,140 @@
       });
       kb.appendChild(r);
     });
+
+    // die Taste sinkt kurz ein (grün), oder blinkt rot bei einem Fehler
+    function press(info, kind){
+      if (!info) return;
+      const els = [keyEls[info.key === " " ? "space" : info.key]];
+      if (info.shift) els.push(keyEls[info.finger <= 3 ? "shiftR" : "shiftL"]);
+      els.forEach(el => {
+        if (!el) return;
+        el.classList.remove("hit", "miss"); void el.offsetWidth; el.classList.add(kind);
+        clearTimeout(el._t); el._t = setTimeout(() => el.classList.remove(kind), kind === "miss" ? 380 : 160);
+      });
+    }
+
+    /* ----- das Rennen: eine Strasse in 3D durch die Berge, du gegen Robo ----- */
+    const race = (() => {
+      const cv = $("tpRace"), ctx = cv.getContext("2d"), W = 960, H = 190, HOR = 70;
+      const fx = Fun.pops();
+      let shown = 0, robo = 0, roll = 0, speed = 0, last = 0, wobble = 0, ahead = null, fire = 0, raf = 0;
+      const on = () => T.race !== false;
+      // where a spot on the road ends up on the screen: z = 1 is right in front of you, bigger is further away
+      const at = (lane, z) => { const k = 1 / z; return { x: W / 2 + lane * W * 0.42 * k, y: HOR + (H - HOR) * k, s: k }; };
+      const roboPos = () => {
+        if (!startT || !L) return 0;
+        const secs = (performance.now() - startT) / 1000;
+        return Math.min(text.length, secs * target(L.n) / 60);
+      };
+      function car(x, y, s, body, top, label, flames){
+        const w = 120 * s, h = 34 * s;
+        ctx.fillStyle = "rgba(0,0,0,0.3)"; ctx.beginPath(); ctx.ellipse(x, y + 2 * s, w * 0.55, 8 * s, 0, 0, 7); ctx.fill();
+        if (flames) {
+          for (let i = 0; i < 3; i++) {
+            const fl = 18 + Math.random() * 22 * flames;
+            ctx.fillStyle = ["#ffe14d", "#ff9f1a", "#ff4d1a"][i];
+            ctx.beginPath(); ctx.moveTo(x - w * 0.3 + i * w * 0.3 - 8 * s, y - h * 0.3); ctx.lineTo(x - w * 0.3 + i * w * 0.3, y - h * 0.3 + fl * s); ctx.lineTo(x - w * 0.3 + i * w * 0.3 + 8 * s, y - h * 0.3); ctx.fill();
+          }
+        }
+        ctx.fillStyle = "#1b1b1b";
+        [[-0.38, 0], [0.38, 0]].forEach(([dx]) => { ctx.fillRect(x + dx * w - 11 * s, y - 14 * s, 22 * s, 16 * s); });
+        ctx.fillStyle = body; round(x - w / 2, y - h - 6 * s, w, h, 10 * s); ctx.fill();
+        ctx.fillStyle = top; round(x - w * 0.3, y - h - 26 * s, w * 0.6, 24 * s, 8 * s); ctx.fill();
+        ctx.fillStyle = "rgba(170,220,255,0.9)"; round(x - w * 0.24, y - h - 22 * s, w * 0.48, 15 * s, 5 * s); ctx.fill();
+        ctx.fillStyle = "#ff3b3b"; ctx.fillRect(x - w / 2 + 6 * s, y - h + 6 * s, 14 * s, 6 * s); ctx.fillRect(x + w / 2 - 20 * s, y - h + 6 * s, 14 * s, 6 * s);
+        if (label) { ctx.font = `bold ${Math.max(11, 16 * s)}px system-ui`; ctx.textAlign = "center"; ctx.fillStyle = "#fff"; ctx.strokeStyle = "rgba(0,0,0,0.6)"; ctx.lineWidth = 3; ctx.strokeText(label, x, y - h - 34 * s); ctx.fillText(label, x, y - h - 34 * s); }
+      }
+      function round(x, y, w, h, r){ ctx.beginPath(); ctx.moveTo(x + r, y); ctx.arcTo(x + w, y, x + w, y + h, r); ctx.arcTo(x + w, y + h, x, y + h, r); ctx.arcTo(x, y + h, x, y, r); ctx.arcTo(x, y, x + w, y, r); ctx.closePath(); }
+      function draw(now){
+        raf = 0;
+        if (!isOpen || !on()) return;
+        const dt = Math.min(0.05, (now - last) / 1000 || 0); last = now;
+        shown += (pos - shown) * Math.min(1, dt * 10);
+        robo = done ? robo : roboPos();
+        speed += ((startT && !done ? stats().apm : 0) / 60 - speed) * Math.min(1, dt * 2);
+        roll += speed * dt * 0.35; wobble = Math.max(0, wobble - dt * 2); fire = combo >= 10 ? Math.min(1, (combo - 5) / 30) : 0;
+        // the sky, the Alps and the lake
+        const sky = ctx.createLinearGradient(0, 0, 0, HOR); sky.addColorStop(0, "#4f9be8"); sky.addColorStop(1, "#cfe6ff");
+        ctx.fillStyle = sky; ctx.fillRect(0, 0, W, HOR);
+        const peaks = [[60, 38], [170, 22], [290, 44], [410, 16], [540, 36], [660, 20], [790, 40], [900, 26]];
+        peaks.forEach(([px, py]) => {
+          const x = ((px - roll * 4) % (W + 200) + W + 200) % (W + 200) - 100;
+          ctx.fillStyle = "#7c8ba3"; ctx.beginPath(); ctx.moveTo(x - 90, HOR); ctx.lineTo(x, py); ctx.lineTo(x + 90, HOR); ctx.fill();
+          ctx.fillStyle = "#ffffff"; ctx.beginPath(); ctx.moveTo(x - 22, py + 16); ctx.lineTo(x, py); ctx.lineTo(x + 22, py + 16); ctx.fill();
+        });
+        ctx.fillStyle = "#6cc04a"; ctx.fillRect(0, HOR, W, H - HOR);
+        // the road, with stripes rushing past
+        const near = at(-1.15, 1), far = at(-1.15, 40), near2 = at(1.15, 1), far2 = at(1.15, 40);
+        ctx.fillStyle = "#555b66"; ctx.beginPath(); ctx.moveTo(near.x, H); ctx.lineTo(far.x, far.y); ctx.lineTo(far2.x, far2.y); ctx.lineTo(near2.x, H); ctx.fill();
+        for (let k = 0; k < 40; k++) {
+          const z0 = 1 + k * 0.9 - (roll % 1.8), z1 = z0 + 0.45;
+          if (z0 < 0.95) continue;
+          const a = at(0, z0), b = at(0, z1);
+          ctx.strokeStyle = "#fff"; ctx.lineWidth = 6 * a.s; ctx.beginPath(); ctx.moveTo(a.x, a.y); ctx.lineTo(b.x, b.y); ctx.stroke();
+          // red and white kerbs, and trees on the side
+          [-1.2, 1.2].forEach(l => { const c = at(l, z0), d = at(l, z1); ctx.strokeStyle = k % 2 ? "#ff4d4d" : "#fff"; ctx.lineWidth = 10 * c.s; ctx.beginPath(); ctx.moveTo(c.x, c.y); ctx.lineTo(d.x, d.y); ctx.stroke(); });
+        }
+        for (let k = 0; k < 14; k++) {
+          const z = 1.2 + k * 2.6 - (roll * 1.4 % 2.6);
+          [-1.9, 1.9].forEach((l, j) => {
+            const t = at(l + (k % 2 ? 0.3 : 0) * (j ? 1 : -1), z);
+            if (t.y < HOR + 2) return;
+            ctx.fillStyle = "#2f7d32"; ctx.beginPath(); ctx.moveTo(t.x - 26 * t.s, t.y); ctx.lineTo(t.x, t.y - 70 * t.s); ctx.lineTo(t.x + 26 * t.s, t.y); ctx.fill();
+          });
+        }
+        // the finish line, once it's close
+        const zf = 1 + (text.length - shown) * 0.12;
+        if (zf < 40 && text.length) {
+          const a = at(-1.15, zf), b = at(1.15, zf), n = 12;
+          for (let i = 0; i < n; i++) { ctx.fillStyle = i % 2 ? "#111" : "#fff"; ctx.fillRect(a.x + (b.x - a.x) * i / n, a.y - 6 * a.s, (b.x - a.x) / n + 1, 10 * a.s); }
+        }
+        // Robo, and you
+        const gap = robo - shown, rz = Math.max(0.9, 1.35 + gap * 0.12), r = at(-0.5, rz);
+        const me = at(0.5, 1.35), sway = Math.sin(now / 40) * wobble * 14;
+        const cars = [{ z: rz, f: () => car(r.x, r.y, r.s, "#d62b2b", "#a81f1f", rz < 6 ? (gap < 0 ? "🤖 Robo (hinter dir)" : "🤖 Robo") : "", 0) },
+                      { z: 1.35, f: () => car(me.x + sway, me.y, me.s, "#1f6bff", "#1650c8", "", fire) }];
+        cars.sort((a, b) => b.z - a.z).forEach(c => c.f());
+        if (rz >= 6 && gap > 0) { ctx.font = "bold 13px system-ui"; ctx.fillStyle = "#fff"; ctx.textAlign = "center"; ctx.fillText(`🤖 Robo ist ${Math.round(gap)} Zeichen vor dir`, W / 2, HOR + 14); }
+        // passing and being passed
+        if (startT && !done) {
+          const now2 = gap < 0;
+          if (ahead !== null && now2 !== ahead) {
+            fx.pop(now2 ? "ÜBERHOLT! 😎" : "Robo überholt! 🤖", W / 2, 60, now2 ? "#ffe14d" : "#ff8a8a", 30);
+            if (now2) Fun.sfx.whoosh(); else Fun.sfx.honk();
+          }
+          ahead = now2;
+        }
+        // the speedo and the combo
+        ctx.fillStyle = "rgba(10,20,45,0.6)"; round(10, 10, 150, 30, 8); ctx.fill();
+        ctx.font = "bold 15px system-ui"; ctx.fillStyle = "#fff"; ctx.textAlign = "left"; ctx.textBaseline = "middle";
+        ctx.fillText(`🏎️ ${startT ? stats().apm : 0} A/min`, 20, 25);
+        if (combo >= 5) {
+          ctx.fillStyle = combo >= 10 ? "rgba(255,120,30,0.9)" : "rgba(10,20,45,0.6)"; round(W - 170, 10, 160, 30, 8); ctx.fill();
+          ctx.fillStyle = "#fff"; ctx.textAlign = "right"; ctx.fillText(`${combo >= 10 ? "🔥" : "✨"} Combo ${combo}`, W - 20, 25);
+        }
+        ctx.textBaseline = "alphabetic";
+        fx.draw(ctx, dt);
+        raf = requestAnimationFrame(draw);
+      }
+      return {
+        start(){ cv.hidden = !on(); if (!raf && on()) { last = performance.now(); raf = requestAnimationFrame(draw); } },
+        stop(){ if (raf) cancelAnimationFrame(raf); raf = 0; },
+        reset(){ shown = 0; robo = 0; ahead = null; fx.clear(); },
+        good(c){
+          if (c && c % 10 === 0) { fx.pop(c >= 50 ? `MEGA COMBO ${c}! 🔥🔥` : `COMBO ${c}! 🔥`, W * 0.72, 70, "#ffb347", 26 + Math.min(16, c / 5)); Fun.sfx.ding(); }
+          if (c > (T.topCombo || 0)) T.topCombo = c;
+        },
+        oops(){ wobble = 1; if (combo === 0) fx.pop(["Oops!", "Hoppla!", "Huch!"][Math.floor(Math.random() * 3)], W * 0.62, 90, "#ff8a8a", 22); Fun.sfx.nope(); },
+        finish(ok){
+          const won = ok && pos >= robo - 0.5;
+          if (won) { T.roboWins = (T.roboWins || 0) + 1; fx.pop("🏆 Du hast Robo geschlagen!", W / 2, 70, "#ffe14d", 32); fx.burst(W / 2, 70, "#ffe14d", 40, 260); Fun.sfx.tada(); }
+          else if (ok) { fx.pop("Robo war schneller 🤖 Nochmal?", W / 2, 70, "#ffffff", 26); Fun.sfx.ding(); }
+          else Fun.sfx.wah();
+        },
+        toggle(){ T.race = !on(); Hub.saveStore(); $("tpRaceBtn").textContent = `🏎️ Rennen: ${on() ? "an" : "aus"}`; cv.hidden = !on(); if (on()) this.start(); else this.stop(); }
+      };
+    })();
 
     function renderGrid(){
       const grid = $("tpGrid");
@@ -258,7 +399,8 @@
       L = LESSONS[Math.max(1, Math.min(COUNT, n))];
       T.lesson = L.n; Hub.saveStore();
       text = makeText(L);
-      pos = 0; errors = 0; wrongAt = new Set(); startT = 0; done = false;
+      pos = 0; errors = 0; wrongAt = new Set(); startT = 0; done = false; combo = 0;
+      race.reset();
       clearInterval(timer); timer = null;
       $("tpTitle").textContent = `Lektion ${L.n}: ${L.title}`;
       $("tpResult").hidden = true;
@@ -315,12 +457,17 @@
     function typeChar(ch){
       if (done || !L) return;
       if (!startT) { startT = performance.now(); timer = setInterval(update, 500); }
-      if (same(ch, text[pos])) {
-        pos++;
+      const want = text[pos];
+      if (same(ch, want)) {
+        press(CHAR[want], "hit");
+        pos++; combo++;
+        race.good(combo);
         if (pos >= text.length) finish();
       } else {
-        errors++;
+        press(CHAR[ch] || CHAR[want], "miss");
+        errors++; combo = 0;
         wrongAt.add(pos);
+        race.oops();
         textEl.classList.remove("shake"); void textEl.offsetWidth; textEl.classList.add("shake");
       }
       update();
@@ -338,6 +485,7 @@
         T.topApm = Math.max(T.topApm || 0, s.apm);
         if (errors === 0) T.perfect = true;
       }
+      race.finish(ok);
       Hub.saveStore();
       Hub.checkBadges();
       $("tpStars").textContent = ok ? "★".repeat(stars) + "☆".repeat(3 - stars) : "☆☆☆";
@@ -365,14 +513,17 @@
     });
     [textEl, kb, hint].forEach(el => el.addEventListener("click", focus));
     $("tpRestart").addEventListener("click", () => start(L.n));
+    $("tpRaceBtn").addEventListener("click", () => { race.toggle(); focus(); });
+    $("tpRaceBtn").textContent = `🏎️ Rennen: ${T.race !== false ? "an" : "aus"}`;
+    Fun.soundButton($("tpRestart"));
     $("tpAgain").addEventListener("click", () => start(L.n));
     $("tpNext").addEventListener("click", () => start(L.n + 1));
 
     start(T.lesson);
 
     return {
-      open(){ isOpen = true; renderGrid(); focus(); },
-      close(){ isOpen = false; clearInterval(timer); timer = null; if (!done && startT) start(L.n); }
+      open(){ isOpen = true; renderGrid(); focus(); race.start(); },
+      close(){ isOpen = false; race.stop(); clearInterval(timer); timer = null; if (!done && startT) start(L.n); }
     };
   }
 
