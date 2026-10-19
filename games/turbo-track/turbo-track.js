@@ -198,9 +198,9 @@
         </div>
         <div class="game-help">↑ or W to drive · ↓ or S to brake · ← → or A D to steer · C to switch camera · hit the ⚡ boosters before the jump and the loop!</div>
         <div class="game-touch">
-          <button class="btn ghost" data-key="left" type="button" aria-label="Steer left">◀</button>
-          <button class="btn ghost" data-key="right" type="button" aria-label="Steer right">▶</button>
-          <button class="btn ghost" data-key="brake" type="button" aria-label="Brake">🛑</button>
+          <button class="btn ghost fun-dpad" data-key="left" type="button" aria-label="Steer left">◀</button>
+          <button class="btn ghost fun-dpad" data-key="right" type="button" aria-label="Steer right">▶</button>
+          <button class="btn ghost fun-dpad" data-key="brake" type="button" aria-label="Brake">🛑</button>
           <button class="btn" data-key="gas" type="button" aria-label="Drive">⛽ GO</button>
         </div>
       </div>
@@ -333,6 +333,7 @@
     }
 
     function driveMe(dt){
+      Fun.stickKeys(stick, keys, { left: "left", right: "right", up: "gas", down: "brake" });
       const c = me;
       if (c.rail) { rideRail(c, dt); return; }
       const top = c.boostT > 0 ? c.maxV * 1.45 : c.maxV;
@@ -977,6 +978,7 @@
     }
 
     /* ---------------- controls ---------------- */
+    const stick = Fun.joystick(canvas.parentElement);   // on phones: steer, push up for gas, down to brake
     const KEYMAP = { ArrowLeft: "left", KeyA: "left", ArrowRight: "right", KeyD: "right", ArrowUp: "gas", KeyW: "gas", ArrowDown: "brake", KeyS: "brake", Space: "brake" };
     window.addEventListener("keydown", e => {
       if (!open) return;

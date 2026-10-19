@@ -36,10 +36,10 @@
         </div>
         <div class="game-help">Click the game to look around with the mouse · W A S D to walk · ← → or Q E to turn · click or Space to blast · Esc lets go of the mouse</div>
         <div class="game-touch">
-          <button class="btn ghost" data-zkey="left" type="button" aria-label="Turn left">↶</button>
-          <button class="btn ghost" data-zkey="up" type="button" aria-label="Walk forward">▲</button>
-          <button class="btn ghost" data-zkey="down" type="button" aria-label="Back up">▼</button>
-          <button class="btn ghost" data-zkey="right" type="button" aria-label="Turn right">↷</button>
+          <button class="btn ghost fun-dpad" data-zkey="left" type="button" aria-label="Turn left">↶</button>
+          <button class="btn ghost fun-dpad" data-zkey="up" type="button" aria-label="Walk forward">▲</button>
+          <button class="btn ghost fun-dpad" data-zkey="down" type="button" aria-label="Back up">▼</button>
+          <button class="btn ghost fun-dpad" data-zkey="right" type="button" aria-label="Turn right">↷</button>
           <button class="btn" data-zkey="fire" type="button" aria-label="Blast">💥 BLAST</button>
         </div>
       </div>
@@ -195,6 +195,7 @@
 
     function updateHero(dt){
       const h = hero;
+      Fun.stickKeys(stick, zbKeys, { left: "left", right: "right", up: "up", down: "down" });
       h.a += ((zbKeys.right ? 1 : 0) - (zbKeys.left ? 1 : 0)) * ZB_TURN * dt;
       const fwd = (zbKeys.up ? 1 : 0) - (zbKeys.down ? 1 : 0), side = (zbKeys.strafeR ? 1 : 0) - (zbKeys.strafeL ? 1 : 0);
       const s = Math.sin(h.a), c = Math.cos(h.a);
@@ -981,6 +982,7 @@
       const r = zbCanvas.getBoundingClientRect();
       zbMouse = [(e.clientX - r.left) / r.width * ZW, (e.clientY - r.top) / r.height * ZH];
     }
+    const stick = Fun.joystick(zbCanvas.parentElement);   // on phones: left and right turn, up and down walk
     zbCanvas.addEventListener("pointermove", trackMouse);
     zbCanvas.addEventListener("pointerdown", e => {
       trackMouse(e);
