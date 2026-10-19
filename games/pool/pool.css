@@ -1,0 +1,28 @@
+/* Blox Pool fills the screen. */
+#plOverlay .game-box{ width: min(100%, calc((100vh - 110px) * 16 / 9)); }
+@media (pointer: coarse){ #plOverlay .game-box{ width: min(100%, calc((100vh - 170px) * 16 / 9)); } }
+@media (max-height: 500px){
+  #plOverlay .game-box{
+    width: min(100%, calc((100vh - 100px) * 16 / 9));
+    width: min(100%, calc((100dvh - 100px) * 16 / 9));
+  }
+}
+#plCanvas:focus{ outline: none; }
+#plCanvas{
+  display: block; width: 100%; aspect-ratio: 16 / 9; height: auto;
+  border-radius: 12px; border: 2px solid rgba(255,255,255,0.25);
+  background: #241a55; touch-action: none; cursor: crosshair;
+}
+.pl-panel{ background: rgba(20,12,50,0.7); }
+/* the POWER bar on the right: drag up and let go to shoot */
+.pl-power{
+  position: absolute; right: 1%; top: 18%; height: 56%; width: clamp(30px, 5%, 46px); z-index: 2; touch-action: none;
+  display: flex; align-items: flex-end; border-radius: 10px; overflow: hidden; cursor: ns-resize;
+  background: rgba(0,0,0,0.45); border: 3px solid rgba(255,255,255,0.6);
+}
+.pl-power[hidden]{ display: none; }
+.pl-fill{ width: 100%; height: 0; background: linear-gradient(to top, #38d96b, #ffe14d 60%, #ff4b3a); }
+.pl-power span{
+  position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%) rotate(-90deg);
+  font: 800 11px system-ui, sans-serif; letter-spacing: 0.1em; color: #fff; text-shadow: 0 1px 2px rgba(0,0,0,0.8); pointer-events: none;
+}
