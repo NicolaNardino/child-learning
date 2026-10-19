@@ -1,0 +1,19 @@
+/* Blox Bowling fills the screen. */
+#bwOverlay .game-box{ width: min(100%, calc((100vh - 110px) * 16 / 9)); }
+@media (pointer: coarse){ #bwOverlay .game-box{ width: min(100%, calc((100vh - 170px) * 16 / 9)); } }
+@media (max-height: 500px){
+  #bwOverlay .game-box{
+    width: min(100%, calc((100vh - 100px) * 16 / 9));
+    width: min(100%, calc((100dvh - 100px) * 16 / 9));
+  }
+}
+#bwCanvas:focus{ outline: none; }
+#bwCanvas{
+  display: block; width: 100%; aspect-ratio: 16 / 9; height: auto;
+  border-radius: 12px; border: 2px solid rgba(255,255,255,0.25);
+  background: #1b0f3f; touch-action: none; cursor: grab;
+}
+.bw-panel{ background: rgba(20,10,50,0.72); }
+.bw-modes{ display: flex; flex-wrap: wrap; gap: 6px; justify-content: center; }
+.bw-modes .btn.ghost{ color: #fff; border-color: rgba(255,255,255,0.4); }
+.bw-modes .btn[aria-pressed="true"]{ background: #ffe14d; color: #14102c; border-color: #ffe14d; }
