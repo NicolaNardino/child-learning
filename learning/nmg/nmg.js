@@ -325,6 +325,8 @@
       race20: ["👑", "Wissens-König"], trial: ["⏱️", "Blitzmerker"], challenge: ["💪", "Schlaukopf"],
       century: ["💯", "Hundert Fakten"]
     },
-    topics: TOPICS
+    topics: TOPICS,
+    // the Ballonfahrt above the questions: every right answer brings up a find for the topic
+    scene: el => NmgExplorer(el, store.nmg.explore = store.nmg.explore || {})
   });
 })();
