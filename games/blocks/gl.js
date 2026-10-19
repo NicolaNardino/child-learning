@@ -267,7 +267,7 @@
 
   function createGL(canvas){
     let gl = null;
-    try { gl = canvas.getContext("webgl", { antialias: true, alpha: false, powerPreference: "high-performance" }); } catch (e) {}
+    try { gl = canvas.getContext("webgl", { antialias: window.Fun ? Fun.quality() === "high" : true, alpha: false, powerPreference: "high-performance" }); } catch (e) {}
     if (!gl) return null;
 
     function program(vs, fs, attribs){

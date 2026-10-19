@@ -912,7 +912,7 @@
 
     function resize(){
       const r = canvas.getBoundingClientRect();
-      const k = Math.max(1, Math.min(2, (r.width * (window.devicePixelRatio || 1)) / W));
+      const k = Fun.res(r.width, W, 2);
       const w = Math.round(W * k), h = Math.round(H * k);
       if (canvas.width !== w || canvas.height !== h) { canvas.width = w; canvas.height = h; }
     }

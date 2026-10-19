@@ -7,6 +7,8 @@
      Fun.soundButton(el) a 🔊/🔇 button put just before el (all the games share the one setting)
      Fun.shake(el)       wobbles an element, for a crash or a hit
      Fun.hint(stage)     a tip that pops up at the top of a game for a few seconds: { show(text, ms), hide() }
+     Fun.quality()       "high" or "low": the graphics setting (Auto switches to low by itself when a game runs slowly)
+     Fun.res(cssW, W, max) the pixel scale a canvas should use, lower on low quality
      Fun.joystick(stage) a thumb joystick in the bottom-left corner, on phones and tablets only:
                          { x, y, on, reset() }, x right and y down, each -1 to 1
    Sounds are on unless Hub.store.sound is false. */
@@ -184,5 +186,43 @@
     return st;
   }
 
-  window.Fun = { pops, sfx, face, soundButton, shake, hint, joystick };
+  /* ---------------- graphics quality: Auto, High or Low ----------------
+     Low draws at the normal resolution instead of the sharp one and drops some of the extras, so older phones
+     keep up. In Auto, a little watcher times the frames while a game is on screen and switches to Low after a
+     few slow seconds (and says so). The choice is saved in store.quality; "auto" is the default. */
+  const quality = () => store.quality === "low" || (store.quality !== "high" && store.qualityAuto === "low") ? "low" : "high";
+  const res = (cssW, W, max) => Math.min(quality() === "low" ? 1 : max, Math.max(1, cssW * (window.devicePixelRatio || 1) / W));
+  const QUALITY_LABEL = { auto: "Auto", high: "High", low: "Low" };
+  function qualityText(){ const q = store.quality || "auto"; return `⚙️ Graphics: ${QUALITY_LABEL[q]}${q === "auto" && store.qualityAuto === "low" ? " (now low)" : ""}`; }
+  function setQuality(q){
+    store.quality = q; if (q !== "auto") delete store.qualityAuto;
+    Hub.saveStore();
+    document.querySelectorAll("[data-quality-btn]").forEach(b => { b.textContent = qualityText(); });
+  }
+  function cycleQuality(){ setQuality({ auto: "high", high: "low", low: "auto" }[store.quality || "auto"]); }
+  (function watch(){
+    let last = 0, slow = 0, acc = 0, frames = 0;
+    function tick(now){
+      const dt = now - last; last = now;
+      if (dt > 0 && dt < 500 && document.querySelector(".game-screen:not([hidden])")) { acc += dt; frames++; }
+      if (acc >= 1000) {
+        const fps = frames * 1000 / acc;
+        slow = fps < 30 ? slow + 1 : Math.max(0, slow - 1);
+        acc = 0; frames = 0;
+        if (slow >= 4 && (store.quality || "auto") === "auto" && store.qualityAuto !== "low") {
+          store.qualityAuto = "low"; Hub.saveStore(); slow = 0;
+          document.querySelectorAll("[data-quality-btn]").forEach(b => { b.textContent = qualityText(); });
+          const stage = document.querySelector(".game-screen:not([hidden]) .game-stage");
+          if (stage) hint(stage).show("🐢 Running slowly, so graphics are lower now. You can change it on the home screen.", 5000);
+        }
+      } else if (!document.querySelector(".game-screen:not([hidden])")) { acc = 0; frames = 0; }
+      requestAnimationFrame(tick);
+    }
+    requestAnimationFrame(t => { last = t; requestAnimationFrame(tick); });
+  })();
+  // the button on the home screen
+  document.addEventListener("click", e => { const b = e.target.closest("[data-quality-btn]"); if (b) cycleQuality(); });
+  document.querySelectorAll("[data-quality-btn]").forEach(b => { b.textContent = qualityText(); });
+
+  window.Fun = { pops, sfx, face, soundButton, shake, hint, joystick, quality, res, setQuality, qualityText };
 })();

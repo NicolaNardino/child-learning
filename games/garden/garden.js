@@ -586,7 +586,7 @@
     /* ---------------- the loop ---------------- */
     let scale = 1;
     function fit(){
-      const s = Math.min(2, Math.max(1, canvas.clientWidth * (window.devicePixelRatio || 1) / W));
+      const s = Fun.res(canvas.clientWidth, W, 2);
       if (Math.abs(s - scale) > 0.01) { scale = s; canvas.width = Math.round(W * s); canvas.height = Math.round(H * s); }
       ctx.setTransform(scale, 0, 0, scale, 0, 0);
     }

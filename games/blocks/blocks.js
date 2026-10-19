@@ -719,7 +719,7 @@
       if (running) flames(dt);
       if (nameT > 0 && (nameT -= dt) <= 0) nameEl.classList.remove("show");
       if (gpu) { // draw at the screen's real size, so every block texture is sharp
-        const w = Math.min(1920, Math.round(canvas.clientWidth * Math.min(window.devicePixelRatio || 1, 2)));
+        const w = Math.min(1920, Math.round(canvas.clientWidth * (Fun.quality() === "low" ? 1 : Math.min(window.devicePixelRatio || 1, 2))));
         if (w > 0 && canvas.width !== w) { canvas.width = w; canvas.height = Math.round(w * 9 / 16); }
       }
       target = aim();

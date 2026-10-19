@@ -419,6 +419,8 @@
       race20: ["👑", "Superstar"], trial: ["⏱️", "Schnelles Gehör"], challenge: ["💪", "Fortissimo"],
       century: ["💯", "Hundert Töne"]
     },
-    topics: TOPICS
+    topics: TOPICS,
+    // the Bühne above the questions: every right answer makes the band play a note
+    scene: el => MusikBuehne(el, store.musik.buehne = store.musik.buehne || {})
   });
 })();
