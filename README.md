@@ -16,7 +16,7 @@ There's nothing to install and no build step. Just open `index.html` in a browse
   - 🔥 Streaks, accuracy and 🎊 confetti for every right answer.
 - 🧙 **Word Wizard**: school English for 5th grade in Switzerland, at the level of *Young World 3* (Lehrplan 21), with British spelling. Above the questions there's a 🧙 **Wizard Duel** in 3D: you're a wizard on a floating stone arena under the stars, facing a word monster for each topic (Word Goblin, Mirror Imp, Spelling Slime, Verb Dragon, Grammar Golem). Every right answer casts a spell at it, and a streak makes the spells bigger (Spark, Fireball, Lightning, Rainbow Blast); a wrong answer and the monster fires back at your shield. Knock out all its hearts and a tougher one comes along.
   - Five topics: 📚 Words (English ↔ German: school, free time, town and traffic), ↔️ Opposites, 🐝 Spelling (pick it, or hear it 🔊 and type it), 🏃 Verbs (present simple, present continuous, past simple) and ✏️ Grammar (be / have got, prepositions, question words, comparing).
-- 🥨 **Deutsch Dash**: Deutsch für die 5. Klasse, passend zu *Die Sprachstarken 5*, mit Schweizer Rechtschreibung (ss statt ß, «Anführungszeichen»).
+- 🥨 **Deutsch Dash**: Deutsch für die 5. Klasse, passend zu *Die Sprachstarken 5*, mit Schweizer Rechtschreibung (ss statt ß, «Anführungszeichen»). Über den Fragen läuft die 🏃 **Fehlerteufel-Jagd** in 3D: du rennst auf einem Weg durch die Schweiz (Chalets, Tannen, Kühe, die Alpen), und der Fehlerteufel 😈 jagt dich. Jede richtige Antwort: ein Sprung, eine Schoggi 🍫 und ein Stück Vorsprung, alle 5 richtig am Stück ein TURBO 🔥. Bei einem Fehler stolperst du, und der Teufel holt auf. Alle 100 m kommst du in einen neuen Ort, von Baar über Zug und Luzern bis zum Matterhorn.
   - Sechs Themen: 🧩 Wortarten (Nomen, Verb, Adjektiv, Pronomen, Partikel), 🎯 Die 4 Fälle, 🏃 Verben (Präteritum, Perfekt), ✍️ Rechtschreibung (Doppelkonsonanten, ss, ck/tz, das/dass), 💬 Satzzeichen (direkte Rede, Kommas) und 🧱 Morpheme.
 - 🌍 **NMG Entdecker**: Natur, Mensch, Gesellschaft für die 5. Klasse in Zug (Lehrplan 21), mit vielen Beispielen aus Zug und Baar.
   - Sechs Themen: 🗺️ Kantone, ⛰️ Geografie, 🏰 Geschichte (Pfahlbauer, Römer, Ritter, 1291, Morgarten), 🫀 Mensch & Körper, 🦊 Tiere & Pflanzen und 🧲 Natur & Technik.
@@ -65,7 +65,7 @@ learning/
   notebook.js, .css        the practice page every subject shares: topics, levels, answers, Time Trial, race, trophies, and an optional scene above the questions
   math/                    Fast Math
   english/                 Word Wizard (duel.js is the Wizard Duel above the questions)
-  german/                  Deutsch Dash
+  german/                  Deutsch Dash (dash.js is the Fehlerteufel-Jagd above the questions)
   nmg/                     NMG Entdecker
   typing/                  Tipp-Meister (its own page, not the notebook)
   quantum/                 Quantum Lab (its own page: five labs with experiments drawn on canvases, and a quiz)

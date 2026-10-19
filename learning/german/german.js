@@ -428,6 +428,8 @@
       race20: ["👑", "Legende"], trial: ["⏱️", "Blitz"], challenge: ["💪", "Stark!"],
       century: ["💯", "Hundert!"]
     },
-    topics: TOPICS
+    topics: TOPICS,
+    // the Fehlerteufel-Jagd above the questions: run through Switzerland, ahead of the mistake devil
+    scene: el => DeutschDash(el, store.german.dash = store.german.dash || {})
   });
 })();
