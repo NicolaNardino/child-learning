@@ -15,3 +15,28 @@
   background: #7cc4ff; touch-action: none;
 }
 .hp-panel{ background: rgba(55,25,5,0.6); }
+/* phones and tablets: a joystick bottom left, PASS and SHOOT bottom right, right on the court */
+.hp-stick, .hp-btns{ display: none; }
+@media (pointer: coarse){
+  #hpOverlay .game-touch{ display: none; }
+  .hp-stick{
+    position: absolute; left: 3%; bottom: 6%; width: clamp(96px, 22vh, 150px); aspect-ratio: 1;
+    border-radius: 50%; background: radial-gradient(circle, rgba(255,255,255,0.22), rgba(255,255,255,0.08));
+    border: 3px solid rgba(255,255,255,0.55); touch-action: none; z-index: 2;
+    display: flex; align-items: center; justify-content: center;
+  }
+  .hp-stick.on{ border-color: #ffe14d; background: radial-gradient(circle, rgba(255,225,77,0.25), rgba(255,255,255,0.08)); }
+  .hp-knob{
+    width: 46%; aspect-ratio: 1; border-radius: 50%; pointer-events: none;
+    background: radial-gradient(circle at 35% 30%, #ffffff, #c9d3e6 45%, #8e9ab3); box-shadow: 0 4px 10px rgba(0,0,0,0.4);
+  }
+  .hp-btns{ display: flex; position: absolute; right: 3%; bottom: 6%; gap: 12px; align-items: flex-end; z-index: 2; }
+  .hp-btn{
+    width: clamp(64px, 15vh, 96px); aspect-ratio: 1; border-radius: 50%; border: 3px solid rgba(255,255,255,0.7);
+    font: 800 clamp(12px, 2.6vh, 16px) system-ui, sans-serif; color: #fff; touch-action: none; user-select: none; -webkit-user-select: none;
+    box-shadow: 0 5px 0 rgba(0,0,0,0.35);
+  }
+  .hp-btn:active{ transform: translateY(3px); box-shadow: 0 2px 0 rgba(0,0,0,0.35); }
+  .hp-pass{ background: rgba(31,107,255,0.75); }
+  .hp-shoot{ background: rgba(255,138,26,0.85); width: clamp(76px, 18vh, 116px); }
+}
