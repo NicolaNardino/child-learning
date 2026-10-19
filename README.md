@@ -8,6 +8,8 @@ There's nothing to install and no build step. Just open `index.html` in a browse
 
 📱 **On a phone or tablet**, open the link and choose *Add to Home Screen* (Safari: the share button; Chrome: the ⋮ menu → *Install app*). Learn & Play then gets its own icon, opens full screen like an app, and still works without internet once it's been opened. The 3D games with a player to move (Egg Heist, Brainrot Heist, 99 Nights, Tag Rush, Potato Tycoon, Blox Soccer and Blox Hoops) show a 🕹️ thumb joystick on touch screens instead of arrow buttons.
 
+👪 **For grown-ups:** the link at the bottom of the home screen opens a progress report (practice in the last 7 days, and how accurate the answers are in every topic of every subject, with "needs practice" and "strong" marks) and a **backup**: copy a progress code (or save it as a file), then paste it on another phone, tablet or computer to carry everything over. Nothing is sent anywhere.
+
 ## 📚 Learning
 
 - 🔢 **Fast Math**: a maths practice notebook. It gives you endless new questions, and every answer comes with a worked explanation.
@@ -63,6 +65,7 @@ manifest.webmanifest, sw.js, icons/   install on a phone (Add to Home Screen) an
 core/
   core.css                 the shared look: theme, buttons, effects, trophies, launcher
   core.js                  saved progress, trophies, confetti, the app list and screen switching (window.Hub)
+  grownups.js              the Grown-ups page: progress report, and the backup code (window.Hub.page)
   fun.js                   the silly bits the games share: comic pop-up words, sounds, cartoon faces, the 🔊 switch, a wobble, the touch joystick (window.Fun)
 learning/
   notebook.js, .css        the practice page every subject shares: topics, levels, answers, Time Trial, race, trophies, and an optional scene above the questions

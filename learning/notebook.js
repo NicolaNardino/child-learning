@@ -115,8 +115,20 @@
   }
   function totalCorrect(topics, d){ return topics.reduce((sum, t) => sum + d.topics[t.id].correct, 0); }
 
+  // every subject that registered, for the Grown-ups page
+  const subjects = [];
+  // count a question for today, so the Grown-ups page can show how much was practised each day
+  function daily(d, correct){
+    const t = new Date(), key = t.getFullYear() + "-" + String(t.getMonth() + 1).padStart(2, "0") + "-" + String(t.getDate()).padStart(2, "0");
+    d.log = d.log || {};
+    const day = d.log[key] = d.log[key] || { a: 0, c: 0 };
+    day.a++; if (correct) day.c++;
+    const keys = Object.keys(d.log).sort();
+    while (keys.length > 60) delete d.log[keys.shift()];
+  }
   function register(cfg){
     const d = cfg.data, TOPICS = cfg.topics;
+    subjects.push({ id: cfg.id, title: cfg.title, icon: cfg.icon, data: d, topics: TOPICS.map(t => ({ id: t.id, label: t.label, icon: t.icon })) });
     if (!d.topic || !TOPICS.some(t => t.id === d.topic)) d.topic = TOPICS[0].id;
     if (!d.level) d.level = "warmup";
     if (!d.streak) d.streak = 0;
@@ -463,6 +475,7 @@
       sessionAttempted++;
       const ts = d.topics[currentTopicId];
       ts.attempted++;
+      daily(d, correct);
       if (correct) {
         sessionCorrect++; ts.correct++;
         d.streak++; if (d.streak > d.best) d.best = d.streak;
@@ -583,6 +596,7 @@
       if (!trialActive || trialAnswered) return;
       if (!val) { trial.input.focus(); return; }
       const correct = trial.prob.check(val);
+      daily(d, correct);
       trialAnswered = true;
       trialIndex++;
       if (correct) {
@@ -792,5 +806,5 @@
     return { open, close };
   }
 
-  window.Notebook = { register, pick, typed, norm, shuffle, sample, choice };
+  window.Notebook = { register, pick, typed, norm, shuffle, sample, choice, subjects };
 })();
