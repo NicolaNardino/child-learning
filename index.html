@@ -288,6 +288,7 @@
     </a>
   </div>
   <footer>Progress is saved in this browser only, so it'll be here next time on this device.</footer>
+  <p class="home-grownups"><a href="#/grownups">👪 Grown-ups: progress report and backup</a></p>
 </div>
 
 <!-- a section: its apps, then its trophy shelf -->
@@ -350,6 +351,7 @@
 <script src="games/forest/forest.js"></script>
 <script src="games/soccer/soccer.js"></script>
 <script src="games/hoops/hoops.js"></script>
+<script src="core/grownups.js"></script>
 <script>
   // keep a copy of the app for offline use (only over https or localhost, where browsers allow it)
   if ("serviceWorker" in navigator) window.addEventListener("load", () => { navigator.serviceWorker.register("sw.js").catch(() => {}); });

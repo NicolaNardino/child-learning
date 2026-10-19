@@ -486,6 +486,9 @@
         if (errors === 0) T.perfect = true;
       }
       race.finish(ok);
+      // a lesson finished today, for the Grown-ups page
+      { const t = new Date(), key = t.getFullYear() + "-" + String(t.getMonth() + 1).padStart(2, "0") + "-" + String(t.getDate()).padStart(2, "0");
+        T.log = T.log || {}; const day = T.log[key] = T.log[key] || { a: 0, c: 0 }; day.a++; if (ok) day.c++; }
       Hub.saveStore();
       Hub.checkBadges();
       $("tpStars").textContent = ok ? "★".repeat(stars) + "☆".repeat(3 - stars) : "☆☆☆";

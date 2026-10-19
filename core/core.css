@@ -303,3 +303,35 @@ button.rainbow{ animation: rainbow-flash 0.6s linear; }
   .door, .app-card{ transition: none; }
 }
 
+
+/* the Grown-ups page: a weekly report and the backup code */
+.home-grownups{ margin-top: 6px; font-size: 13px; color: var(--ink-soft); }
+.home-grownups a{ color: var(--ink-soft); text-decoration: underline; text-underline-offset: 3px; }
+.gu{ display: flex; flex-direction: column; gap: 14px; }
+.gu-card{ background: var(--paper-raised); border: 1.5px solid var(--line-strong); border-radius: 14px; padding: 16px; display: flex; flex-direction: column; gap: 10px; }
+.gu-card h2{ font-size: 18px; font-weight: 800; display: flex; flex-wrap: wrap; align-items: baseline; gap: 4px 10px; }
+.gu-card h2 small{ font-size: 13px; font-weight: 600; color: var(--ink-soft); }
+.gu-card h3{ font-size: 15px; font-weight: 700; }
+.gu-summary{ display: grid; grid-template-columns: repeat(auto-fit, minmax(110px, 1fr)); gap: 10px; }
+.gu-summary div{ display: flex; flex-direction: column; background: var(--paper); border-radius: 10px; padding: 10px; }
+.gu-summary b{ font: 800 26px "Bricolage Grotesque", sans-serif; color: var(--accent); }
+.gu-summary span, .gu-note{ font-size: 12.5px; color: var(--ink-soft); line-height: 1.45; }
+.gu-days{ display: flex; align-items: flex-end; gap: 8px; height: 110px; padding-top: 6px; }
+.gu-day{ flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: flex-end; height: 100%; gap: 4px; font-size: 11px; color: var(--ink-soft); }
+.gu-bar{ width: 100%; max-width: 40px; min-height: 3px; border-radius: 5px 5px 2px 2px; background: linear-gradient(var(--accent), var(--accent2)); }
+.gu-topic{ display: grid; grid-template-columns: minmax(110px, 1.2fr) 2fr 76px minmax(90px, 1fr); align-items: center; gap: 8px; font-size: 14px; }
+.gu-meter{ height: 10px; border-radius: 6px; background: var(--paper); overflow: hidden; }
+.gu-meter i{ display: block; height: 100%; border-radius: 6px; background: var(--ink-soft); }
+.gu-meter.great i{ background: var(--good); } .gu-meter.ok i{ background: var(--tier3); } .gu-meter.low i{ background: var(--bad); }
+.gu-pct{ font-family: "IBM Plex Mono", monospace; font-size: 12px; text-align: right; white-space: nowrap; }
+.gu-flag{ font-size: 12px; font-weight: 700; color: var(--ink-soft); }
+.gu-topic:has(.low) .gu-flag{ color: var(--bad); } .gu-topic:has(.great) .gu-flag{ color: var(--good); }
+.gu-list{ list-style: none; padding: 0; margin: 0; display: grid; gap: 6px; }
+.gu-list li{ display: flex; justify-content: space-between; gap: 10px; font-size: 14px; border-bottom: 1px dashed var(--line); padding-bottom: 5px; }
+.gu-list b{ font-family: "IBM Plex Mono", monospace; font-size: 13px; font-weight: 600; }
+.gu-code{ width: 100%; font: 12px "IBM Plex Mono", monospace; padding: 10px; border-radius: 8px; background: var(--paper); color: var(--ink); border: 1.5px solid var(--line-strong); resize: vertical; word-break: break-all; }
+.gu-row{ display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
+.gu-msg{ font-size: 13px; color: var(--accent); }
+.gu-file{ cursor: pointer; }
+.gu hr{ border: 0; border-top: 1px dashed var(--line-strong); margin: 6px 0; }
+@media (max-width: 560px){ .gu-topic{ grid-template-columns: 1fr 70px; } .gu-topic .gu-meter{ grid-column: 1 / -1; order: 3; } .gu-flag{ grid-column: 1 / -1; } }

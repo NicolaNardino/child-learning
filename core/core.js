@@ -6,7 +6,8 @@
      stat()   optional: a short line for its card, like "Best: 2:15"
      badges   optional: [{ id, icon, name, desc, test() }] for the section's trophy shelf
      mount(host) builds the app inside host the first time it's opened, and returns { open(), close() }
-   Routes live in the address bar: #/ (home), #/games (a section), #/games/pacman (an app). */
+   Routes live in the address bar: #/ (home), #/games (a section), #/games/pacman (an app).
+   Hub.page(id, { title, mount(host) -> { open(), close() } }) adds a plain page at #/id (the Grown-ups page). */
 (function(){
   "use strict";
 
@@ -114,6 +115,9 @@
   }
 
   /* ---------------- screens ---------------- */
+  // plain pages that aren't an app or a section, like #/grownups
+  const pages = {};
+  function page(id, p){ pages[id] = Object.assign({ host: null, ctrl: null }, p); }
   const homeView = document.getElementById("homeView");
   const sectionView = document.getElementById("sectionView");
   const appViews = document.getElementById("appViews");
@@ -166,9 +170,20 @@
 
   function show(next){
     if (current && current.app && current.app !== next.app) current.app.ctrl.close();
+    if (current && current.page && current.page !== next.page && current.page.ctrl) current.page.ctrl.close();
     current = next;
-    homeView.hidden = !!(next.section || next.app);
+    homeView.hidden = !!(next.section || next.app || next.page);
     sectionView.hidden = !next.section || !!next.app;
+    Object.values(pages).forEach(p => { if (p.host) p.host.hidden = p !== next.page; });
+    if (next.page) {
+      const p = next.page;
+      if (!p.host) { p.host = document.createElement("div"); p.host.className = "app-view"; appViews.appendChild(p.host); p.ctrl = p.mount(p.host); }
+      p.host.hidden = false;
+      document.title = `${p.title} · Learn & Play`;
+      p.ctrl.open();
+      window.scrollTo(0, 0);
+      return;
+    }
     apps.forEach(a => { if (a.host) a.host.hidden = a !== next.app; });
     if (next.app) {
       const a = next.app;
@@ -195,7 +210,8 @@
   function route(){
     const [section, appId] = location.hash.replace(/^#\/?/, "").split("/");
     const app = apps.find(a => a.section === section && a.id === appId);
-    if (app) show({ section, app });
+    if (pages[section]) show({ section: null, app: null, page: pages[section] });
+    else if (app) show({ section, app });
     else if (SECTIONS[section]) show({ section, app: null });
     else show({ section: null, app: null });
   }
@@ -221,5 +237,7 @@
     route();
   });
 
-  window.Hub = { store, saveStore, formatTime, confettiBurst, checkBadges, register, leave };
+  // what the Grown-ups page needs to know about the apps and the trophies
+  const appList = () => apps.map(a => ({ id: a.id, section: a.section, title: a.title, icon: a.icon, stat: a.stat ? a.stat() : "", badges: a.badges.length, earned: a.badges.filter(b => store.badges[b.id]).length }));
+  window.Hub = { store, saveStore, formatTime, confettiBurst, checkBadges, register, leave, page, appList, STORE_KEY };
 })();

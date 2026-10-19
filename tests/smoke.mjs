@@ -54,6 +54,9 @@ for (const hash of apps) {
   console.log(`${failures.some(f => f.startsWith(hash + ":")) ? "FAIL" : "ok  "} ${hash}`);
 }
 
+await visit("#/grownups", false);   // the Grown-ups page (report and backup) too
+console.log(`${failures.some(f => f.startsWith("#/grownups:")) ? "FAIL" : "ok  "} #/grownups`);
+
 await browser.close();
 server.close();
 if (failures.length) { console.error("\nErrors:\n" + failures.join("\n")); process.exit(1); }
