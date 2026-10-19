@@ -156,7 +156,7 @@
     const U = {}, A = {};
     const statMesh = Mesh(), dyn = Mesh();
     function initGL(){
-      try { gl = canvas.getContext("webgl", { antialias: true, alpha: false }); } catch (e) { gl = null; }
+      try { gl = canvas.getContext("webgl", { antialias: Fun.quality() === "high", alpha: false }); } catch (e) { gl = null; }
       if (!gl) return false;
       const vs = `attribute vec3 aPos; attribute vec3 aNor; attribute vec3 aCol; attribute float aEm;
         uniform mat4 uVP; varying vec3 vPos; varying vec3 vNor; varying vec3 vCol; varying float vEm;
@@ -222,7 +222,8 @@
       const r = rng(Date.now() & 0xffff);
       trees = [];
       const kidSpots = KIDS.map(k => ({ x: Math.cos(k.a) * 52, z: Math.sin(k.a) * 52 }));
-      for (let tries = 0; trees.length < 300 && tries < 8000; tries++) {
+      const LOW = Fun.quality() === "low";   // fewer trees and tufts of grass on slow devices
+      for (let tries = 0; trees.length < (LOW ? 180 : 300) && tries < 8000; tries++) {
         const a = r() * 6.283, d = 9 + Math.sqrt(r()) * (WORLD + 6 - 9);
         const t = { x: Math.cos(a) * d, z: Math.sin(a) * d };
         if (trees.some(o => Math.abs(o.x - t.x) < 3 && Math.abs(o.z - t.z) < 3)) continue;
@@ -230,7 +231,7 @@
         t.h = 4 + r() * 3.5; t.hp = 3; t.shake = 0; t.pine = r() < 0.65; t.col = ["#2f7d32", "#3a8f3a", "#2a6b30", "#4a9a3a", "#356f2c"][Math.floor(r() * 5)];
         trees.push(t);
       }
-      tufts = []; for (let i = 0; i < 500; i++) { const a = r() * 6.283, d = 5 + r() * 66; tufts.push({ x: Math.cos(a) * d, z: Math.sin(a) * d, h: 0.25 + r() * 0.35, c: ["#4f8f3a", "#5c9e40", "#3f7f30"][Math.floor(r() * 3)] }); }
+      tufts = []; for (let i = 0; i < (LOW ? 120 : 500); i++) { const a = r() * 6.283, d = 5 + r() * 66; tufts.push({ x: Math.cos(a) * d, z: Math.sin(a) * d, h: 0.25 + r() * 0.35, c: ["#4f8f3a", "#5c9e40", "#3f7f30"][Math.floor(r() * 3)] }); }
       rocks = []; for (let i = 0; i < 40; i++) { const a = r() * 6.283, d = 10 + r() * 60; rocks.push({ x: Math.cos(a) * d, z: Math.sin(a) * d, s: 0.5 + r() * 1.2, yaw: r() * 3 }); }
       items = [];
       const scatter = (kind, n, lo, hi) => { for (let i = 0; i < n; i++) { const a = r() * 6.283, d = lo + r() * (hi - lo); items.push({ kind, x: Math.cos(a) * d, z: Math.sin(a) * d, y: 0, vy: 0, yaw: r() * 6 }); } };
@@ -854,7 +855,7 @@
 
     /* ---------------- the loop ---------------- */
     function fit(){
-      const s = Math.min(2, Math.max(1, canvas.clientWidth * (window.devicePixelRatio || 1) / W));
+      const s = Fun.res(canvas.clientWidth, W, 2);
       const w = Math.round(W * s), h = Math.round(H * s);
       if (canvas.width !== w) { canvas.width = w; canvas.height = h; ui.width = w; ui.height = h; }
       ctx.setTransform(ui.width / W, 0, 0, ui.height / H, 0, 0);

@@ -510,7 +510,7 @@
     // the game fills the screen now, so draw it at the real size to keep it sharp
     let tagScale = 1;
     function fitTagCanvas(){
-      const s = Math.min(3, Math.max(1, tagCanvas.clientWidth * (window.devicePixelRatio || 1) / VIEW_W));
+      const s = Fun.res(tagCanvas.clientWidth, VIEW_W, 3);
       if (Math.abs(s - tagScale) < 0.01) return;
       tagScale = s;
       tagCanvas.width = Math.round(VIEW_W * s); tagCanvas.height = Math.round(VIEW_H * s);

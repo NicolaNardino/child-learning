@@ -335,7 +335,7 @@
     }
     let scale = 1;
     function fitCanvas(){
-      const s = Math.min(3, Math.max(1, canvas.clientWidth * (window.devicePixelRatio || 1) / W));
+      const s = Fun.res(canvas.clientWidth, W, 3);
       if (Math.abs(s - scale) < 0.01) return;
       scale = s; canvas.width = Math.round(W * s); canvas.height = Math.round(H * s);
     }

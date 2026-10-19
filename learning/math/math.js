@@ -349,6 +349,8 @@
     nameFallback: "your mathematician",
     subject: "maths",
     data: Hub.store,
-    topics: TOPICS
+    topics: TOPICS,
+    // the Rocket Run above the questions: every right answer fires the boosters
+    scene: el => MathRocket(el, Hub.store.rocket = Hub.store.rocket || {})
   });
 })();

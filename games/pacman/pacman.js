@@ -453,7 +453,7 @@
     // the maze fills the screen, so draw it at the real size to keep it sharp
     let pacScale = 1;
     function fitPacCanvas(){
-      const s = Math.min(3, Math.max(1, pacCanvas.clientWidth * (window.devicePixelRatio || 1) / CW));
+      const s = Fun.res(pacCanvas.clientWidth, CW, 3);
       if (Math.abs(s - pacScale) < 0.01) return;
       pacScale = s;
       pacCanvas.width = Math.round(CW * s); pacCanvas.height = Math.round(CH * s);

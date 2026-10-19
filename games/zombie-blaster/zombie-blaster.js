@@ -777,7 +777,7 @@
 
     let zbScale = 1;
     function fitZbCanvas(){
-      const s = Math.min(3, Math.max(1, zbCanvas.clientWidth * (window.devicePixelRatio || 1) / ZW));
+      const s = Fun.res(zbCanvas.clientWidth, ZW, 3);
       if (Math.abs(s - zbScale) < 0.01) return;
       zbScale = s;
       zbCanvas.width = Math.round(ZW * s); zbCanvas.height = Math.round(ZH * s);
