@@ -1,0 +1,16 @@
+{
+  "name": "Learn & Play",
+  "short_name": "Learn & Play",
+  "description": "Learning and games for a 5th grader: maths, English, German, NMG, music and typing, plus lots of games.",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "any",
+  "background_color": "#1b1612",
+  "theme_color": "#e8402c",
+  "icons": [
+    { "src": "icons/icon-192.png", "sizes": "192x192", "type": "image/png" },
+    { "src": "icons/icon-512.png", "sizes": "512x512", "type": "image/png" },
+    { "src": "icons/icon-maskable-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+  ]
+}

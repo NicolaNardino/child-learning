@@ -7,6 +7,8 @@
      Fun.soundButton(el) a 🔊/🔇 button put just before el (all the games share the one setting)
      Fun.shake(el)       wobbles an element, for a crash or a hit
      Fun.hint(stage)     a tip that pops up at the top of a game for a few seconds: { show(text, ms), hide() }
+     Fun.joystick(stage) a thumb joystick in the bottom-left corner, on phones and tablets only:
+                         { x, y, on, reset() }, x right and y down, each -1 to 1
    Sounds are on unless Hub.store.sound is false. */
 (function(){
   "use strict";
@@ -160,5 +162,27 @@
     };
   }
 
-  window.Fun = { pops, sfx, face, soundButton, shake, hint };
+  // a joystick for touch screens; it follows your thumb and springs back when you let go
+  function joystick(stage){
+    const el = document.createElement("div"), knob = document.createElement("div");
+    el.className = "fun-stick"; el.setAttribute("aria-label", "Joystick: drag to move");
+    knob.className = "fun-knob"; el.appendChild(knob); stage.appendChild(el);
+    const st = { x: 0, y: 0, on: false, reset };
+    function move(e){
+      const r = el.getBoundingClientRect(), R = r.width / 2;
+      let dx = (e.clientX - r.left - R) / R, dy = (e.clientY - r.top - R) / R;
+      const m = Math.hypot(dx, dy);
+      if (m > 1) { dx /= m; dy /= m; }
+      st.x = dx; st.y = dy;
+      knob.style.transform = `translate(${dx * R * 0.6}px, ${dy * R * 0.6}px)`;
+    }
+    function reset(){ st.on = false; st.x = st.y = 0; knob.style.transform = ""; el.classList.remove("on"); }
+    el.addEventListener("pointerdown", e => { e.preventDefault(); e.stopPropagation(); st.on = true; el.classList.add("on"); el.setPointerCapture(e.pointerId); move(e); });
+    el.addEventListener("pointermove", e => { if (st.on) move(e); });
+    ["pointerup", "pointercancel", "lostpointercapture"].forEach(ev => el.addEventListener(ev, reset));
+    window.addEventListener("blur", reset);
+    return st;
+  }
+
+  window.Fun = { pops, sfx, face, soundButton, shake, hint, joystick };
 })();

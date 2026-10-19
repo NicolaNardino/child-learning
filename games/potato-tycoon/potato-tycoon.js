@@ -59,10 +59,10 @@
         </div>
         <div class="game-help">W A S D or the arrow keys to walk · Q E or drag the screen to turn the camera · Space to jump · walk up to a station and it works by itself · step on a green button to buy an upgrade</div>
         <div class="game-touch">
-          <button class="btn ghost" data-ptkey="left" type="button" aria-label="Walk left">◀</button>
-          <button class="btn ghost" data-ptkey="up" type="button" aria-label="Walk forward">▲</button>
-          <button class="btn ghost" data-ptkey="down" type="button" aria-label="Walk back">▼</button>
-          <button class="btn ghost" data-ptkey="right" type="button" aria-label="Walk right">▶</button>
+          <button class="btn ghost fun-dpad" data-ptkey="left" type="button" aria-label="Walk left">◀</button>
+          <button class="btn ghost fun-dpad" data-ptkey="up" type="button" aria-label="Walk forward">▲</button>
+          <button class="btn ghost fun-dpad" data-ptkey="down" type="button" aria-label="Walk back">▼</button>
+          <button class="btn ghost fun-dpad" data-ptkey="right" type="button" aria-label="Walk right">▶</button>
           <button class="btn" data-ptkey="jump" type="button" aria-label="Jump">JUMP</button>
         </div>
       </div>
@@ -77,6 +77,7 @@
     const B = Blocky(ctx, W, H, { back: 11, up: 7.5, pitch: 0.36 }), { polyPath, line3, part } = B;
     const fx = Fun.pops();
     const keys = { left: false, right: false, up: false, down: false, jump: false, turnL: false, turnR: false };
+    let stick = null;   // on phones: a joystick to walk with
     let open = false, running = false, last = 0, clock = 0, frameDt = 1 / 60, camYaw = 0, saveT = 0;
     let S = null, you = null, onPad = null, prompt = null;
     const timers = { farm: 0, peel: 0, fry: 0, sell: 0, autoPeel: 0, autoFry: 0 };
@@ -108,7 +109,8 @@
     function stepYou(dt){
       if (keys.turnL) camYaw -= 2.2 * dt;
       if (keys.turnR) camYaw += 2.2 * dt;
-      const fwd = (keys.up ? 1 : 0) - (keys.down ? 1 : 0), side = (keys.right ? 1 : 0) - (keys.left ? 1 : 0);
+      let fwd = (keys.up ? 1 : 0) - (keys.down ? 1 : 0), side = (keys.right ? 1 : 0) - (keys.left ? 1 : 0);
+      if (stick && stick.on && Math.hypot(stick.x, stick.y) > 0.15) { fwd = -stick.y; side = stick.x; }
       const s = Math.sin(camYaw), c = Math.cos(camYaw);
       let wx = s * fwd + c * side, wz = c * fwd - s * side;
       const len = Math.hypot(wx, wz), speed = SPEED[S.up.shoes];
@@ -375,6 +377,7 @@
       running = true;
       panel.hidden = true;
       Object.keys(keys).forEach(k => { keys[k] = false; });
+      if (stick) stick.reset();
       canvas.focus();
     }
     function newFarm(){
@@ -437,6 +440,7 @@
       ["pointerup", "pointercancel", "pointerleave"].forEach(ev => btn.addEventListener(ev, () => { keys[k] = false; }));
     });
     canvas.tabIndex = 0;
+    stick = Fun.joystick(canvas.parentElement);
 
     $("ptCloseBtn").addEventListener("click", () => Hub.leave());
     Fun.soundButton($("ptCloseBtn"));
