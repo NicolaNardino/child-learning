@@ -8,7 +8,7 @@ There's nothing to install and no build step. Just open `index.html` in a browse
 
 📱 **On a phone or tablet**, open the link and choose *Add to Home Screen* (Safari: the share button; Chrome: the ⋮ menu → *Install app*). Learn & Play then gets its own icon, opens full screen like an app, and still works without internet once it's been opened. ⚙️ **Graphics:** at the bottom of the home screen, *Graphics: Auto* can be switched to *High* or *Low*. Low draws the games at normal resolution and leaves out some extras (fewer trees in 99 Nights, no edge smoothing), which helps older phones. In Auto, a game that runs slowly for a few seconds switches itself to Low and says so.
 
-The 3D games with a player to move (Egg Heist, Brainrot Heist, 99 Nights, Tag Rush, Potato Tycoon, Blox Soccer and Blox Hoops) show a 🕹️ thumb joystick on touch screens instead of arrow buttons.
+Every game with a player to move (Egg Heist, Brainrot Heist, 99 Nights, Tag Rush, Potato Tycoon, Blox Soccer, Blox Hoops, Block World, Parkour, Zombie Blaster, Turbo Track, Robot Tag, Pac-Man, Pac-Man 3D and Ping-Pong) shows a 🕹️ thumb joystick on touch screens instead of arrow buttons. Fishing, Garden Grow and Tower have nothing to steer, so they stay tap and hold.
 
 👪 **For grown-ups:** the link at the bottom of the home screen opens a progress report (practice in the last 7 days, and how accurate the answers are in every topic of every subject, with "needs practice" and "strong" marks) and a **backup**: copy a progress code (or save it as a file), then paste it on another phone, tablet or computer to carry everything over. Nothing is sent anywhere.
 

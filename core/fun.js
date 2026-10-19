@@ -9,6 +9,7 @@
      Fun.hint(stage)     a tip that pops up at the top of a game for a few seconds: { show(text, ms), hide() }
      Fun.quality()       "high" or "low": the graphics setting (Auto switches to low by itself when a game runs slowly)
      Fun.res(cssW, W, max) the pixel scale a canvas should use, lower on low quality
+     Fun.stickKeys(stick, keys, map) feeds that joystick into a game's key table
      Fun.joystick(stage) a thumb joystick in the bottom-left corner, on phones and tablets only:
                          { x, y, on, reset() }, x right and y down, each -1 to 1
    Sounds are on unless Hub.store.sound is false. */
@@ -186,6 +187,17 @@
     return st;
   }
 
+  // turns the joystick into the same on/off keys the keyboard sets; call it once a frame. map: { left, right, up, down } -> key names
+  function stickKeys(st, keys, map){
+    const dead = 0.3, d = { left: st.on && st.x < -dead, right: st.on && st.x > dead, up: st.on && st.y < -dead, down: st.on && st.y > dead };
+    st.held = st.held || {};
+    Object.keys(map).forEach(dir => {
+      const k = map[dir];
+      if (d[dir]) { keys[k] = true; st.held[k] = true; }
+      else if (st.held[k]) { keys[k] = false; st.held[k] = false; }
+    });
+  }
+
   /* ---------------- graphics quality: Auto, High or Low ----------------
      Low draws at the normal resolution instead of the sharp one and drops some of the extras, so older phones
      keep up. In Auto, a little watcher times the frames while a game is on screen and switches to Low after a
@@ -224,5 +236,5 @@
   document.addEventListener("click", e => { const b = e.target.closest("[data-quality-btn]"); if (b) cycleQuality(); });
   document.querySelectorAll("[data-quality-btn]").forEach(b => { b.textContent = qualityText(); });
 
-  window.Fun = { pops, sfx, face, soundButton, shake, hint, joystick, quality, res, setQuality, qualityText };
+  window.Fun = { pops, sfx, face, soundButton, shake, hint, joystick, stickKeys, quality, res, setQuality, qualityText };
 })();

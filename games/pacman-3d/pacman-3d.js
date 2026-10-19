@@ -32,7 +32,7 @@
           </div>
         </div>
         <div class="game-help">You're inside Pac-Man! ← → to turn at the next corner · ↑ go ahead · ↓ turn around · eat a big dot, then chase the blue ghosts!</div>
-        <div class="p3d-pad">
+        <div class="p3d-pad fun-dpad">
           <button class="btn ghost" data-dir="up" type="button" aria-label="Up">▲</button>
           <button class="btn ghost" data-dir="left" type="button" aria-label="Left">◀</button>
           <button class="btn ghost" data-dir="down" type="button" aria-label="Down">▼</button>
@@ -163,7 +163,11 @@
       });
     }
 
+    let stickDir = null;
     function movePac(dt){
+      const sd = stick.on && Math.hypot(stick.x, stick.y) > 0.5 ? (Math.abs(stick.x) > Math.abs(stick.y) ? (stick.x > 0 ? "right" : "left") : (stick.y > 0 ? "down" : "up")) : null;
+      if (sd && sd !== stickDir) steer(sd);   // like the arrow keys: left, right, ahead, turn around
+      stickDir = sd;
       // turning straight around works at any moment
       if (pacWant && pacWant === OPPOSITE[pac.dir] && pac.prog > 0) {
         [pac.x, pac.y] = stepTile(pac, pac.dir); pac.dir = pacWant; pac.prog = 1 - pac.prog;
@@ -672,6 +676,7 @@
     });
     // swipe on the maze to steer
     let swipeFrom = null;
+    const stick = Fun.joystick(pacCanvas.parentElement);   // on phones: push left or right to turn, down to turn around
     pacCanvas.addEventListener("pointerdown", e => { swipeFrom = [e.clientX, e.clientY]; });
     pacCanvas.addEventListener("pointermove", e => {
       if (!swipeFrom) return;

@@ -62,10 +62,10 @@
         </div>
         <div class="game-help">W A S D to move · mouse or ← → ↑ ↓ to look · Space to jump or swim up · left click to dig · right click to build · 1–9, 0, – or the mouse wheel to pick a block · F to fly (Space up, Shift down) · E for your inventory · T for another time of day · Esc or P to pause and free your mouse</div>
         <div class="game-touch bl-touch">
-          <button class="btn ghost" data-bkey="left" type="button" aria-label="Step left">◀</button>
-          <button class="btn ghost" data-bkey="forward" type="button" aria-label="Walk forward">▲</button>
-          <button class="btn ghost" data-bkey="back" type="button" aria-label="Walk back">▼</button>
-          <button class="btn ghost" data-bkey="right" type="button" aria-label="Step right">▶</button>
+          <button class="btn ghost fun-dpad" data-bkey="left" type="button" aria-label="Step left">◀</button>
+          <button class="btn ghost fun-dpad" data-bkey="forward" type="button" aria-label="Walk forward">▲</button>
+          <button class="btn ghost fun-dpad" data-bkey="back" type="button" aria-label="Walk back">▼</button>
+          <button class="btn ghost fun-dpad" data-bkey="right" type="button" aria-label="Step right">▶</button>
           <button class="btn" data-bkey="jump" type="button" aria-label="Jump">JUMP</button>
           <button class="btn" data-bkey="mine" type="button" aria-label="Dig">⛏</button>
           <button class="btn" data-bkey="place" type="button" aria-label="Build">🧱</button>
@@ -459,6 +459,7 @@
     }
 
     function step(dt){
+      Fun.stickKeys(stick, keys, { left: "left", right: "right", up: "forward", down: "back" });
       yaw += ((keys.lookR ? 1 : 0) - (keys.lookL ? 1 : 0)) * 2 * dt;
       pitch = Math.max(-1.5, Math.min(1.5, pitch + ((keys.lookU ? 1 : 0) - (keys.lookD ? 1 : 0)) * 1.6 * dt));
       p.wet = !p.fly && idAt(Math.floor(p.x), Math.floor(p.y + 0.5), Math.floor(p.z)) === ID.WATER;
@@ -645,7 +646,7 @@
       spawnMobs();
     }
     function lockMouse(){
-      if (document.pointerLockElement === canvas) return;
+      if (document.pointerLockElement === canvas || matchMedia("(pointer: coarse)").matches) return;   // touch screens: no mouse to lock, and a lock would swallow the joystick
       try { const r = canvas.requestPointerLock(); if (r && r.catch) r.catch(() => {}); } catch (e) {}
     }
     function releaseKeys(){ Object.keys(keys).forEach(k => { keys[k] = false; }); }
@@ -780,6 +781,7 @@
     // mouse: once the pointer is locked, moving it turns you; left digs, right builds
     let lockedAt = 0, unlockedAt = 0;
     const tip = Fun.hint(canvas.parentElement);
+    const stick = Fun.joystick(canvas.parentElement);   // on phones: walk and step; drag the world to look
     document.addEventListener("pointerlockchange", () => {
       lockedAt = performance.now();
       if (ui.isOpen() && document.pointerLockElement === canvas) document.exitPointerLock(); // a screen is open: keep the mouse free

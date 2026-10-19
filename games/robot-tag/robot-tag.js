@@ -36,9 +36,9 @@
         </div>
         <div class="game-help">← → or A D to run · ↑ W or Space to jump (jump again in the air, or off a wall!) · ↓ S to drop down</div>
         <div class="game-touch">
-          <button class="btn ghost" data-key="left" type="button" aria-label="Run left">◀</button>
-          <button class="btn ghost" data-key="down" type="button" aria-label="Drop down">▼</button>
-          <button class="btn ghost" data-key="right" type="button" aria-label="Run right">▶</button>
+          <button class="btn ghost fun-dpad" data-key="left" type="button" aria-label="Run left">◀</button>
+          <button class="btn ghost fun-dpad" data-key="down" type="button" aria-label="Drop down">▼</button>
+          <button class="btn ghost fun-dpad" data-key="right" type="button" aria-label="Run right">▶</button>
           <button class="btn" data-key="jump" type="button" aria-label="Jump">JUMP</button>
         </div>
       </div>
@@ -166,6 +166,7 @@
 
     function updatePlayer(dt){
       const p = player;
+      Fun.stickKeys(stick, tagKeys, { left: "left", right: "right", down: "down" });
       const input = (tagKeys.right ? 1 : 0) - (tagKeys.left ? 1 : 0);
       if (input) p.face = input;
       p.wallLock = Math.max(0, p.wallLock - dt);
@@ -666,6 +667,7 @@
       ["pointerup", "pointercancel", "pointerleave"].forEach(ev => btn.addEventListener(ev, () => { tagKeys[k] = false; }));
     });
     tagCanvas.tabIndex = 0;
+    const stick = Fun.joystick(tagCanvas.parentElement);   // on phones: run and drop down; the JUMP button stays
 
     document.getElementById("tagCloseBtn").addEventListener("click", () => Hub.leave());
     Fun.soundButton(document.getElementById("tagCloseBtn"));

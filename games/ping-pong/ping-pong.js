@@ -456,6 +456,7 @@
       clock += dt;
       // your paddle
       const kv = 1.8 * dt;
+      Fun.stickKeys(stick, keys, { left: "left", right: "right", up: "up", down: "down" });
       if (keys.left) me.tx -= kv; if (keys.right) me.tx += kv;
       if (keys.up) me.ty += kv; if (keys.down) me.ty -= kv;
       clampMe();
@@ -889,6 +890,7 @@
       me.ty = TY + 0.05 + (1 - sy / H) * 0.95;
       clampMe();
     }
+    const stick = Fun.joystick(canvas.parentElement);   // on phones: an alternative to dragging the paddle
     canvas.addEventListener("pointermove", e => { if (mode !== "menu" && mode !== "over") pointerAt(e); });
     canvas.addEventListener("pointerdown", e => {
       if (mode === "menu" || mode === "over") return;

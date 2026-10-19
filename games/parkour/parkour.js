@@ -153,10 +153,10 @@
         </div>
         <div class="game-help">Click the game to look around with the mouse · W A S D to run · ← → or Q E to turn · Space to jump · R to go back to your flag · Esc lets go of the mouse</div>
         <div class="game-touch">
-          <button class="btn ghost" data-pkey="left" type="button" aria-label="Turn left">↶</button>
-          <button class="btn ghost" data-pkey="up" type="button" aria-label="Run forward">▲</button>
-          <button class="btn ghost" data-pkey="down" type="button" aria-label="Back up">▼</button>
-          <button class="btn ghost" data-pkey="right" type="button" aria-label="Turn right">↷</button>
+          <button class="btn ghost fun-dpad" data-pkey="left" type="button" aria-label="Turn left">↶</button>
+          <button class="btn ghost fun-dpad" data-pkey="up" type="button" aria-label="Run forward">▲</button>
+          <button class="btn ghost fun-dpad" data-pkey="down" type="button" aria-label="Back up">▼</button>
+          <button class="btn ghost fun-dpad" data-pkey="right" type="button" aria-label="Turn right">↷</button>
           <button class="btn" data-pkey="jump" type="button" aria-label="Jump">JUMP</button>
         </div>
       </div>
@@ -696,6 +696,7 @@
         jumpQueued = false;
         return;
       }
+      Fun.stickKeys(stick, keys, { left: "left", right: "right", up: "up", down: "down" });
       cam.a += ((keys.right ? 1 : 0) - (keys.left ? 1 : 0)) * TURN * dt;
       const fwd = (keys.up ? 1 : 0) - (keys.down ? 1 : 0), side = (keys.strafeR ? 1 : 0) - (keys.strafeL ? 1 : 0);
       let mx = Math.sin(cam.a) * fwd + Math.cos(cam.a) * side, mz = Math.cos(cam.a) * fwd - Math.sin(cam.a) * side;
@@ -828,6 +829,7 @@
       else { unlockedAt = performance.now(); tip.hide(); }
     });
     let dragX = null;
+    const stick = Fun.joystick(canvas.parentElement);   // on phones: left and right turn, up and down run
     canvas.addEventListener("pointerdown", e => {
       if (e.pointerType === "mouse" && running && !looking() && canvas.requestPointerLock) {
         try { const p = canvas.requestPointerLock(); if (p && p.catch) p.catch(() => {}); } catch (err) {}
