@@ -49,10 +49,10 @@
         </div>
         <div class="game-help">W A S D or the arrow keys to run · Space to jump (jump over a tagger to dodge!) · get to the green side before the time runs out</div>
         <div class="game-touch">
-          <button class="btn ghost" data-trkey="left" type="button" aria-label="Run left">◀</button>
-          <button class="btn ghost" data-trkey="up" type="button" aria-label="Run forward">▲</button>
-          <button class="btn ghost" data-trkey="down" type="button" aria-label="Run back">▼</button>
-          <button class="btn ghost" data-trkey="right" type="button" aria-label="Run right">▶</button>
+          <button class="btn ghost fun-dpad" data-trkey="left" type="button" aria-label="Run left">◀</button>
+          <button class="btn ghost fun-dpad" data-trkey="up" type="button" aria-label="Run forward">▲</button>
+          <button class="btn ghost fun-dpad" data-trkey="down" type="button" aria-label="Run back">▼</button>
+          <button class="btn ghost fun-dpad" data-trkey="right" type="button" aria-label="Run right">▶</button>
           <button class="btn" data-trkey="jump" type="button" aria-label="Jump">JUMP</button>
         </div>
       </div>
@@ -71,6 +71,7 @@
     let you = null, bots = [], taggers = [];
     let banner = { text: "", sub: "", t: 0 };
     const keys = { left: false, right: false, up: false, down: false, jump: false };
+    let stick = null;   // on phones: a joystick to run with
     const fx = Fun.pops();
 
     /* ----- the people: a body is a blocky avatar with a spot, a speed and a way it faces ----- */
@@ -145,7 +146,8 @@
 
     function stepYou(dt){
       if (you.out) { you.vx *= 0.9; you.vz *= 0.9; return; }
-      const fwd = (keys.up ? 1 : 0) - (keys.down ? 1 : 0), side = (keys.right ? 1 : 0) - (keys.left ? 1 : 0);
+      let fwd = (keys.up ? 1 : 0) - (keys.down ? 1 : 0), side = (keys.right ? 1 : 0) - (keys.left ? 1 : 0);
+      if (stick && stick.on && Math.hypot(stick.x, stick.y) > 0.15) { fwd = -stick.y; side = stick.x; }
       // forward is always toward the far side, the way the camera looks
       moveBody(you, side * dir, fwd * dir, RUN, dt);
       if (keys.jump) jump(you);
@@ -386,6 +388,7 @@
       running = true;
       panel.hidden = true;
       Object.keys(keys).forEach(k => { keys[k] = false; });
+      if (stick) stick.reset();
       canvas.focus();
     }
     function gameOver(why){
@@ -442,6 +445,7 @@
       ["pointerup", "pointercancel", "pointerleave"].forEach(ev => btn.addEventListener(ev, () => { keys[k] = false; }));
     });
     canvas.tabIndex = 0;
+    stick = Fun.joystick(canvas.parentElement);
 
     $("trCloseBtn").addEventListener("click", () => Hub.leave());
     Fun.soundButton($("trCloseBtn"));

@@ -175,10 +175,10 @@
           </div>
           <div class="game-help">W A S D to walk · ← → or the mouse to turn (click the game to use the mouse, Esc to let go) · E to buy, steal, lock or sell · click or F to swing your bat · Space to jump</div>
           <div class="game-touch eh-touch">
-            <button class="btn ghost" data-k="left" type="button" aria-label="Turn left">↶</button>
-            <button class="btn ghost" data-k="up" type="button" aria-label="Walk">▲</button>
-            <button class="btn ghost" data-k="down" type="button" aria-label="Back">▼</button>
-            <button class="btn ghost" data-k="right" type="button" aria-label="Turn right">↷</button>
+            <button class="btn ghost fun-dpad" data-k="left" type="button" aria-label="Turn left">↶</button>
+            <button class="btn ghost fun-dpad" data-k="up" type="button" aria-label="Walk">▲</button>
+            <button class="btn ghost fun-dpad" data-k="down" type="button" aria-label="Back">▼</button>
+            <button class="btn ghost fun-dpad" data-k="right" type="button" aria-label="Turn right">↷</button>
             <button class="btn" data-k="act" type="button" aria-label="Action">E</button>
             <button class="btn" data-k="bat" type="button" aria-label="Swing the bat">🏏</button>
           </div>
@@ -195,6 +195,7 @@
       let chars = [], belt = [], beltT = 0, bases = [], walkers = [];   // walkers: brainrots you bought, walking home
       let me = null, prompt = null, msg = null;
       const keys = { up: false, down: false, left: false, right: false, sleft: false, sright: false, jump: false };
+      const stick = Fun.joystick(canvas.parentElement);   // on phones: push up to walk, sideways to turn
 
       /* ---------------- people: you and three robot players ---------------- */
       const LOOKS = [
@@ -501,9 +502,10 @@
           });
         });
         // you
-        const turn = ((keys.right ? 1 : 0) - (keys.left ? 1 : 0)) * 2.6 * dt;
+        const turn = ((keys.right ? 1 : 0) - (keys.left ? 1 : 0) + (stick.on ? stick.x : 0)) * 2.6 * dt;
         me.yaw += turn;
-        const f = (keys.up ? 1 : 0) - (keys.down ? 1 : 0), sd = (keys.sright ? 1 : 0) - (keys.sleft ? 1 : 0);
+        let f = (keys.up ? 1 : 0) - (keys.down ? 1 : 0), sd = (keys.sright ? 1 : 0) - (keys.sleft ? 1 : 0);
+        if (stick.on && Math.abs(stick.y) > 0.2) f = -stick.y;
         let mx = Math.sin(me.yaw) * f + Math.cos(me.yaw) * sd, mz = Math.cos(me.yaw) * f - Math.sin(me.yaw) * sd;
         const len = Math.hypot(mx, mz); if (len > 1) { mx /= len; mz /= len; }
         if (keys.jump && me.y === 0 && me.stun <= 0) { me.vy = 9; Fun.sfx.pop(); }
@@ -870,6 +872,7 @@
       function start(){
         running = true; panel.hidden = true;
         Object.keys(keys).forEach(k => { keys[k] = false; });
+        stick.reset();
         canvas.focus();
         tip.show(cfg.tip, 4500);
       }

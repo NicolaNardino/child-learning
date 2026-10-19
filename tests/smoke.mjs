@@ -9,7 +9,7 @@ import { fileURLToPath } from "node:url";
 
 const { chromium } = await import(process.env.PLAYWRIGHT_MODULE || "playwright");
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
-const TYPES = { ".html": "text/html", ".js": "text/javascript", ".css": "text/css", ".json": "application/json", ".png": "image/png", ".svg": "image/svg+xml" };
+const TYPES = { ".html": "text/html", ".js": "text/javascript", ".css": "text/css", ".json": "application/json", ".png": "image/png", ".svg": "image/svg+xml", ".webmanifest": "application/manifest+json" };
 
 // a tiny static file server for the repo
 const server = http.createServer((req, res) => {

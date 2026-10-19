@@ -124,10 +124,10 @@
         </div>
         <div class="game-help">W A S D to walk · Shift to sprint · ← → or the mouse to turn (click the game to use the mouse, Esc to let go) · click or Space to swing the axe · E to pick up, open chests, feed the fire or rescue · Q to eat · F for the flashlight</div>
         <div class="game-touch nf-touch">
-          <button class="btn ghost" data-k="left" type="button" aria-label="Turn left">↶</button>
-          <button class="btn ghost" data-k="up" type="button" aria-label="Walk">▲</button>
-          <button class="btn ghost" data-k="down" type="button" aria-label="Back">▼</button>
-          <button class="btn ghost" data-k="right" type="button" aria-label="Turn right">↷</button>
+          <button class="btn ghost fun-dpad" data-k="left" type="button" aria-label="Turn left">↶</button>
+          <button class="btn ghost fun-dpad" data-k="up" type="button" aria-label="Walk">▲</button>
+          <button class="btn ghost fun-dpad" data-k="down" type="button" aria-label="Back">▼</button>
+          <button class="btn ghost fun-dpad" data-k="right" type="button" aria-label="Turn right">↷</button>
           <button class="btn ghost" data-k="run" type="button" aria-label="Sprint">🏃</button>
           <button class="btn" data-k="act" type="button" aria-label="Pick up or use">E</button>
           <button class="btn" data-k="axe" type="button" aria-label="Swing the axe">🪓</button>
@@ -149,6 +149,7 @@
     let staticDirty = true, deerWarned = false;
     const me = { x: 0, z: 6, yaw: Math.PI, walk: 0, moving: false, swing: 0, run: false };
     const keys = { up: false, down: false, left: false, right: false, sleft: false, sright: false, run: false };
+    let stick = null;   // on phones: a joystick (push up to walk, sideways to turn)
 
     /* ---------------- WebGL ---------------- */
     let gl = null, prog = null, staticBuf = null, staticCount = 0, dynBuf = null;
@@ -419,9 +420,11 @@
       if (st.t >= DAY + NIGHT) { st.t -= DAY + NIGHT; dawn(); if (!running) return; }
       if (!wasNight && night()) startNight();
       // you
-      const tw = (keys.left ? -1 : 0) + (keys.right ? 1 : 0);
+      const tw = (keys.left ? -1 : 0) + (keys.right ? 1 : 0) + (stick && stick.on ? stick.x : 0);
       me.yaw += tw * 2.6 * dt;
-      const fwd = (keys.up ? 1 : 0) - (keys.down ? 1 : 0), side = (keys.sright ? 1 : 0) - (keys.sleft ? 1 : 0);
+      let fwd = (keys.up ? 1 : 0) - (keys.down ? 1 : 0);
+      const side = (keys.sright ? 1 : 0) - (keys.sleft ? 1 : 0);
+      if (stick && stick.on && Math.abs(stick.y) > 0.2) fwd = -stick.y;
       const sy = Math.sin(me.yaw), cy = Math.cos(me.yaw);
       let vx = sy * fwd + cy * side, vz = cy * fwd - sy * side;
       const l = Math.hypot(vx, vz);
@@ -868,6 +871,7 @@
       if (!gl) return;
       running = true; panel.hidden = true;
       Object.keys(keys).forEach(k => { keys[k] = false; });
+      if (stick) stick.reset();
       canvas.focus();
       tip.show("🪓 Chop trees (click or Space), grab the logs (E) and feed the fire!", 4500);
     }
@@ -972,6 +976,7 @@
       ["pointerup", "pointercancel", "pointerleave"].forEach(ev => btn.addEventListener(ev, () => { if (k in keys) keys[k] = false; }));
     });
     canvas.tabIndex = 0;
+    stick = Fun.joystick(canvas.parentElement);
     $("nfCloseBtn").addEventListener("click", () => Hub.leave());
     Fun.soundButton($("nfCloseBtn"));
     playBtn.addEventListener("click", start);

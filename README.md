@@ -6,6 +6,8 @@ Learning and games for a 5th grader. The home screen asks **Learning** or **Game
 
 There's nothing to install and no build step. Just open `index.html` in a browser.
 
+📱 **On a phone or tablet**, open the link and choose *Add to Home Screen* (Safari: the share button; Chrome: the ⋮ menu → *Install app*). Learn & Play then gets its own icon, opens full screen like an app, and still works without internet once it's been opened. The 3D games with a player to move (Egg Heist, Brainrot Heist, 99 Nights, Tag Rush, Potato Tycoon, Blox Soccer and Blox Hoops) show a 🕹️ thumb joystick on touch screens instead of arrow buttons.
+
 ## 📚 Learning
 
 - 🔢 **Fast Math**: a maths practice notebook. It gives you endless new questions, and every answer comes with a worked explanation.
@@ -57,10 +59,11 @@ Every game fills the screen and has touch buttons on phones and tablets.
 
 ```
 index.html                 the launcher: home, section lists, and the list of apps
+manifest.webmanifest, sw.js, icons/   install on a phone (Add to Home Screen) and play offline
 core/
   core.css                 the shared look: theme, buttons, effects, trophies, launcher
   core.js                  saved progress, trophies, confetti, the app list and screen switching (window.Hub)
-  fun.js                   the silly bits the games share: comic pop-up words, sounds, cartoon faces, the 🔊 switch, a wobble (window.Fun)
+  fun.js                   the silly bits the games share: comic pop-up words, sounds, cartoon faces, the 🔊 switch, a wobble, the touch joystick (window.Fun)
 learning/
   notebook.js, .css        the practice page every subject shares: topics, levels, answers, Time Trial, race, trophies, and an optional scene above the questions
   math/                    Fast Math
