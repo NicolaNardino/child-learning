@@ -103,3 +103,6 @@
 @media (prefers-reduced-motion: reduce){
   .qm-cat .qm-head, .qm-cat .qm-tail, .qm-cat .qm-eyes, .qm-next{ animation: none; }
 }
+/* the 3D atom you build in the quiz */
+.qm-atom-box{ margin-bottom: 12px; }
+.qm-atom3d{ display: block; width: 100%; aspect-ratio: 720 / 260; height: auto; border-radius: 14px; border: 2px solid var(--line-strong); }

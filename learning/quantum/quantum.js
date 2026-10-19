@@ -18,7 +18,8 @@
       { id: "qmFirst",  icon: "🔬", name: "Quantum Curious",  desc: "Finish your first Quantum Lab",            test: () => doneCount() >= 1 },
       { id: "qmAll",    icon: "⚛️", name: "Quantum Explorer", desc: "Finish all five Quantum Labs",              test: () => doneCount() >= 5 },
       { id: "qmSpooky", icon: "🔗", name: "Spooky Action",    desc: "Do a real Bell test with 100 entangled pairs", test: () => !!Q().spooky },
-      { id: "qmQuiz",   icon: "🧠", name: "Quantum Whiz",     desc: "Score 9 or 10 in the Quantum Quiz",         test: () => (Q().quizBest || 0) >= 9 }
+      { id: "qmQuiz",   icon: "🧠", name: "Quantum Whiz",     desc: "Score 9 or 10 in the Quantum Quiz",         test: () => (Q().quizBest || 0) >= 9 },
+      { id: "qmNeon",   icon: "💡", name: "Neon Builder",     desc: "Build a neon atom: 10 out of 10 in the quiz", test: () => !!(Q().elements && Q().elements.Ne) }
     ],
     mount
   });
@@ -1096,12 +1097,15 @@
       let k = 0, score = 0;
       page.innerHTML = `
         <div class="qm-title"><h2>🧠 Quantum Quiz</h2><span class="level-desc">${Q().quizBest ? `Best: ${Q().quizBest} / 10` : "10 questions"}</span></div>
+        <div class="qm-atom-box"></div>
         <div class="qm-quiz"></div>`;
       const box = page.querySelector(".qm-quiz");
+      const atom = QuantumAtom(page.querySelector(".qm-atom-box"));   // every right answer builds the atom up
       function next(){
         box.innerHTML = `<div class="qm-progress">${pool.map((_, i) => `<i class="${i < k ? "past" : i === k ? "on" : ""}"></i>`).join("")}<b>⭐ ${score}</b></div>`;
         box.appendChild(questionEl(pool[k], k + 1, ok => {
           if (ok) score++;
+          atom.answer(ok);
           const b = document.createElement("button");
           b.type = "button"; b.className = "btn"; b.textContent = k === 9 ? "My score! 🏁" : "Next →";
           b.addEventListener("click", () => { k++; if (k < 10) next(); else end(); });
@@ -1111,9 +1115,12 @@
       function end(){
         const best = score > (Q().quizBest || 0);
         if (best) Q().quizBest = score;
+        const el = atom.element(score);
+        if (el) Q().elements = Object.assign(Q().elements || {}, { [el.s]: true });
         Hub.saveStore(); Hub.checkBadges();
         box.innerHTML = `<div class="qm-score"><div class="qm-big">${score >= 9 ? "🏆" : score >= 6 ? "⭐" : "🐱"}</div><h2>${score} / 10</h2>
           <p>${score >= 9 ? "Professor Whiskers is SO impressed! 😻" : score >= 6 ? "Great work! 😺" : "Good try! Play the labs and come back 😸"}${best ? " New best!" : ""}</p>
+          <p>${el ? `You built <b>${el.name}</b> (${el.s}): ${el.fact}! ⚛️` : "No atom this time."}${Object.keys(Q().elements || {}).length ? ` Atoms you've built: ${Object.keys(Q().elements).join(" ")}` : ""}</p>
           <button class="btn" type="button">↻ Again</button></div>`;
         box.querySelector("button").addEventListener("click", renderQuiz);
         if (score >= 9) { Hub.confettiBurst(box.querySelector("h2")); SFX.tada(); }

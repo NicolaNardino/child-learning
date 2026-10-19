@@ -2,7 +2,9 @@
    Fifteen balls, six pockets. Pot all of your group (solids or stripes), then the black 8, to win.
    The first ball you pot decides your group. Potting the cue ball, or hitting the wrong ball first, is a foul
    and gives the other player the cue ball to put anywhere. Pot the 8 too early and you lose.
-   Aim: move the mouse, or tap the table. Shoot: hold the mouse button (or Space) and let go, or drag the POWER bar up and let go. */
+   Aim: move the mouse, or tap the table. Shoot: hold the mouse button (or Space) and let go, or drag the POWER bar up and let go.
+   SPIN: hit the cue ball high to follow through, low to screw back, or to the side to bend off the cushions.
+   Modes: BloxBot on Easy, Normal or Hard, or Practice on your own (clear the table in as few shots as you can). */
 (function(){
   "use strict";
   const store = Hub.store;
@@ -13,7 +15,9 @@
     stat: () => store.poolWins ? "Wins: " + store.poolWins : "",
     badges: [
       { id: "poolwin", icon: "🎱", name: "Pool Shark", desc: "Win a game of Blox Pool",       test: () => (store.poolWins || 0) >= 1 },
-      { id: "poolrun", icon: "🔥", name: "On a Roll",  desc: "Pot 3 balls in one turn",       test: () => (store.poolBestRun || 0) >= 3 }
+      { id: "poolrun", icon: "🔥", name: "On a Roll",  desc: "Pot 3 balls in one turn",       test: () => (store.poolBestRun || 0) >= 3 },
+      { id: "poolhard", icon: "🤖", name: "Bot Breaker", desc: "Beat BloxBot on Hard",           test: () => (store.poolHardWins || 0) >= 1 },
+      { id: "poolclear", icon: "🎯", name: "Sharp Shooter", desc: "Clear the practice table in 30 shots or fewer", test: () => store.poolPracticeBest > 0 && store.poolPracticeBest <= 30 }
     ],
     mount
   });
@@ -28,6 +32,8 @@
   const groupOf = n => n === 0 ? null : n === 8 ? "eight" : n < 8 ? "solid" : "stripe";
   const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
   const NAMES = ["Noob_Max", "BloxBot"];
+  const MODES = { easy: { label: "Easy", err: 0.07 }, normal: { label: "Normal", err: 0.022 }, hard: { label: "Hard", err: 0.007 }, practice: { label: "Practice" } };
+  const SPIN_FOLLOW = 0.6, SPIN_SIDE = 0.32;         // how much top/back spin and side spin change the cue ball's path
 
   // how the table looks on the 960 x 540 screen: a slanted top-down view, near side wider
   const W = 960, H = 540, K = 3.3, CX = 480, Y0 = 140, HS = 300;
@@ -54,26 +60,36 @@
         <div class="game-stage">
           <canvas id="plCanvas" width="960" height="540"></canvas>
           <div class="pl-power" id="plPower" aria-label="Power: drag up and let go to shoot"><div class="pl-fill" id="plFill"></div><span>POWER</span></div>
+          <div class="pl-spin" id="plSpin" role="slider" aria-label="Spin: tap where the cue hits the white ball"><i id="plSpinDot"></i><span>SPIN</span></div>
           <div class="game-panel pl-panel" id="plPanel">
             <div class="game-panel-title" id="plPanelTitle">Blox Pool</div>
             <div class="game-panel-text" id="plPanelText"></div>
             <button class="btn" id="plPlayBtn" type="button">▶ Play</button>
+            <div class="pl-modes" id="plModes" role="group" aria-label="Who to play">
+              <button class="btn ghost small" type="button" data-mode="easy">🤖 Easy</button>
+              <button class="btn ghost small" type="button" data-mode="normal">🤖 Normal</button>
+              <button class="btn ghost small" type="button" data-mode="hard">🤖 Hard</button>
+              <button class="btn ghost small" type="button" data-mode="practice">🎯 Practice</button>
+            </div>
           </div>
         </div>
-        <div class="game-help">Move the mouse (or tap the table) to aim · hold the mouse button or Space and let go to shoot, harder the longer you hold · on a touch screen drag the POWER bar up and let go · ← → fine-tune the aim · pot your balls, then the black 8</div>
+        <div class="game-help">Move the mouse (or tap the table) to aim · hold the mouse button or Space and let go to shoot, harder the longer you hold · on a touch screen drag the POWER bar up and let go · ← → fine-tune the aim · tap the SPIN ball (or ↑ ↓) to hit high or low · pot your balls, then the black 8</div>
       </div>
     </section>`;
 
     const $ = id => document.getElementById(id);
     const overlay = $("plOverlay"), canvas = $("plCanvas"), ctx = canvas.getContext("2d");
     const panel = $("plPanel"), panelTitle = $("plPanelTitle"), panelText = $("plPanelText"), playBtn = $("plPlayBtn");
-    const whoEl = $("plWho"), potEl = $("plPot"), powerEl = $("plPower"), fillEl = $("plFill");
+    const whoEl = $("plWho"), potEl = $("plPot"), powerEl = $("plPower"), fillEl = $("plFill"), spinEl = $("plSpin"), spinDot = $("plSpinDot");
     const fx = Fun.pops();
 
     let open = false, running = false, last = 0, clock = 0, scale = 1;
     let balls = [], cue = null, turn = 0, groups = [null, null], state = "ready";   // ready, aim, place, roll, ai, over
     let aim = 0, power = 0, charging = false, inHand = false, broke = false, shot = null, settleT = 0;
     let hover = null, runCount = 0, potThisGame = 0, status = "", ai = null, overT = 0, firstGame = true;
+    let mode = MODES[store.poolMode] ? store.poolMode : "normal", shots = 0;
+    const spin = { x: 0, y: 0 };   // where the cue hits the white ball: x right, y up, each -1 to 1
+    const practice = () => mode === "practice";
 
     /* ---------------- setting up ---------------- */
     function ball(n, x, y){ return { n, x, y, vx: 0, vy: 0, out: false, sink: null }; }
@@ -97,7 +113,8 @@
       balls = rack(); cue = balls[0];
       groups = [null, null]; inHand = false; broke = false; shot = null; power = 0; charging = false;
       runCount = 0; potThisGame = 0; hover = null; ai = null; overT = 0;
-      turn = firstGame ? 0 : (Math.random() < 0.5 ? 0 : 1); firstGame = false;
+      turn = firstGame || practice() ? 0 : (Math.random() < 0.5 ? 0 : 1); firstGame = false;
+      shots = 0; setSpin(0, 0);
       aim = Math.atan2(0, 1);
       fx.clear();
       nextTurnState();
@@ -117,8 +134,11 @@
       a.x -= nx * ov; a.y -= ny * ov; b.x += nx * ov; b.y += ny * ov;
       const rv = (b.vx - a.vx) * nx + (b.vy - a.vy) * ny;
       if (rv >= 0) return;
+      const pre = Math.hypot(cue.vx, cue.vy);
       const j = -(1 + E_BALL) * rv / 2;
       a.vx -= j * nx; a.vy -= j * ny; b.vx += j * nx; b.vy += j * ny;
+      // top spin rolls the cue ball on after the hit, back spin pulls it back
+      if ((a === cue || b === cue) && cue.sy) { cue.vx += cue.dx * cue.sy * SPIN_FOLLOW * pre; cue.vy += cue.dy * cue.sy * SPIN_FOLLOW * pre; cue.sy = 0; }
       if (shot && shot.first === null && (a === cue || b === cue)) shot.first = (a === cue ? b : a).n;
       if (-rv > 30) Fun.sfx.thunk();
     }
@@ -148,6 +168,11 @@
         if (b.x > L - R) { b.x = L - R; b.vx = -Math.abs(b.vx) * E_RAIL; hit = 1; }
         if (b.y < R) { b.y = R; b.vy = Math.abs(b.vy) * E_RAIL; hit = 1; }
         if (b.y > WD - R) { b.y = WD - R; b.vy = -Math.abs(b.vy) * E_RAIL; hit = 1; }
+        if (hit && b === cue && cue.sx && cue.rails < 2) {
+          if (b.x <= R || b.x >= L - R) b.vy += cue.sx * SPIN_SIDE * sp * (b.x <= R ? -1 : 1);
+          else b.vx += cue.sx * SPIN_SIDE * sp * (b.y <= R ? 1 : -1);
+          cue.rails++; cue.sx *= 0.5;
+        }
         if (hit && sp > 90) Fun.sfx.bonk();
       }
       for (let i = 0; i < balls.length; i++) {
@@ -167,8 +192,13 @@
     function shoot(angle, pw){
       const v = VMIN + clamp(pw, 0, 1) * (VMAX - VMIN);
       cue.vx = Math.cos(angle) * v; cue.vy = Math.sin(angle) * v;
+      cue.dx = Math.cos(angle); cue.dy = Math.sin(angle);
+      const sp = turn === 0 ? spin : { x: 0, y: 0 };
+      cue.sx = sp.x; cue.sy = sp.y; cue.rails = 0;
+      shots++;
       shot = { pocketed: [], scratch: false, first: null, breakShot: !broke, cleared: !!groups[turn] && remaining(turn) === 0 };
       broke = true; state = "roll"; settleT = 0; charging = false; power = 0; inHand = false;
+      setSpin(0, 0);
       Fun.sfx.whoosh();
     }
     function respot8(){
@@ -182,13 +212,28 @@
       const won = winner === 0;
       store.poolPlayed = (store.poolPlayed || 0) + 1;
       if (won) store.poolWins = (store.poolWins || 0) + 1;
+      if (won && mode === "hard") store.poolHardWins = (store.poolHardWins || 0) + 1;
       if (runCount > (store.poolBestRun || 0)) store.poolBestRun = runCount;
       Hub.saveStore(); Hub.checkBadges();
       if (won) { Fun.sfx.tada(); Hub.confettiBurst(playBtn); } else Fun.sfx.wah();
       panelTitle.textContent = won ? "🏆 You won!" : "😩 BloxBot won this time";
-      panelText.textContent = why + (store.poolWins ? ` Wins so far: ${store.poolWins}.` : "");
-      playBtn.textContent = "▶ Play again";
-      panel.hidden = false; powerEl.hidden = true; playBtn.focus();
+      panelText.textContent = why + ` (BloxBot on ${MODES[mode].label}.)` + (store.poolWins ? ` Wins so far: ${store.poolWins}.` : "");
+      showPanel("▶ Play again");
+    }
+    function finishPractice(){
+      state = "over"; running = false; overT = 0;
+      const best = !store.poolPracticeBest || shots < store.poolPracticeBest;
+      if (best) store.poolPracticeBest = shots;
+      Hub.saveStore(); Hub.checkBadges();
+      Fun.sfx.tada(); Hub.confettiBurst(playBtn);
+      panelTitle.textContent = "🎯 Table cleared!";
+      panelText.textContent = `You potted all 15 balls in ${shots} shots.` + (best ? " That's your best yet!" : ` Your best is ${store.poolPracticeBest}.`) + " Can you do it in fewer?";
+      showPanel("▶ Play again");
+    }
+    function showPanel(label){
+      playBtn.textContent = label;
+      modesEl.querySelectorAll("[data-mode]").forEach(b => b.setAttribute("aria-pressed", String(b.dataset.mode === mode)));
+      panel.hidden = false; powerEl.hidden = true; spinEl.hidden = true; playBtn.focus();
     }
     function switchTurn(){
       if (turn === 0 && runCount > (store.poolBestRun || 0)) { store.poolBestRun = runCount; Hub.saveStore(); Hub.checkBadges(); }
@@ -196,6 +241,17 @@
     }
     function endShot(){
       const p = turn, o = 1 - p, S = shot, pot = S.pocketed.filter(n => n !== 0), eight = pot.includes(8);
+      if (practice()) {
+        const left = balls.filter(b => b.n && !b.out).length;
+        if (!left) { finishPractice(); return; }
+        runCount = pot.length ? runCount + pot.length : 0;
+        if (pot.length > 1) fx.pop(pot.length + " IN ONE!", CX, 300, "#ffe14d", 40);
+        if (S.scratch) { inHand = true; fx.pop("SCRATCH!", CX, 300, "#ff6b6b", 40); }
+        status = `Shot ${shots}. ${15 - left} of 15 potted.` + (S.scratch ? " Put the cue ball back anywhere." : "");
+        nextTurnState();
+        if (state === "aim") aim = aimAtBest();
+        return;
+      }
       const myGroup = groups[p];
       let foul = S.scratch || S.first === null;
       if (!foul && myGroup) foul = !(S.first === 8 ? S.cleared : groupOf(S.first) === myGroup);
@@ -238,6 +294,7 @@
     /* ---------------- the bot ---------------- */
     function targetsFor(p){
       const live = balls.filter(b => b.n && !b.out), g = groups[p];
+      if (practice()) return live;
       if (!g) return live.filter(b => b.n !== 8);
       const own = live.filter(b => groupOf(b.n) === g);
       return own.length ? own : live.filter(b => b.n === 8);
@@ -268,7 +325,8 @@
       if (!best) best = { score: -2, angle: 0, dist: 120 };
       const v = clamp(Math.sqrt(2 * FRIC * best.dist) + 70, VMIN + 60, VMAX);
       best.power = (v - VMIN) / (VMAX - VMIN);
-      best.angle += (Math.random() + Math.random() - 1) * 0.022;                    // nobody is perfect
+      best.angle += (Math.random() + Math.random() - 1) * (MODES[mode].err || 0.022);   // nobody is perfect (Easy least of all)
+      if (mode === "easy") best.power = clamp(best.power * (0.8 + Math.random() * 0.4), 0.1, 1);
       return best;
     }
     function legalSpot(x, y){
@@ -288,7 +346,7 @@
       placeCue(best.x, best.y);
     }
     function botPlan(){
-      if (!broke) return { angle: Math.atan2(WD / 2 - cue.y, FOOT - cue.x) + (Math.random() - 0.5) * 0.03, power: 1 };
+      if (!broke) return { angle: Math.atan2(WD / 2 - cue.y, FOOT - cue.x) + (Math.random() - 0.5) * 0.03, power: mode === "easy" ? 0.8 : 1 };
       return planShot(cue.x, cue.y, 1);
     }
     function updateBot(dt){
@@ -434,6 +492,17 @@
         let nx = r.hit.x - ex, ny = r.hit.y - ey; const nl = Math.hypot(nx, ny) || 1; nx /= nl; ny /= nl;
         const [hx, hy] = proj(r.hit.x, r.hit.y), [tx, ty] = proj(r.hit.x + nx * 50, r.hit.y + ny * 50);
         ctx.setLineDash([4, 6]); ctx.strokeStyle = "rgba(255,225,77,0.95)"; ctx.beginPath(); ctx.moveTo(hx, hy); ctx.lineTo(tx, ty); ctx.stroke(); ctx.setLineDash([]);
+        // and the cue ball: it slides off sideways, then rolls on or comes back with top or back spin
+        if (turn === 0) {
+          const along = dx * nx + dy * ny;
+          let cx2 = dx - along * nx, cy2 = dy - along * ny;
+          cx2 += dx * spin.y * SPIN_FOLLOW; cy2 += dy * spin.y * SPIN_FOLLOW;
+          const cl = Math.hypot(cx2, cy2);
+          if (cl > 0.05) {
+            const len = 18 + cl * 34, [ux, uy] = proj(ex + cx2 / cl * len, ey + cy2 / cl * len);
+            ctx.setLineDash([3, 6]); ctx.strokeStyle = "rgba(160,220,255,0.9)"; ctx.beginPath(); ctx.moveTo(gx, gy); ctx.lineTo(ux, uy); ctx.stroke(); ctx.setLineDash([]);
+          }
+        }
       }
     }
     function drawCue(){
@@ -446,12 +515,33 @@
       ctx.strokeStyle = "#4aa3ff"; ctx.lineWidth = ka * 2.4; ctx.beginPath(); ctx.moveTo(ax, ay); ctx.lineTo(tx, ty); ctx.stroke();
       ctx.lineCap = "butt";
     }
+    function drawPracticeTray(){
+      ctx.fillStyle = "rgba(255,225,77,0.22)"; ctx.fillRect(30, 492, 900, 40);
+      ctx.strokeStyle = "#ffe14d"; ctx.lineWidth = 2; ctx.strokeRect(30, 492, 900, 40);
+      ctx.fillStyle = "#fff"; ctx.font = '800 15px "Bricolage Grotesque", system-ui, sans-serif'; ctx.textAlign = "left"; ctx.textBaseline = "middle";
+      ctx.fillText(`🎯 Practice · shot ${shots}`, 40, 505);
+      ctx.font = "600 12px system-ui, sans-serif"; ctx.fillStyle = "rgba(255,255,255,0.8)";
+      ctx.fillText(store.poolPracticeBest ? `Best: ${store.poolPracticeBest} shots` : "Pot all 15 in as few shots as you can", 40, 522);
+      for (let n = 1; n <= 15; n++) {
+        const b = balls.find(o => o.n === n), x = 330 + (n - 1) * 39, y = 512;
+        ctx.globalAlpha = b && b.out ? 1 : 0.25;
+        drawMini(n, x, y);
+        ctx.globalAlpha = 1;
+      }
+    }
+    function drawMini(n, x, y){
+      ctx.fillStyle = n > 8 ? "#fff" : colourOf(n); ctx.beginPath(); ctx.arc(x, y, 13, 0, 7); ctx.fill();
+      if (n > 8) { ctx.save(); ctx.beginPath(); ctx.arc(x, y, 13, 0, 7); ctx.clip(); ctx.fillStyle = colourOf(n); ctx.fillRect(x - 13, y - 6, 26, 12); ctx.restore(); }
+      ctx.fillStyle = "#fff"; ctx.beginPath(); ctx.arc(x, y, 6.5, 0, 7); ctx.fill();
+      ctx.fillStyle = "#14102c"; ctx.font = "900 9px system-ui, sans-serif"; ctx.textAlign = "center"; ctx.fillText(n, x, y + 0.5);
+      ctx.strokeStyle = "#14102c"; ctx.lineWidth = 1.5; ctx.beginPath(); ctx.arc(x, y, 13, 0, 7); ctx.stroke();
+    }
     function drawTray(p){
       const x0 = p === 0 ? 30 : 500, w = 430, g = groups[p];
       ctx.fillStyle = turn === p && state !== "over" ? "rgba(255,225,77,0.22)" : "rgba(0,0,0,0.35)";
       ctx.fillRect(x0, 492, w, 40); ctx.strokeStyle = turn === p && state !== "over" ? "#ffe14d" : "rgba(255,255,255,0.25)"; ctx.lineWidth = 2; ctx.strokeRect(x0, 492, w, 40);
       ctx.fillStyle = "#fff"; ctx.font = '800 15px "Bricolage Grotesque", system-ui, sans-serif'; ctx.textAlign = "left"; ctx.textBaseline = "middle";
-      ctx.fillText(NAMES[p] + (p === 0 ? " (you)" : ""), x0 + 10, 505);
+      ctx.fillText(NAMES[p] + (p === 0 ? " (you)" : ` (${MODES[mode].label})`), x0 + 10, 505);
       ctx.font = "600 12px system-ui, sans-serif"; ctx.fillStyle = "rgba(255,255,255,0.8)";
       ctx.fillText(g ? (g === "solid" ? "Solids" : "Stripes") : "Open table", x0 + 10, 522);
       if (!g) return;
@@ -459,11 +549,7 @@
       nums.forEach((n, i) => {
         const b = balls.find(o => o.n === n), x = x0 + 140 + i * 36, y = 512;
         const dim = b && b.out; ctx.globalAlpha = dim ? 0.25 : 1;
-        ctx.fillStyle = n > 8 ? "#fff" : colourOf(n); ctx.beginPath(); ctx.arc(x, y, 13, 0, 7); ctx.fill();
-        if (n > 8) { ctx.save(); ctx.beginPath(); ctx.arc(x, y, 13, 0, 7); ctx.clip(); ctx.fillStyle = colourOf(n); ctx.fillRect(x - 13, y - 6, 26, 12); ctx.restore(); }
-        ctx.fillStyle = "#fff"; ctx.beginPath(); ctx.arc(x, y, 6.5, 0, 7); ctx.fill();
-        ctx.fillStyle = "#14102c"; ctx.font = "900 9px system-ui, sans-serif"; ctx.textAlign = "center"; ctx.fillText(n, x, y + 0.5);
-        ctx.strokeStyle = "#14102c"; ctx.lineWidth = 1.5; ctx.beginPath(); ctx.arc(x, y, 13, 0, 7); ctx.stroke();
+        drawMini(n, x, y);
         ctx.globalAlpha = 1;
       });
     }
@@ -471,7 +557,7 @@
       fitCanvas();
       ctx.setTransform(scale, 0, 0, scale, 0, 0);
       drawRoom();
-      drawAvatar(0); drawAvatar(1);
+      drawAvatar(0); if (!practice()) drawAvatar(1);
       drawTable();
       const list = balls.filter(b => !b.out).sort((a, b) => a.y - b.y);
       if (state === "place" && hover) {
@@ -484,7 +570,7 @@
       list.forEach(b => { if (!(state === "place" && b === cue && hover)) drawBall(b); });
       if (showAim && !cue.out) drawCue();
       fx.draw(ctx, dt);
-      drawTray(0); drawTray(1);
+      if (practice()) drawPracticeTray(); else { drawTray(0); drawTray(1); }
       // what's going on
       const msg = status || ""; ctx.font = '700 15px "Bricolage Grotesque", system-ui, sans-serif';
       ctx.textAlign = "center"; ctx.textBaseline = "middle"; ctx.fillStyle = "#fff"; ctx.strokeStyle = "rgba(0,0,0,0.6)"; ctx.lineWidth = 4;
@@ -492,11 +578,12 @@
     }
     let lastWho = "", lastPot = -1;
     function hud(){
-      const who = state === "over" ? "Game over" : state === "place" ? (turn === 0 ? "Place the cue ball" : "BloxBot places") : turn === 0 ? "Your turn" : "BloxBot's turn";
+      const who = state === "over" ? "Game over" : state === "place" ? (turn === 0 ? "Place the cue ball" : "BloxBot places") : practice() ? "Practice" : turn === 0 ? "Your turn" : "BloxBot's turn";
       if (who !== lastWho) { whoEl.textContent = who; lastWho = who; }
       if (potThisGame !== lastPot) { potEl.textContent = "🎱 ×" + potThisGame; lastPot = potThisGame; }
       const showPower = state === "aim" && turn === 0 && running;
       if (powerEl.hidden === showPower) powerEl.hidden = !showPower;
+      if (spinEl.hidden === showPower) spinEl.hidden = !showPower;
       fillEl.style.height = Math.round(power * 100) + "%";
       if (state === "aim" && turn === 0 && !status) status = "Your turn.";
     }
@@ -512,11 +599,19 @@
     }
 
     /* ---------------- starting and leaving ---------------- */
+    function setSpin(x, y){
+      const m = Math.hypot(x, y);
+      if (m > 1) { x /= m; y /= m; }
+      spin.x = x; spin.y = y;
+      spinDot.style.left = (50 + x * 34) + "%"; spinDot.style.top = (50 - y * 34) + "%";
+      spinEl.setAttribute("aria-valuetext", spin.y > 0.2 ? "top spin" : spin.y < -0.2 ? "back spin" : Math.abs(spin.x) > 0.2 ? "side spin" : "no spin");
+    }
     function start(){
+      store.poolMode = mode; Hub.saveStore();
       reset();
       running = true; panel.hidden = true;
       Object.keys(keys).forEach(k => { keys[k] = false; });
-      if (state === "aim") status = "You break! Aim, then shoot.";
+      if (state === "aim") status = practice() ? "Practice: pot all 15 balls. You break!" : "You break! Aim, then shoot.";
       canvas.focus();
     }
     function openGame(){
@@ -524,10 +619,10 @@
       reset(); status = "";
       overlay.hidden = false; document.body.style.overflow = "hidden";
       panelTitle.textContent = "🎱 Blox Pool";
-      panelText.textContent = "American 8-ball against BloxBot. Pot all of your group, solids or stripes (the first ball you pot decides), then sink the black 8 to win. Potting the white cue ball or hitting the wrong ball first is a foul, and the other player gets the cue ball to put anywhere."
+      panelText.textContent = "American 8-ball against BloxBot. Pot all of your group, solids or stripes (the first ball you pot decides), then sink the black 8 to win. Potting the white cue ball or hitting the wrong ball first is a foul, and the other player gets the cue ball to put anywhere. Pick how good BloxBot is, or practise on your own."
         + (store.poolWins ? ` Wins so far: ${store.poolWins}.` : "");
-      playBtn.textContent = "▶ Play"; panel.hidden = false; powerEl.hidden = true;
-      last = performance.now(); requestAnimationFrame(loop); playBtn.focus();
+      showPanel("▶ Play");
+      last = performance.now(); requestAnimationFrame(loop);
     }
     function closeGame(){
       open = false; running = false; overlay.hidden = true; document.body.style.overflow = "";
@@ -549,6 +644,9 @@
       if (e.code === "ArrowLeft" || e.code === "KeyA") { e.preventDefault(); keys.left = true; }
       if (e.code === "ArrowRight" || e.code === "KeyD") { e.preventDefault(); keys.right = true; }
       if (e.key === "Shift") keys.shift = true;
+      if ((e.code === "ArrowUp" || e.code === "ArrowDown") && state === "aim" && turn === 0) {
+        e.preventDefault(); setSpin(spin.x, clamp(spin.y + (e.code === "ArrowUp" ? 0.25 : -0.25), -1, 1));
+      }
     });
     window.addEventListener("keyup", e => {
       if (e.code === "Space" && open) { chargeRelease(); return; }
@@ -580,6 +678,20 @@
     });
     ["pointerup", "pointercancel"].forEach(n => canvas.addEventListener(n, e => { if (e.pointerType === "mouse") chargeRelease(); }));
     // the POWER bar for touch screens: drag up, let go to shoot
+    // the SPIN ball: tap or drag where the cue should hit it; double tap to hit it in the middle again
+    let spinning = false;
+    const spinAt = e => { const r = spinEl.getBoundingClientRect(); setSpin((e.clientX - r.left - r.width / 2) / (r.width * 0.34), -(e.clientY - r.top - r.height / 2) / (r.height * 0.34)); };
+    spinEl.addEventListener("pointerdown", e => { if (state !== "aim" || turn !== 0) return; e.preventDefault(); spinning = true; spinEl.setPointerCapture(e.pointerId); spinAt(e); });
+    spinEl.addEventListener("pointermove", e => { if (spinning) spinAt(e); });
+    ["pointerup", "pointercancel"].forEach(n => spinEl.addEventListener(n, () => { spinning = false; if (Math.hypot(spin.x, spin.y) < 0.18) setSpin(0, 0); }));
+    spinEl.addEventListener("dblclick", () => setSpin(0, 0));
+    const modesEl = $("plModes");
+    modesEl.addEventListener("click", e => {
+      const b = e.target.closest("[data-mode]"); if (!b) return;
+      mode = b.dataset.mode;
+      modesEl.querySelectorAll("[data-mode]").forEach(x => x.setAttribute("aria-pressed", String(x === b)));
+      Fun.sfx.pop();
+    });
     let powering = false;
     const barPower = e => { const r = powerEl.getBoundingClientRect(); power = clamp((r.bottom - e.clientY) / r.height, 0, 1); };
     powerEl.addEventListener("pointerdown", e => { if (state !== "aim" || turn !== 0) return; e.preventDefault(); powering = true; powerEl.setPointerCapture(e.pointerId); barPower(e); });
@@ -593,7 +705,7 @@
     $("plCloseBtn").addEventListener("click", () => Hub.leave());
     Fun.soundButton($("plCloseBtn"));
     playBtn.addEventListener("click", start);
-    window.__pool = { get state(){ return state; }, get turn(){ return turn; }, get groups(){ return groups; }, balls: () => balls, shoot: (a, p) => shoot(a, p), get aim(){ return aim; }, set aim(v){ aim = v; } };
+    window.__pool = { get mode(){ return mode; }, set mode(v){ mode = v; }, spin: setSpin, get shots(){ return shots; }, get state(){ return state; }, get turn(){ return turn; }, get groups(){ return groups; }, balls: () => balls, shoot: (a, p) => shoot(a, p), get aim(){ return aim; }, set aim(v){ aim = v; } };
 
     return { open: openGame, close: closeGame };
   }
