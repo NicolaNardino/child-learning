@@ -18,7 +18,7 @@ There's nothing to install and no build step. Just open `index.html` in a browse
   - Five topics: 📚 Words (English ↔ German: school, free time, town and traffic), ↔️ Opposites, 🐝 Spelling (pick it, or hear it 🔊 and type it), 🏃 Verbs (present simple, present continuous, past simple) and ✏️ Grammar (be / have got, prepositions, question words, comparing).
 - 🥨 **Deutsch Dash**: Deutsch für die 5. Klasse, passend zu *Die Sprachstarken 5*, mit Schweizer Rechtschreibung (ss statt ß, «Anführungszeichen»). Über den Fragen läuft die 🏃 **Fehlerteufel-Jagd** in 3D: du rennst auf einem Weg durch die Schweiz (Chalets, Tannen, Kühe, die Alpen), und der Fehlerteufel 😈 jagt dich. Jede richtige Antwort: ein Sprung, eine Schoggi 🍫 und ein Stück Vorsprung, alle 5 richtig am Stück ein TURBO 🔥. Bei einem Fehler stolperst du, und der Teufel holt auf. Alle 100 m kommst du in einen neuen Ort, von Baar über Zug und Luzern bis zum Matterhorn.
   - Sechs Themen: 🧩 Wortarten (Nomen, Verb, Adjektiv, Pronomen, Partikel), 🎯 Die 4 Fälle, 🏃 Verben (Präteritum, Perfekt), ✍️ Rechtschreibung (Doppelkonsonanten, ss, ck/tz, das/dass), 💬 Satzzeichen (direkte Rede, Kommas) und 🧱 Morpheme.
-- 🌍 **NMG Entdecker**: Natur, Mensch, Gesellschaft für die 5. Klasse in Zug (Lehrplan 21), mit vielen Beispielen aus Zug und Baar.
+- 🌍 **NMG Entdecker**: Natur, Mensch, Gesellschaft für die 5. Klasse in Zug (Lehrplan 21), mit vielen Beispielen aus Zug und Baar. Über den Fragen schwebst du in einer 🎈 **Ballonfahrt** in 3D über Hügel, Berge mit Schnee und blaue Seen. Jede richtige Antwort: der Brenner faucht, der Ballon steigt, und ein Fund zum Thema schwebt in deinen Korb (ein Wappen 🛡️, eine Burg 🏰, ein Fuchs 🦊, ein Herz 🫀, eine Rakete 🚀...). Bei einem Fehler kommt eine grimmige Gewitterwolke ⛈️ und drückt dich hinunter. Eine Serie bringt dich immer höher.
   - Sechs Themen: 🗺️ Kantone, ⛰️ Geografie, 🏰 Geschichte (Pfahlbauer, Römer, Ritter, 1291, Morgarten), 🫀 Mensch & Körper, 🦊 Tiere & Pflanzen und 🧲 Natur & Technik.
 - 🎵 **Musik Maestro**: Musik für die 5. Klasse, mit Noten auf einem echten Notensystem und Tönen zum Anhören.
   - Sechs Themen: 🎼 Notennamen (mit h!), ⏱️ Notenwerte und Pausen, 📏 Takt, 🎻 Instrumente, 🔤 Musikwörter und Komponisten, und 👂 ein Hör-Quiz (hoch oder tief, Dur oder Moll, schnell oder langsam).
@@ -66,7 +66,7 @@ learning/
   math/                    Fast Math
   english/                 Word Wizard (duel.js is the Wizard Duel above the questions)
   german/                  Deutsch Dash (dash.js is the Fehlerteufel-Jagd above the questions)
-  nmg/                     NMG Entdecker
+  nmg/                     NMG Entdecker (explore.js is the Ballonfahrt above the questions)
   typing/                  Tipp-Meister (its own page, not the notebook)
   quantum/                 Quantum Lab (its own page: five labs with experiments drawn on canvases, and a quiz)
   musik/                   Musik Maestro (draws notes as SVG and plays tones with Web Audio)
