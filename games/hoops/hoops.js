@@ -41,6 +41,12 @@
         </div>
         <div class="game-stage">
           <canvas id="hpCanvas" width="960" height="540"></canvas>
+          <!-- on phones and tablets: a joystick to run with, and big PASS and SHOOT buttons over the court -->
+          <div class="hp-stick" id="hpStick" aria-label="Joystick: drag to run"><div class="hp-knob" id="hpKnob"></div></div>
+          <div class="hp-btns">
+            <button class="hp-btn hp-pass" data-hpkey="pass" type="button" aria-label="Pass">PASS</button>
+            <button class="hp-btn hp-shoot" data-hpkey="shoot" type="button" aria-label="Shoot or jump">SHOOT</button>
+          </div>
           <div class="game-panel hp-panel" id="hpPanel">
             <div class="game-panel-title" id="hpPanelTitle">Blox Hoops</div>
             <div class="game-panel-text" id="hpPanelText"></div>
@@ -48,14 +54,6 @@
           </div>
         </div>
         <div class="game-help">W A S D or the arrow keys to run · hold Space and let go in the green to shoot (right under the hoop: DUNK!) · E to pass · no ball? Space jumps to block, run into the dribbler to steal</div>
-        <div class="game-touch">
-          <button class="btn ghost" data-hpkey="left" type="button" aria-label="Run left">◀</button>
-          <button class="btn ghost" data-hpkey="up" type="button" aria-label="Run forward">▲</button>
-          <button class="btn ghost" data-hpkey="down" type="button" aria-label="Run back">▼</button>
-          <button class="btn ghost" data-hpkey="right" type="button" aria-label="Run right">▶</button>
-          <button class="btn ghost" data-hpkey="pass" type="button" aria-label="Pass">PASS</button>
-          <button class="btn" data-hpkey="shoot" type="button" aria-label="Shoot or jump">SHOOT</button>
-        </div>
       </div>
     </section>`;
 
@@ -73,6 +71,7 @@
     let charging = false, charge = 0, camYaw = 0, cheer = 0;
     let banner = { text: "", sub: "", t: 0 };
     const keys = { left: false, right: false, up: false, down: false };
+    const stick = { x: 0, y: 0, on: false };   // the touch joystick: x right, y down, each -1 to 1
     const fx = Fun.pops();
 
     /* ----- the players ----- */
@@ -392,8 +391,11 @@
     /* ----- you ----- */
     function stepYou(dt){
       if (phase !== "play") { moveBody(you, 0, 0, 0, dt); return; }
-      const fwd = (keys.up ? 1 : 0) - (keys.down ? 1 : 0), side = (keys.right ? 1 : 0) - (keys.left ? 1 : 0);
-      moveBody(you, side * cam.c + fwd * cam.s, -side * cam.s + fwd * cam.c, charging ? RUN * 0.35 : RUN, dt);
+      let fwd = (keys.up ? 1 : 0) - (keys.down ? 1 : 0), side = (keys.right ? 1 : 0) - (keys.left ? 1 : 0), push = 1;
+      // the joystick: push it a little to jog, all the way to sprint
+      const m = Math.hypot(stick.x, stick.y);
+      if (stick.on && m > 0.15) { fwd = -stick.y; side = stick.x; push = Math.min(1, 0.35 + m * 0.75); }
+      moveBody(you, side * cam.c + fwd * cam.s, -side * cam.s + fwd * cam.c, (charging ? RUN * 0.35 : RUN) * push, dt);
       if (charging) charge = Math.min(1.15, charge + dt / 0.9);
     }
 
@@ -653,6 +655,7 @@
       running = true;
       panel.hidden = true;
       Object.keys(keys).forEach(k => { keys[k] = false; });
+      dropStick();
       canvas.focus();
     }
     function fullTime(){
@@ -707,7 +710,21 @@
       if (e.code === "Space" && open) { releaseShoot(); return; }
       const k = KEYMAP[e.code]; if (k) keys[k] = false;
     });
-    window.addEventListener("blur", () => { Object.keys(keys).forEach(k => { keys[k] = false; }); charging = false; });
+    window.addEventListener("blur", () => { Object.keys(keys).forEach(k => { keys[k] = false; }); charging = false; dropStick(); });
+    // the joystick follows your thumb and springs back when you let go
+    const stickEl = $("hpStick"), knob = $("hpKnob");
+    function moveStick(e){
+      const r = stickEl.getBoundingClientRect(), R = r.width / 2;
+      let dx = (e.clientX - r.left - R) / R, dy = (e.clientY - r.top - R) / R;
+      const m = Math.hypot(dx, dy);
+      if (m > 1) { dx /= m; dy /= m; }
+      stick.x = dx; stick.y = dy;
+      knob.style.transform = `translate(${dx * R * 0.6}px, ${dy * R * 0.6}px)`;
+    }
+    function dropStick(){ stick.on = false; stick.x = stick.y = 0; knob.style.transform = ""; stickEl.classList.remove("on"); }
+    stickEl.addEventListener("pointerdown", e => { e.preventDefault(); stick.on = true; stickEl.classList.add("on"); stickEl.setPointerCapture(e.pointerId); moveStick(e); });
+    stickEl.addEventListener("pointermove", e => { if (stick.on) moveStick(e); });
+    ["pointerup", "pointercancel", "lostpointercapture"].forEach(ev => stickEl.addEventListener(ev, dropStick));
     host.querySelectorAll("[data-hpkey]").forEach(btn => {
       const k = btn.dataset.hpkey;
       btn.addEventListener("pointerdown", e => {
