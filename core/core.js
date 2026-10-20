@@ -89,7 +89,8 @@
   const appsIn = section => apps.filter(a => a.section === section);
   // the games are grouped on their page; anything new and not listed here goes under "More games"
   const CATEGORIES = [
-    { title: "⚽ Sports", ids: ["soccer", "hoops", "pool", "bowling", "minigolf", "ping-pong", "turbo"] },
+    { title: "🏁 Racing", ids: ["wheels", "turbo"] },
+    { title: "⚽ Sports", ids: ["soccer", "hoops", "pool", "bowling", "minigolf", "ping-pong"] },
     { title: "🗺️ Adventure", ids: ["forest", "parkour", "robot-tag", "tag-rush", "zombie-blaster", "egg-heist", "brainrot-heist"] },
     { title: "👾 Arcade", ids: ["pacman", "pacman-3d", "tower", "fishing"] },
     { title: "🧱 Build & grow", ids: ["blocks", "garden", "potato-tycoon"] },

@@ -1,0 +1,45 @@
+/* Stunt Wheels fills the screen; on touch screens big BRAKE, NITRO and GAS pedals sit on the game. */
+#swOverlay .game-box{ width: min(100%, calc((100vh - 110px) * 16 / 9)); }
+@media (pointer: coarse){ #swOverlay .game-box{ width: min(100%, calc((100vh - 120px) * 16 / 9)); } }
+@media (max-height: 500px){
+  #swOverlay .game-box{
+    width: min(100%, calc((100vh - 100px) * 16 / 9));
+    width: min(100%, calc((100dvh - 100px) * 16 / 9));
+  }
+}
+#swCanvas:focus{ outline: none; }
+#swCanvas{
+  display: block; width: 100%; aspect-ratio: 16 / 9; height: auto;
+  border-radius: 12px; border: 2px solid rgba(255,255,255,0.25);
+  background: #6fc3ff; touch-action: none;
+}
+.sw-panel{ background: rgba(20,8,40,0.72); overflow-y: auto; justify-content: flex-start; padding-top: 16px; }
+.sw-pick{ display: flex; flex-direction: column; gap: 6px; align-items: center; width: 100%; }
+.sw-pick > span{ font-size: 12px; font-weight: 800; letter-spacing: 0.08em; text-transform: uppercase; opacity: 0.8; }
+.sw-levels, .sw-cars{ display: flex; flex-wrap: wrap; gap: 6px; justify-content: center; max-width: 760px; }
+.sw-lvl{
+  display: flex; flex-direction: column; align-items: center; gap: 1px; min-width: 84px; padding: 6px 8px; border-radius: 10px;
+  background: rgba(255,255,255,0.1); border: 2px solid rgba(255,255,255,0.3); color: #fff; cursor: pointer; font: inherit;
+}
+.sw-lvl b{ font: 900 18px "Bricolage Grotesque", sans-serif; }
+.sw-lvl span{ font-size: 11px; white-space: nowrap; }
+.sw-lvl i{ font-style: normal; color: #ffe14d; font-size: 12px; letter-spacing: 1px; }
+.sw-lvl.on, .sw-car.on{ border-color: #ff7a00; background: rgba(255,122,0,0.3); }
+.sw-lvl:disabled, .sw-car:disabled{ opacity: 0.45; cursor: not-allowed; }
+.sw-car{ display: flex; flex-direction: column; align-items: center; gap: 3px; padding: 6px 8px; border-radius: 10px; background: rgba(255,255,255,0.1); border: 2px solid rgba(255,255,255,0.3); color: #fff; cursor: pointer; font: inherit; font-size: 11px; min-width: 84px; }
+.sw-car i{ display: block; width: 46px; height: 18px; border-radius: 10px 14px 4px 4px; background: linear-gradient(170deg, var(--c) 55%, var(--t) 56%, var(--t) 66%, var(--c) 67%); box-shadow: inset 0 -5px 0 rgba(0,0,0,0.25); border: 2px solid #140a20; }
+/* the pedals */
+.sw-pedals{ display: none; }
+@media (pointer: coarse){
+  #swOverlay .game-help{ display: none; }
+  .sw-pedals{ display: block; }
+  .sw-pedal{
+    position: absolute; bottom: 4%; z-index: 2; touch-action: none; user-select: none; -webkit-user-select: none;
+    font: 900 clamp(12px, 2vw, 16px) "Bricolage Grotesque", sans-serif; color: #fff; border: 3px solid rgba(255,255,255,0.7);
+    border-radius: 16px; padding: clamp(10px, 3vh, 20px) clamp(12px, 2.6vw, 24px); background: rgba(20,10,40,0.4);
+  }
+  .sw-brake{ left: 2%; }
+  .sw-gas{ right: 2%; background: rgba(255,122,0,0.55); }
+  .sw-nitro{ right: calc(2% + clamp(80px, 13vw, 130px)); background: rgba(58,168,255,0.45); }
+  .sw-pedal.on{ transform: scale(0.94); border-color: #ffe14d; }
+}
