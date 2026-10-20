@@ -372,7 +372,7 @@
     }
     function loop(now){
       if (!open) return;
-      const dt = Math.min(1 / 30, (now - last) / 1000 || 0);
+      const dt = Math.max(0, Math.min(1 / 30, (now - last) / 1000 || 0));
       last = now; frameDt = dt;
       if (running) step(dt);
       else clock += dt;

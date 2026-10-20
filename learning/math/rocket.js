@@ -86,7 +86,7 @@
     function frame(now){
       raf = 0;
       if (!open) return;
-      const dt = Math.min(0.05, (now - last) / 1000 || 0); last = now; clock += dt;
+      const dt = Math.max(0, Math.min(0.05, (now - last) / 1000 || 0)); last = now; clock += dt;
       boost = Math.max(0, boost - dt * 0.5); wobble = Math.max(0, wobble - dt * 1.2);
       speed += ((1 + boost * 5) - speed) * Math.min(1, dt * 3);
       const bg = ctx.createRadialGradient(CX, CY, 10, CX, CY, W * 0.6);

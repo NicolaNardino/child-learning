@@ -229,7 +229,7 @@
     function frame(now){
       raf = 0;
       if (!open) return;
-      const dt = Math.min(0.05, (now - last) / 1000 || 0); last = now; clock += dt;
+      const dt = Math.max(0, Math.min(0.05, (now - last) / 1000 || 0)); last = now; clock += dt;
       cam.yaw = Math.sin(clock * 0.25) * 0.08; cam.x = Math.sin(clock * 0.25) * 0.8;
       hurt = Math.max(0, hurt - dt); cast = Math.max(0, cast - dt); shield = Math.max(0, shield - dt * 1.5); laugh = Math.max(0, laugh - dt);
       enter = Math.max(0, enter - dt * 1.6);

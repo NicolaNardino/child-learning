@@ -292,7 +292,7 @@
       function draw(now){
         raf = 0;
         if (!isOpen || !on()) return;
-        const dt = Math.min(0.05, (now - last) / 1000 || 0); last = now;
+        const dt = Math.max(0, Math.min(0.05, (now - last) / 1000 || 0)); last = now;
         shown += (pos - shown) * Math.min(1, dt * 10);
         robo = done ? robo : roboPos();
         speed += ((startT && !done ? stats().apm : 0) / 60 - speed) * Math.min(1, dt * 2);

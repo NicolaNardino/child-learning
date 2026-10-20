@@ -132,7 +132,7 @@
     function frame(now){
       raf = 0;
       if (!open) return;
-      const dt = Math.min(0.05, (now - last) / 1000 || 0); last = now; clock += dt;
+      const dt = Math.max(0, Math.min(0.05, (now - last) / 1000 || 0)); last = now; clock += dt;
       flash = Math.max(0, flash - dt * 1.5); flicker = Math.max(0, flicker - dt); jump = Math.max(0, jump - dt * 0.8); sour = Math.max(0, sour - dt);
       drawStage();
       drawLights();

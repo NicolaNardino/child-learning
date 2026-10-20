@@ -699,7 +699,7 @@
 
     function loop(now){
       if (!isOpen) return;
-      const dt = Math.min(1 / 30, (now - last) / 1000 || 0);
+      const dt = Math.max(0, Math.min(1 / 30, (now - last) / 1000 || 0));
       last = now; frame++;
       if (running && !ui.isOpen()) step(dt);
       else if (running) { for (let k = 0; k < 3; k++) move(dt / 3); }   // with a screen open you stand still, but you still fall
