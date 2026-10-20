@@ -1,0 +1,33 @@
+/* Race Off fills the screen; the pedals and the level buttons reuse the Stunt Wheels styles. */
+#roOverlay .game-box{ width: min(100%, calc((100vh - 110px) * 16 / 9)); }
+@media (pointer: coarse){ #roOverlay .game-box{ width: min(100%, calc((100vh - 120px) * 16 / 9)); } }
+@media (max-height: 500px){
+  #roOverlay .game-box{
+    width: min(100%, calc((100vh - 100px) * 16 / 9));
+    width: min(100%, calc((100dvh - 100px) * 16 / 9));
+  }
+}
+#roCanvas:focus{ outline: none; }
+#roCanvas{
+  display: block; width: 100%; aspect-ratio: 16 / 9; height: auto;
+  border-radius: 12px; border: 2px solid rgba(255,255,255,0.25);
+  background: #6fc3ff; touch-action: none;
+}
+.ro-panel{ background: rgba(14,12,34,0.78); overflow-y: auto; justify-content: flex-start; padding-top: 14px; }
+.ro-tabs, .ro-modes{ display: flex; gap: 6px; justify-content: center; flex-wrap: wrap; }
+.ro-tabs .btn.ghost{ color: #fff; border-color: rgba(255,255,255,0.4); }
+.ro-tabs .btn[aria-pressed="true"]{ background: #ff7a00; color: #14102c; border-color: #ff7a00; }
+.ro-body{ display: flex; flex-direction: column; gap: 8px; align-items: center; width: 100%; max-width: 780px; }
+.ro-missions{ display: flex; flex-wrap: wrap; gap: 4px 12px; justify-content: center; font-size: 12px; opacity: 0.95; }
+.ro-missions b{ width: 100%; }
+.ro-note{ font-size: 13px; max-width: 46ch; margin: 0; }
+.ro-bank{ font: 900 20px "Bricolage Grotesque", sans-serif; color: #ffd84d; }
+.ro-carbar{ display: flex; gap: 10px; align-items: center; font-size: 14px; }
+.ro-ups{ display: flex; flex-direction: column; gap: 5px; width: 100%; max-width: 560px; }
+.ro-up{ display: grid; grid-template-columns: 1fr auto 86px; align-items: center; gap: 10px; background: rgba(255,255,255,0.08); border-radius: 10px; padding: 5px 10px; text-align: left; }
+.ro-upname{ font-weight: 800; font-size: 14px; display: flex; flex-direction: column; }
+.ro-upname small{ font-weight: 500; font-size: 11px; opacity: 0.75; }
+.ro-pips{ color: #ff9a3c; letter-spacing: 2px; font-size: 13px; }
+.ro-up .btn{ min-width: 78px; }
+.sw-car.using{ box-shadow: 0 0 0 2px #7dff9a inset; }
+.sw-car small{ opacity: 0.85; font-size: 10px; }
