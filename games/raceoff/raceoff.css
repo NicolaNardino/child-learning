@@ -31,3 +31,4 @@
 .ro-up .btn{ min-width: 78px; }
 .sw-car.using{ box-shadow: 0 0 0 2px #7dff9a inset; }
 .sw-car small{ opacity: 0.85; font-size: 10px; }
+.sw-lvl em{ font-style: normal; font-size: 10px; opacity: 0.85; }

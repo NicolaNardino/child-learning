@@ -5,6 +5,8 @@
    touches the ground, the run is over. Fuel drains, so grab the red fuel cans. Coins you collect are yours to
    keep: spend them in the garage on new cars and five upgrades each (engine, tires, suspension, fuel tank,
    nitro). 30 career levels in five worlds, each with three missions for stars, plus an Endless run.
+   Assist makes it kinder (narrower gaps, fuel lasts longer) for levels that feel too hard. Every finished level
+   records a ghost: a see-through copy of your fastest run that races you next time, with the gap in metres.
    The soundtrack is the same original loop as Stunt Wheels (games/wheels/music.js). */
 (function(){
   "use strict";
@@ -118,10 +120,11 @@
     let terrain, car, cam = { x: 0, y: 0, z: 1 }, pickups = [], pads = [], runCoins = 0, fuel = 1, nitro = 0.4, time = 0, dist = 0;
     let airT = 0, airRot = 0, maxAir = 0, flips = 0, usedNitro = false, outT = 0, endT = 0, shake = 0, lastGroundY = 0, goalX = 0, dust = [], sparks = [], stats = null;
     const keys = { gas: false, brake: false, nitro: false };
+    let ghost = null, rec = [], recT = 0, ghostGap = null;   // the best run to race against, and the run being recorded
 
     /* ---------------- the ground: a polyline that is made as you drive ---------------- */
     function newTerrain(seed, d0, endless, goalPx){
-      const T = { pieces: [], x: 0, y: 0, rnd: seeded(seed), d: d0, endless, goalPx, nextFuel: 3800, nextNitro: 6200, cur: null, maxY: 0 };
+      const T = { assist: !!R().assist, pieces: [], x: 0, y: 0, rnd: seeded(seed), d: d0, endless, goalPx, nextFuel: 3800, nextNitro: 6200, cur: null, maxY: 0 };
       T.cur = { pts: [{ x: -400, y: 0 }, { x: 0, y: 0 }] }; T.pieces.push(T.cur);
       return T;
     }
@@ -159,7 +162,7 @@
         const len = 520 + rnd() * 220, A = 8 + d * 12, wl = 78 + rnd() * 30;
         addPts(T, len, t => A * Math.sin(len * t / wl * Math.PI * 2), 14);
       } else if (pickSeg < 0.86) { // a ramp and a gap to jump
-        const gap = 200 + d * 170 + rnd() * 60;
+        const gap = (200 + d * 170 + rnd() * 60) * (T.assist ? 0.78 : 1);
         const flat = 200 + rnd() * 120; addPts(T, flat, () => 0);
         if (gap > 300 || rnd() < 0.5) pads.push({ x0: T.x - flat * 0.9, x1: T.x - 10 });
         const rise = 50 + rnd() * 40 + d * 50;
@@ -324,6 +327,8 @@
       fuel = 1; nitro = 0.4; time = 0; runCoins = 0; flips = 0; maxAir = 0; usedNitro = false; outT = 0; endT = 0; dist = 0; shake = 0; clock = 0;
       missions = endless ? [] : missionsOf(lvl); done = {};
       cam.x = car.x; cam.y = car.y; cam.z = 1; fx.clear();
+      rec = []; recT = 0; ghostGap = null;
+      ghost = !endless && R().ghost && R().ghost[lvl.n] ? R().ghost[lvl.n] : null;
       state = "count";
       stats = null;
     }
@@ -344,17 +349,20 @@
       const finished = why === "finish";
       state = finished ? "finish" : "over";
       const S = R(), m = Math.round(dist / PX_M);
-      let bonus = 0, newStars = 0;
+      let bonus = 0, newStars = 0, newBest = false;
       if (mode === "endless") { if (m > S.best) { S.best = m; } }
       else if (finished) {
         let mask = (S.stars || {})[lvl.n] || 0;
         missions.forEach((mi, i) => { if (missionDone(mi) && !(mask >> i & 1)) { mask |= 1 << i; newStars++; } });
         S.stars = S.stars || {}; S.stars[lvl.n] = mask;
         bonus = 100 + 100 * newStars; store.raceoffWins = (store.raceoffWins || 0) + 1;
+        S.bestTime = S.bestTime || {}; S.ghost = S.ghost || {};
+        const prev = S.bestTime[lvl.n];
+        if (!prev || time < prev) { newBest = true; S.bestTime[lvl.n] = Math.round(time * 10) / 10; S.ghost[lvl.n] = { car: S.car, d: rec.concat([[Math.round(car.x), Math.round(car.y), Math.round(car.a * 100)]]) }; }
       }
       const earned = runCoins + bonus;
       S.coins += earned;
-      stats = { m, why, earned, bonus, runCoins, newStars, mission: missions.map(mi => ({ text: mi.text, ok: missionDone(mi) })) };
+      stats = { m, why, earned, bonus, runCoins, newStars, newBest, time, mission: missions.map(mi => ({ text: mi.text, ok: missionDone(mi) })) };
       Hub.saveStore(); Hub.checkBadges();
       if (finished) { Fun.sfx.tada(); Hub.confettiBurst(canvas); } else { Fun.sfx.crash(); if (why === "crash") fx.pop("CRASH!", W / 2, H * 0.35, "#ff6b6b", 48); if (why === "fuel") fx.pop("OUT OF FUEL!", W / 2, H * 0.35, "#ff6b4a", 44); if (why === "fell") fx.pop("SPLASH!", W / 2, H * 0.35, "#7fd0ff", 44); }
       setTimeout(() => showResults(), finished ? 1400 : 1100);
@@ -365,13 +373,14 @@
       if (state === "count") { if (clock > 1.9) { state = "race"; Fun.sfx.whoosh(); } else { physics(Math.min(dt, 1 / 60)); } }
       else if (state === "race") {
         time += dt;
+        recT += dt; if (lvl && recT >= 0.1) { recT -= 0.1; rec.push([Math.round(car.x), Math.round(car.y), Math.round(car.a * 100)]); }
         const n = 4, S = car.S;
         for (let i = 0; i < n && state === "race"; i++) physics(dt / n);
         extend(terrain, car.x + 2200);
         dist = Math.max(dist, car.x - 120);
         // fuel and nitro
         const gasing = keys.gas && fuel > 0;
-        fuel = Math.max(0, fuel - dt * (gasing ? 0.036 : 0.012) * S.drain);
+        fuel = Math.max(0, fuel - dt * (gasing ? 0.036 : 0.012) * S.drain * (R().assist ? 0.65 : 1));
         if (keys.nitro && nitro > 0 && fuel > 0) { nitro = Math.max(0, nitro - dt * 0.28 * S.nitroUse); usedNitro = true; }
         pickups.forEach(p => {
           if (p.got || Math.abs(p.x - car.x) > 70) return;
@@ -386,6 +395,7 @@
         if (car.x < 60 && car.vx < 0) { car.x = 60; car.vx = 0; }
         const gc = groundAt(terrain, car.x);
         if (gc && car.y > gc.y + 30) car.head = true;   // the body is inside the ground
+        if (ghost) { const g = ghostAt(time); ghostGap = g ? Math.round((car.x - g.x) / PX_M) : null; }
         if (car.head) endRun("crash");
         else if (car.y > lastGroundY + 420) endRun("fell");
         else if (fuel <= 0 && Math.hypot(car.vx, car.vy) < 30) { outT += dt; if (outT > 1.4) endRun("fuel"); } else outT = 0;
@@ -480,6 +490,23 @@
         }
       });
     }
+    // where your best run was after t seconds
+    function ghostAt(t){
+      const d = ghost.d, f = Math.max(0, t / 0.1), i = Math.min(d.length - 1, Math.floor(f)), j = Math.min(d.length - 1, i + 1), u = Math.min(1, f - i);
+      if (!d[i]) return null;
+      return { x: d[i][0] + (d[j][0] - d[i][0]) * u, y: d[i][1] + (d[j][1] - d[i][1]) * u, a: (d[i][2] + (d[j][2] - d[i][2]) * u) / 100, done: f >= d.length - 1 };
+    }
+    // a see-through copy of the car that set your best time
+    function drawGhost(){
+      const g = ghostAt(state === "count" ? 0 : time); if (!g) return;
+      const C = CARS.find(c => c.id === ghost.car) || CARS[0], ca = Math.cos(g.a), sa = Math.sin(g.a);
+      ctx.save(); ctx.globalAlpha = 0.42;
+      WHEELS.forEach(([lx, ly]) => { const wx = g.x + lx * ca - (ly + 14) * sa, wy = g.y + lx * sa + (ly + 14) * ca; ctx.fillStyle = "#9bd8ff"; ctx.beginPath(); ctx.arc(sx(wx), sy(wy), C.wr * cam.z, 0, 7); ctx.fill(); });
+      ctx.translate(sx(g.x), sy(g.y)); ctx.rotate(g.a); ctx.scale(cam.z, cam.z);
+      ctx.fillStyle = "#9bd8ff"; ctx.strokeStyle = "#e8f8ff"; ctx.lineWidth = 2.5; ctx.beginPath();
+      ctx.moveTo(-50, 9); ctx.lineTo(-50, -6); ctx.lineTo(-36, -10); ctx.lineTo(-16, -10); ctx.quadraticCurveTo(-8, -28, 8, -12); ctx.lineTo(42, -6); ctx.quadraticCurveTo(54, -3, 53, 9); ctx.closePath(); ctx.fill(); ctx.stroke();
+      ctx.restore();
+    }
     function drawCar(){
       const c = car, S = c.S, C = S.C;
       const ca = Math.cos(c.a), sa = Math.sin(c.a);
@@ -522,6 +549,7 @@
       ctx.font = '900 26px "Bricolage Grotesque", system-ui'; const t = lvl ? `${m} / ${lvl.goal} m` : `${m} m`;
       ctx.strokeText(t, 16, 26); ctx.fillText(t, 16, 26);
       ctx.font = '800 16px "Bricolage Grotesque", system-ui'; ctx.strokeText(`🪙 ${runCoins}`, 16, 54); ctx.fillText(`🪙 ${runCoins}`, 16, 54);
+      if (ghost && ghostGap !== null && state === "race") { const txt = `👻 ${ghostGap >= 0 ? "+" : ""}${ghostGap} m ${ghostGap >= 0 ? "ahead" : "behind"}`; ctx.fillStyle = ghostGap >= 0 ? "#7dff9a" : "#ff9a8a"; ctx.strokeText(txt, 84, 54); ctx.fillText(txt, 84, 54); ctx.fillStyle = "#fff"; }
       // missions
       if (missions.length && (state === "race" || state === "count")) {
         ctx.font = "700 12px system-ui"; missions.forEach((mi, i) => { const ok = missionDone(mi) && mi.id !== "finish" && mi.id !== "nonitro" && mi.id !== "fuel" && mi.id !== "time" ? true : false; const txt = `${ok ? "✔" : "○"} ${mi.text}`; ctx.fillStyle = ok ? "#7dff9a" : "#fff"; ctx.strokeText(txt, 16, 78 + i * 16); ctx.fillText(txt, 16, 78 + i * 16); });
@@ -542,6 +570,7 @@
       if (shake > 0) ctx.translate((Math.random() - 0.5) * shake, (Math.random() - 0.5) * shake);
       drawBackground(); drawTerrain(); drawPickups();
       dust.forEach(d => { ctx.fillStyle = `rgba(230,220,200,${Math.max(0, 0.6 - d.t)})`; ctx.beginPath(); ctx.arc(sx(d.x), sy(d.y), (4 + d.t * 14) * cam.z, 0, 7); ctx.fill(); });
+      if (ghost && (state === "race" || state === "count" || state === "finish")) drawGhost();
       drawCar();
       sparks.forEach(s => { ctx.fillStyle = "#ffd84d"; ctx.fillRect(sx(s.x), sy(s.y), 3, 3); });
       fx.draw(ctx, dt); drawHud();
@@ -565,7 +594,7 @@
         showPanel("↻ Again");
       } else if (s.why === "finish") {
         titleEl.textContent = `🏁 ${"⭐".repeat(starsOf(L.n))}${"☆".repeat(3 - starsOf(L.n))}`;
-        textEl.textContent = `Level ${L.n + 1} done: +${s.earned} coins (${s.runCoins} collected, ${s.bonus} bonus).` + s.mission.map(m => ` ${m.ok ? "✔" : "✘"} ${m.text}.`).join("");
+        textEl.textContent = `Level ${L.n + 1} done in ${s.time.toFixed(1)} s${s.newBest ? ' (new best! 👻 your ghost will race you next time)' : ` (best ${R().bestTime[L.n]} s)`}: +${s.earned} coins (${s.runCoins} collected, ${s.bonus} bonus).` + s.mission.map(m => ` ${m.ok ? "✔" : "✘"} ${m.text}.`).join("");
         pickLvl = Math.min(LEVELS.length - 1, L.n + 1); showPanel(L.n < LEVELS.length - 1 ? "▶ Next level" : "↻ Again");
       } else {
         titleEl.textContent = s.why === "fuel" ? "⛽ Out of fuel" : s.why === "fell" ? "💦 You fell in!" : "💥 Crash!";
@@ -586,9 +615,10 @@
         let h = `<div class="ro-modes" role="group"><button type="button" class="sw-world${mode === "career" ? " on" : ""}" data-mode="career">🏁 Career</button><button type="button" class="sw-world${mode === "endless" ? " on" : ""}" data-mode="endless">🛣️ Endless${S.best ? ` <small>${S.best} m</small>` : ""}</button></div>`;
         if (mode === "career") {
           h += `<div class="sw-worlds">` + WORLDS.map((wd, wi) => `<button type="button" class="sw-world${wi === pickWorld ? " on" : ""}" data-world="${wi}" ${unlocked(wi * 6) ? "" : "disabled"}>${unlocked(wi * 6) ? wd.icon : "🔒"} ${wd.name}</button>`).join("") + `</div><div class="sw-levels">` +
-            LEVELS.filter(L => L.world === pickWorld).map(L => { const st = starsOf(L.n), ok = unlocked(L.n); return `<button type="button" class="sw-lvl${L.n === pickLvl ? " on" : ""}" data-lvl="${L.n}" ${ok ? "" : "disabled"}><b>${ok ? L.n + 1 : "🔒"}</b><span>${L.goal} m</span><i>${"★".repeat(st)}${"☆".repeat(3 - st)}</i></button>`; }).join("") + `</div>`;
+            LEVELS.filter(L => L.world === pickWorld).map(L => { const st = starsOf(L.n), ok = unlocked(L.n); return `<button type="button" class="sw-lvl${L.n === pickLvl ? " on" : ""}" data-lvl="${L.n}" ${ok ? "" : "disabled"}><b>${ok ? L.n + 1 : "🔒"}</b><span>${L.goal} m</span><i>${"★".repeat(st)}${"☆".repeat(3 - st)}</i>${(S.bestTime || {})[L.n] ? `<em>👻 ${S.bestTime[L.n]} s</em>` : ""}</button>`; }).join("") + `</div>`;
           h += `<div class="ro-missions"><b>Missions, level ${pickLvl + 1}:</b> ` + missionsOf(LEVELS[pickLvl]).map(m => `<span>${((S.stars || {})[pickLvl] >> missionsOf(LEVELS[pickLvl]).indexOf(m) & 1) ? "✔" : "○"} ${m.text}</span>`).join("") + `</div>`;
         } else h += `<p class="ro-note">Drive as far as you can. The ground never ends, and neither does the fuel hunt: grab the red cans!</p>`;
+        h += `<button type="button" class="sw-world${S.assist ? " on" : ""}" data-assist="1">🛟 Assist: ${S.assist ? "ON" : "OFF"} <small>${S.assist ? "narrower gaps, fuel lasts longer" : "tap if a level feels too hard"}</small></button>`;
         body.innerHTML = h;
       } else {
         const gc = garageCar || S.car, C = CARS.find(c => c.id === gc), U = upsOf(C.id);
@@ -609,7 +639,8 @@
     }
     body.addEventListener("click", e => {
       const S = R(), b = e.target.closest("button"); if (!b || b.disabled) return;
-      if (b.dataset.mode) { mode = b.dataset.mode; Fun.sfx.pop(); }
+      if (b.dataset.assist) { S.assist = !S.assist; Hub.saveStore(); Fun.sfx.pop(); }
+      else if (b.dataset.mode) { mode = b.dataset.mode; Fun.sfx.pop(); }
       else if (b.dataset.world) { pickWorld = +b.dataset.world; const first = pickWorld * 6; pickLvl = LEVELS.slice(first, first + 6).find(L => unlocked(L.n) && !starsOf(L.n))?.n ?? first; Fun.sfx.pop(); }
       else if (b.dataset.lvl) { pickLvl = +b.dataset.lvl; Fun.sfx.pop(); }
       else if (b.dataset.car) { garageCar = b.dataset.car; Fun.sfx.pop(); }
@@ -664,7 +695,7 @@
     $("roCloseBtn").addEventListener("click", () => Hub.leave());
     Fun.soundButton($("roCloseBtn"));
     playBtn.addEventListener("click", start);
-    window.__ro = { keys, get state(){ return state; }, get car(){ return car; }, get fuel(){ return fuel; }, get dist(){ return dist; }, get coins(){ return runCoins; }, get stats(){ return stats; }, get flips(){ return flips; }, get maxAir(){ return maxAir; },
+    window.__ro = { get ghost(){ return ghost; }, get gap(){ return ghostGap; }, keys, get state(){ return state; }, get car(){ return car; }, get fuel(){ return fuel; }, get dist(){ return dist; }, get coins(){ return runCoins; }, get stats(){ return stats; }, get flips(){ return flips; }, get maxAir(){ return maxAir; },
       level: i => { mode = "career"; pickLvl = i; start(); }, endless: () => { mode = "endless"; start(); }, slope: () => { const g = groundAt(terrain, car.x); return g ? Math.atan2(g.ty, g.tx) : 0; }, slopeAt: x => { const g = groundAt(terrain, x); return g ? Math.atan2(g.ty, g.tx) : null; }, groundY: x => { const g = groundAt(terrain, x); return g ? g.y : null; }, R };
 
     return { open: openGame, close: closeGame };
