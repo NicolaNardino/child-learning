@@ -161,7 +161,7 @@
     function frame(now){
       raf = 0;
       if (!open) return;
-      const dt = Math.min(0.05, (now - last) / 1000 || 0); last = now; clock += dt;
+      const dt = Math.max(0, Math.min(0.05, (now - last) / 1000 || 0)); last = now; clock += dt;
       travel += speed * dt * 2.2;
       alt += (wantAlt - alt) * Math.min(1, dt * 1.5);
       burner = Math.max(0, burner - dt * 1.2); storm = Math.max(0, storm - dt * 0.5);

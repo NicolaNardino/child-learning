@@ -701,7 +701,7 @@
         if (def.rainbow || def.disco) {
           fill = ctx.createLinearGradient(p.x, p.y - r, p.x, p.y + r);
           const cols = def.disco ? ["#fff36b", "#ff6bd6", "#6bf0ff", "#fff36b"] : ["#ff4d4d", "#ff9f1c", "#ffe14d", "#4dd66b", "#4da6ff", "#b46bff"];
-          cols.forEach((c, i) => fill.addColorStop(((i / (cols.length - 1)) + (def.disco ? clock * 0.5 : 0)) % 1, c));
+          cols.forEach((c, i) => fill.addColorStop((((i / (cols.length - 1)) + (def.disco ? clock * 0.5 : 0)) % 1 + 1) % 1, c));   // kept in 0..1 even if the clock goes below zero
         } else {
           fill = ctx.createRadialGradient(p.x - r * 0.3, p.y - r * 0.4, r * 0.1, p.x, p.y, r * 1.1);
           fill.addColorStop(0, def.shell[0]); fill.addColorStop(1, def.shell[1]);
@@ -861,7 +861,7 @@
       }
       function loop(now){
         if (!open) return;
-        const dt = Math.min(1 / 30, (now - last) / 1000 || 0);
+        const dt = Math.max(0, Math.min(1 / 30, (now - last) / 1000 || 0));
         last = now; frameDt = dt;
         if (running) step(dt); else clock += dt;
         fit();

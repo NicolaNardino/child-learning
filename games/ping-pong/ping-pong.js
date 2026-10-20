@@ -874,7 +874,7 @@
 
     function loop(now){
       if (!open) return;
-      const dt = Math.min(0.05, (now - last) / 1000); last = now; fxDt = dt;
+      const dt = Math.max(0, Math.min(0.05, (now - last) / 1000 || 0)); last = now; fxDt = dt;
       update(dt);
       placeHead(dt);
       draw();

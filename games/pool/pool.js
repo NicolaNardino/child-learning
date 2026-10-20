@@ -591,7 +591,7 @@
 
     function loop(now){
       if (!open) return;
-      const dt = Math.min(1 / 30, (now - last) / 1000 || 0);
+      const dt = Math.max(0, Math.min(1 / 30, (now - last) / 1000 || 0));
       last = now;
       if (running || state === "over") update(dt); else clock += dt;
       draw(dt);

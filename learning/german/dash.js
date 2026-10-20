@@ -126,7 +126,7 @@
     function frame(now){
       raf = 0;
       if (!open) return;
-      const dt = Math.min(0.05, (now - last) / 1000 || 0); last = now; clock += dt;
+      const dt = Math.max(0, Math.min(0.05, (now - last) / 1000 || 0)); last = now; clock += dt;
       speed += ((turbo > 0 ? 2.6 : 1.1) - speed) * Math.min(1, dt * 2);
       roll += speed * dt * 1.2;
       jump = Math.max(0, jump - dt * 1.8); trip = Math.max(0, trip - dt * 1.6); turbo = Math.max(0, turbo - dt); caught = Math.max(0, caught - dt);
