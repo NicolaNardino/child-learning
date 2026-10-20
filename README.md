@@ -1,6 +1,8 @@
 # 🎒 Learn & Play
 
-Learning and games for a 5th grader. The home screen asks **Learning** or **Games**, and each one lists its apps and has its own 🏆 trophy shelf.
+Learning and games for a 5th grader. The home screen asks **Learning** or **Games**, and each one lists its apps and has its own 🏆 trophy shelf. The games are grouped into Sports, Adventure, Arcade and Build & grow.
+
+📅 **Every day** the home screen has three new challenges, one for learning and two for games (like "Answer 10 questions in any subject", "Bowl a strike" or "Play Blox Pool"). Each one done earns 30 🪙 coins, all three earn 50 more, and every new trophy earns 20. Doing at least one a day keeps the 🔥 streak going. Coins buy new looks in the 🛍️ **Shop**: pool table cloths, bowling balls and golf balls. The home screen also has a 🔎 search box for every game and subject, and a "Jump back in" row with the last ones played.
 
 ▶️ **Play it here: https://nicolanardino.github.io/child-learning/**
 
@@ -73,6 +75,8 @@ core/
   core.js                  saved progress, trophies, confetti, the app list and screen switching (window.Hub)
   grownups.js              the Grown-ups page: progress report, and the backup code (window.Hub.page)
   fun.js                   the silly bits the games share: comic pop-up words, sounds, cartoon faces, the 🔊 switch, a wobble, the touch joystick, the graphics quality setting (window.Fun)
+  daily.js                 today's three challenges, the streak and the coins (window.Daily)
+  shop.js                  the shop page at #/shop and Hub.cosmetic(slot) for the looks you bought
 learning/
   notebook.js, .css        the practice page every subject shares: topics, levels, answers, Time Trial, race, trophies, and an optional scene above the questions
   math/                    Fast Math (rocket.js is the Rocket Run above the questions)
@@ -113,7 +117,7 @@ Progress is saved in this browser's `localStorage` under one key, shared by ever
 
 ### Smoke test
 
-Every pull request and every push to `main` runs a GitHub Actions check (`.github/workflows/smoke.yml`): it makes sure every script parses, then `tests/smoke.mjs` opens every Learning subject and every game in a headless Chromium, presses Play, and fails if any page throws an error. To run it yourself: `npm install --no-save playwright && npx playwright install chromium && node tests/smoke.mjs`.
+Every pull request and every push to `main` runs a GitHub Actions check (`.github/workflows/smoke.yml`): it makes sure every script parses, then `tests/smoke.mjs` opens every Learning subject and every game in a headless Chromium, presses Play, plays a little (arrow keys, Space and a mouse drag), and fails if any page throws an error. It then opens everything again on a phone-sized screen and fails if anything sticks out sideways, a game runs off the bottom, or something covers the Play button. To run it yourself: `npm install --no-save playwright && npx playwright install chromium && node tests/smoke.mjs`.
 
 ### Adding a new app
 

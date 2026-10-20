@@ -146,6 +146,7 @@
       const [sx, sy] = proj(hole.cup[0], hole.cup[1]);
       fx.pop(word, sx, sy - 30, strokes === 1 ? "#ffe14d" : d <= 0 ? "#7dff9a" : "#ffffff", strokes === 1 ? 46 : 36);
       fx.burst(sx, sy, "#ffe14d", 20, 160);
+      if (d <= 0) { store.golfPars = (store.golfPars || 0) + 1; Hub.saveStore(); Hub.checkBadges(); }
       if (strokes === 1) { store.golfAces = (store.golfAces || 0) + 1; Hub.saveStore(); Hub.checkBadges(); Fun.sfx.tada(); Hub.confettiBurst(canvas); }
       else if (d <= 0) Fun.sfx.ding(); else Fun.sfx.coin();
       card[hi] = strokes;
@@ -266,7 +267,8 @@
       const [sx, sy, k] = proj(ball.x, ball.y), r = R * k;
       ctx.fillStyle = "rgba(0,0,0,0.3)"; ctx.beginPath(); ctx.ellipse(sx + r * 0.2, sy + r * 0.3, r, r * 0.55, 0, 0, 7); ctx.fill();
       const g = ctx.createRadialGradient(sx - r * 0.35, sy - r * 0.6, r * 0.1, sx, sy - r * 0.3, r);
-      g.addColorStop(0, "#ffffff"); g.addColorStop(1, "#c9d2e3");
+      const look = Hub.cosmetic ? Hub.cosmetic("golfBall").colors : ["#ffffff", "#c9d2e3"];   // the shop can change your ball
+      g.addColorStop(0, look[0]); g.addColorStop(1, look[1]);
       ctx.fillStyle = g; ctx.beginPath(); ctx.arc(sx, sy - r * 0.3, r, 0, 7); ctx.fill();
       ctx.strokeStyle = "#14102c"; ctx.lineWidth = 1.5; ctx.stroke();
     }

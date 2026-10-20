@@ -429,8 +429,9 @@
       if (active) { ctx.fillStyle = "#ffe14d"; ctx.beginPath(); ctx.moveTo(cx - 9, 8 + dy); ctx.lineTo(cx + 9, 8 + dy); ctx.lineTo(cx, 19 + dy); ctx.closePath(); ctx.fill(); }
     }
     function drawTable(){
-      rim(15, "#6b3f1e"); rim(13.5, "#9a6330"); rim(7, "#177a43");
-      poly([[0, 0], [L, 0], [L, WD], [0, WD]], "#2fbf71");
+      const felt = Hub.cosmetic ? Hub.cosmetic("poolFelt").colors : ["#2fbf71", "#177a43"];   // the shop can change the cloth
+      rim(15, "#6b3f1e"); rim(13.5, "#9a6330"); rim(7, felt[1]);
+      poly([[0, 0], [L, 0], [L, WD], [0, WD]], felt[0]);
       // studs on the felt
       ctx.fillStyle = "rgba(255,255,255,0.13)";
       for (let x = 12; x < L; x += 12) for (let y = 12; y < WD; y += 12) { const [sx, sy, k] = proj(x, y); ctx.fillRect(sx - k * 0.5, sy - k * 0.35, k, k * 0.7); }

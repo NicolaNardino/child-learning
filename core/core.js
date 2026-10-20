@@ -87,19 +87,28 @@
     apps.push(Object.assign({ badges: [], ctrl: null, host: null }, app));
   }
   const appsIn = section => apps.filter(a => a.section === section);
+  // the games are grouped on their page; anything new and not listed here goes under "More games"
+  const CATEGORIES = [
+    { title: "⚽ Sports", ids: ["soccer", "hoops", "pool", "bowling", "minigolf", "ping-pong", "turbo"] },
+    { title: "🗺️ Adventure", ids: ["forest", "parkour", "robot-tag", "tag-rush", "zombie-blaster", "egg-heist", "brainrot-heist"] },
+    { title: "👾 Arcade", ids: ["pacman", "pacman-3d", "tower", "fishing"] },
+    { title: "🧱 Build & grow", ids: ["blocks", "garden", "potato-tycoon"] }
+  ];
 
   /* ---------------- trophies: every app brings its own, each section has a shelf ---------------- */
   function checkBadges(){
+    if (window.Daily) Daily.check();   // today's challenges read the same progress
     const fresh = apps.flatMap(a => a.badges).filter(b => !store.badges[b.id] && b.test());
     if (!fresh.length) return;
     fresh.forEach(b => { store.badges[b.id] = true; });
+    if (store.coins !== undefined) store.coins += 20 * fresh.length;   // every new trophy is worth 20 coins in the shop
     saveStore();
     if (current && current.section && !current.app) renderSection(current.section);
     fresh.forEach((b, i) => setTimeout(() => showToast(b), i * 900));
   }
 
   let toastStack = null;
-  function showToast(b){
+  function showToast(b, title){
     if (!toastStack) {
       toastStack = document.createElement("div");
       toastStack.className = "toast-stack";
@@ -108,7 +117,9 @@
     }
     const t = document.createElement("div");
     t.className = "toast";
-    t.innerHTML = `<span class="icon">${b.icon}</span><div><div class="t1">New trophy!</div><div class="t2"></div></div>`;
+    t.innerHTML = `<span class="icon"></span><div><div class="t1"></div><div class="t2"></div></div>`;
+    t.querySelector(".icon").textContent = b.icon;
+    t.querySelector(".t1").textContent = title || "New trophy! +20 🪙";
     t.querySelector(".t2").textContent = b.name;
     toastStack.appendChild(t);
     setTimeout(() => { t.classList.add("out"); setTimeout(() => t.remove(), 400); }, 3200);
@@ -125,10 +136,39 @@
 
   function renderHome(){
     document.getElementById("homeName").textContent = store.name || "there";
+    if (window.Daily) Daily.renderHome(document.getElementById("dailyCard"));
+    // jump back in: the last few apps opened
+    const recent = (store.recent || []).map(id => apps.find(a => a.id === id)).filter(Boolean).slice(0, 6);
+    document.getElementById("recentRow").hidden = !recent.length;
+    const rl = document.getElementById("recentList"); rl.innerHTML = "";
+    recent.forEach(a => rl.appendChild(appCard(a, true)));
+    renderSearch();
     Object.keys(SECTIONS).forEach(id => {
       const n = appsIn(id).length, noun = SECTIONS[id].noun[n === 1 ? 0 : 1];
       document.getElementById(id + "Count").textContent = `${n} ${noun}`;
     });
+  }
+
+  function appCard(a, small){
+    const card = document.createElement("a");
+    card.className = "app-card" + (small ? " small" : "");
+    card.href = `#/${a.section}/${a.id}`;
+    card.innerHTML = `<span class="app-icon"></span><span class="app-title"></span><span class="app-blurb"></span><span class="app-stat mono"></span>`;
+    card.querySelector(".app-icon").textContent = a.icon;
+    card.querySelector(".app-title").textContent = a.title;
+    card.querySelector(".app-blurb").textContent = small ? "" : a.blurb;
+    card.querySelector(".app-stat").textContent = a.stat ? a.stat() : "";
+    return card;
+  }
+  // the home screen's search: titles and blurbs of every app
+  function renderSearch(){
+    const q = document.getElementById("appSearch").value.trim().toLowerCase(), out = document.getElementById("searchResults");
+    out.innerHTML = "";
+    out.hidden = !q;
+    if (!q) return;
+    const hits = apps.filter(a => (a.title + " " + a.blurb).toLowerCase().includes(q));
+    if (!hits.length) { const p = document.createElement("p"); p.className = "search-none"; p.textContent = "Nothing found. Try another word!"; out.appendChild(p); }
+    hits.forEach(a => out.appendChild(appCard(a)));
   }
 
   function renderSection(id){
@@ -137,17 +177,15 @@
     document.getElementById("sectionBlurb").textContent = sec.blurb;
     const grid = document.getElementById("appGrid");
     grid.innerHTML = "";
-    appsIn(id).forEach(a => {
-      const card = document.createElement("a");
-      card.className = "app-card";
-      card.href = `#/${id}/${a.id}`;
-      card.innerHTML = `<span class="app-icon"></span><span class="app-title"></span><span class="app-blurb"></span><span class="app-stat mono"></span>`;
-      card.querySelector(".app-icon").textContent = a.icon;
-      card.querySelector(".app-title").textContent = a.title;
-      card.querySelector(".app-blurb").textContent = a.blurb;
-      card.querySelector(".app-stat").textContent = a.stat ? a.stat() : "";
-      grid.appendChild(card);
-    });
+    if (id === "games") {
+      const listed = new Set(CATEGORIES.flatMap(c => c.ids));
+      const groups = CATEGORIES.map(c => ({ title: c.title, list: c.ids.map(x => apps.find(a => a.id === x)).filter(Boolean) }));
+      groups.push({ title: "✨ More games", list: appsIn(id).filter(a => !listed.has(a.id)) });
+      groups.filter(g => g.list.length).forEach(g => {
+        const h = document.createElement("h2"); h.className = "cat-head"; h.textContent = g.title; grid.appendChild(h);
+        g.list.forEach(a => grid.appendChild(appCard(a)));
+      });
+    } else appsIn(id).forEach(a => grid.appendChild(appCard(a)));
     // this section's trophy shelf
     const badges = appsIn(id).flatMap(a => a.badges);
     const shelf = document.getElementById("trophySection");
@@ -196,7 +234,14 @@
       }
       a.host.hidden = false;
       document.title = `${a.title} · Learn & Play`;
+      // remember it for "Jump back in" and for today's challenges
+      store.recent = [a.id, ...(store.recent || []).filter(x => x !== a.id)].slice(0, 8);
+      const d = new Date(), day = d.getFullYear() + "-" + String(d.getMonth() + 1).padStart(2, "0") + "-" + String(d.getDate()).padStart(2, "0");
+      if (!store.playedDay || store.playedDay.day !== day) store.playedDay = { day, ids: [] };
+      if (!store.playedDay.ids.includes(a.id)) store.playedDay.ids.push(a.id);
+      saveStore();
       a.ctrl.open();
+      if (window.Daily) Daily.check();
     } else if (next.section) {
       renderSection(next.section);
       document.title = `${SECTIONS[next.section].title} · Learn & Play`;
@@ -230,6 +275,8 @@
     document.getElementById("homeName").textContent = store.name || "there";
   });
 
+  document.getElementById("appSearch").addEventListener("input", renderSearch);
+
   window.addEventListener("hashchange", route);
   // the app scripts load after this one, so wait for all of them before showing anything
   window.addEventListener("DOMContentLoaded", () => {
@@ -239,5 +286,6 @@
 
   // what the Grown-ups page needs to know about the apps and the trophies
   const appList = () => apps.map(a => ({ id: a.id, section: a.section, title: a.title, icon: a.icon, stat: a.stat ? a.stat() : "", badges: a.badges.length, earned: a.badges.filter(b => store.badges[b.id]).length }));
-  window.Hub = { store, saveStore, formatTime, confettiBurst, checkBadges, register, leave, page, appList, STORE_KEY };
+  const toast = (icon, line1, line2) => showToast({ icon, name: line2 }, line1);
+  window.Hub = { store, saveStore, formatTime, confettiBurst, checkBadges, register, leave, page, appList, toast, STORE_KEY };
 })();

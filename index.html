@@ -290,8 +290,17 @@
       <span class="door-count" id="gamesCount"></span>
     </a>
   </div>
+  <section class="home-daily" id="dailyCard" aria-label="Today's challenges"></section>
+  <div class="home-search">
+    <input type="search" id="appSearch" placeholder="🔎 Find a game or subject…" aria-label="Find a game or subject" autocomplete="off">
+    <div class="app-grid search-results" id="searchResults" hidden></div>
+  </div>
+  <section class="home-recent" id="recentRow" hidden aria-label="Jump back in">
+    <h2>⏪ Jump back in</h2>
+    <div class="recent-list" id="recentList"></div>
+  </section>
   <footer>Progress is saved in this browser only, so it'll be here next time on this device.</footer>
-  <p class="home-grownups"><a href="#/grownups">👪 Grown-ups: progress report and backup</a> · <button class="home-quality" type="button" data-quality-btn title="Lower graphics run better on older phones">⚙️ Graphics: Auto</button></p>
+  <p class="home-grownups"><a href="#/shop">🛍️ Shop</a> · <a href="#/grownups">👪 Grown-ups: progress report and backup</a> · <button class="home-quality" type="button" data-quality-btn title="Lower graphics run better on older phones">⚙️ Graphics: Auto</button></p>
 </div>
 
 <!-- a section: its apps, then its trophy shelf -->
@@ -316,6 +325,8 @@
 
 <script src="core/core.js"></script>
 <script src="core/fun.js"></script>
+<script src="core/daily.js"></script>
+<script src="core/shop.js"></script>
 <script src="learning/notebook.js"></script>
 <script src="learning/math/rocket.js"></script>
 <script src="learning/math/math.js"></script>
