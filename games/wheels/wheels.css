@@ -43,3 +43,9 @@
   .sw-nitro{ right: calc(2% + clamp(80px, 13vw, 130px)); background: rgba(58,168,255,0.45); }
   .sw-pedal.on{ transform: scale(0.94); border-color: #ffe14d; }
 }
+.sw-lvl em{ font-style: normal; font-size: 10px; opacity: 0.85; }
+.sw-worlds{ display: flex; flex-wrap: wrap; gap: 6px; justify-content: center; margin-bottom: 4px; }
+.sw-world{ padding: 5px 10px; border-radius: 999px; background: rgba(255,255,255,0.1); border: 2px solid rgba(255,255,255,0.3); color: #fff; cursor: pointer; font: 700 12px system-ui, sans-serif; }
+.sw-world small{ opacity: 0.75; margin-left: 2px; }
+.sw-world.on{ border-color: #ff7a00; background: rgba(255,122,0,0.35); }
+.sw-world:disabled{ opacity: 0.45; cursor: not-allowed; }
