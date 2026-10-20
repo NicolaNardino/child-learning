@@ -35,6 +35,7 @@
       { id: "build", icon: "🧱", text: "Place 30 blocks in Block World", goal: 30, href: "#/games/blocks", counter: "blocksPlaced" },
       { id: "parkour", icon: "🧗", text: "Reach the trophy in Parkour Run", goal: 1, href: "#/games/parkour", counter: "parkourWins" },
       { id: "pong", icon: "🏓", text: "Play a game of Ping Pong 3D", goal: 1, href: "#/games/ping-pong", counter: "pongPlayed" },
+      { id: "wheels", icon: "🏎️", text: "Finish a Stunt Wheels track", goal: 1, href: "#/games/wheels", counter: "wheelsFinishes" },
       { id: "chess", icon: "♟️", text: "Beat BloxBot at chess", goal: 1, href: "#/games/chess", counter: "chessWins" },
       { id: "three", icon: "🎮", text: "Play 3 different games", goal: 3, href: "#/games", now: () => played().filter(id => games().some(g => g.id === id)).length }
     ];
