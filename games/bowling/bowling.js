@@ -82,6 +82,7 @@
     const panel = $("bwPanel"), panelTitle = $("bwPanelTitle"), panelText = $("bwPanelText"), playBtn = $("bwPlayBtn"), modesEl = $("bwModes");
     const whoEl = $("bwWho"), frameEl = $("bwFrame");
     const fx = Fun.pops();
+    const myBall = () => Hub.cosmetic ? Hub.cosmetic("bowlBall").colors[0] : "#2f7bff";   // the shop can change your ball
 
     let open = false, running = false, last = 0, clock = 0, scale = 1;
     let mode = store.bowlMode === "solo" ? "solo" : "bot";
@@ -378,7 +379,7 @@
         const steps = 12; for (let i = 1; i <= steps; i++) { const s = i / steps, z = 0.5 + Math.cos(angle) * len * s, x = posX + Math.sin(angle) * len * s + hook * 0.25 * s * s, q = P(x, 0.01, z); if (q) ctx.lineTo(q[0], q[1]); }
         ctx.stroke(); ctx.setLineDash([]);
       }
-      drawBall(b, turn === 0 ? "#2f7bff" : "#e8332b");
+      drawBall(b, turn === 0 ? myBall() : "#e8332b");
       if (charging) {
         ctx.fillStyle = "rgba(0,0,0,0.5)"; ctx.fillRect(CX - 110, 500, 220, 18);
         ctx.fillStyle = power > 0.8 ? "#ff4b3a" : power > 0.45 ? "#ffe14d" : "#38d96b"; ctx.fillRect(CX - 108, 502, 216 * power, 14);
@@ -389,7 +390,7 @@
       ctx.setTransform(scale, 0, 0, scale, 0, 0);
       drawAlley();
       const items = pins.filter(p => !p.gone).map(p => ({ z: p.z, d: () => drawPin(p) }));
-      if (ball && !ball.gone) items.push({ z: ball.z, d: () => drawBall(ball, turn === 0 ? "#2f7bff" : "#e8332b") });
+      if (ball && !ball.gone) items.push({ z: ball.z, d: () => drawBall(ball, turn === 0 ? myBall() : "#e8332b") });
       items.sort((a, b) => b.z - a.z).forEach(i => i.d());
       if (state === "aim" || state === "bot") drawAim();
       if (gesture && gesture.pts.length > 1) {
