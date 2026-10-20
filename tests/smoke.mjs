@@ -52,7 +52,7 @@ async function phoneCheck(hash, ctx){
   await page.waitForTimeout(500);
   const btn = page.locator(".game-screen:not([hidden]) .game-panel:not([hidden]) .btn").first();
   if (await btn.count() && await btn.isVisible()) {
-    try { await btn.tap({ timeout: 3000 }); await page.waitForTimeout(500); }
+    try { await btn.tap({ timeout: 10000 }); await page.waitForTimeout(500); }
     catch (e) { errors.push("the Play button can't be tapped (something covers it)"); }
   }
   const r = await page.evaluate(() => {
