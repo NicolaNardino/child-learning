@@ -91,7 +91,7 @@
   function totalStars(){ const s = (store.wheels || {}).stars || {}; return Object.values(s).reduce((a, b) => a + b, 0); }
 
   /* ---------------- building a track from its plan ---------------- */
-  const G = 1500, CAR_H = 15;
+  const G = 1500, CAR_H = 15, CAR_DRAW = 1.35;
   function buildTrack(L){
     const pieces = [], coins = [], checks = [], boosts = [], fuels = [];
     let lastFuel = 0;
@@ -441,6 +441,8 @@
     // a hot rod seen from the side, facing right
     function drawCar(d, x, y, ang, wheel, flame){
       ctx.save(); ctx.translate(x, y); ctx.rotate(ang); ctx.scale(cam.z, cam.z);
+      // drawn 1.35x bigger, grown from the track line (CAR_H below the car's centre) so the wheels stay on the road
+      ctx.translate(0, CAR_H); ctx.scale(CAR_DRAW, CAR_DRAW); ctx.translate(0, -CAR_H);
       const truck = d.style === "truck", lift = truck ? -12 : 0, rr = truck ? 19 : 15, fr = truck ? 19 : 12;
       // flames out of the back
       if (flame) {
@@ -555,7 +557,7 @@
       // the camera looks ahead when you're fast, and zooms out a little
       const sp = car.on ? Math.abs(car.v) : Math.hypot(car.vx, car.vy);
       const big = canvas.clientWidth && canvas.clientWidth < 700 ? 1.25 : 1;   // closer on a small phone screen
-      const tz = big * Math.max(0.62, 1 - sp / 3200), lead = Math.min(220, sp * 0.16);
+      const tz = big * Math.max(0.68, 1.08 - sp / 3000), lead = Math.min(220, sp * 0.16);
       cam.z += (tz - cam.z) * Math.min(1, dt * 1.5);
       cam.x += (car.x + lead - cam.x) * Math.min(1, dt * 6);
       cam.y += (car.y - cam.y) * Math.min(1, dt * 4);
