@@ -11,7 +11,11 @@
    weaken gravity, rain and snow cost grip, and night drives by headlight. The last level of each world is a race
    against a rival car, and a Daily track is the same for everybody on a given date. Paint and wheel styles are
    bought in the Style tab. Gamepad and (experimental) phone tilt work too, and any run can be replayed or shared.
-   The soundtrack is the same original loop as Stunt Wheels (games/wheels/music.js). */
+   Every car has its own ability (coin magnet, swimming, a tough roof, faster air spins, big nitro, rock crushing,
+   double coins) and its own engine sound. The Build tab is a track editor: drag dots to shape the ground, add
+   gaps, coins, fuel, nitro, rocks and speed pads, test drive it, and share it as a text code.
+   The soundtrack is the same original loop as Stunt Wheels (games/wheels/music.js); tyre squeal, rain, the nitro
+   roar and the crash come from the same file. */
 (function(){
   "use strict";
   const store = Hub.store;
@@ -19,14 +23,23 @@
 
   /* ---------------- cars and upgrades ---------------- */
   const CARS = [
-    { id: "flame",   name: "Flame Racer",  body: "#ff3b1f", trim: "#ffd400", price: 0,    power: 1.0,  grip: 1.0,  susp: 1.0, wr: 15, style: "rod",   awd: false },
-    { id: "shark",   name: "Shark Bite",   body: "#2f7bff", trim: "#bfe3ff", price: 300,  power: 1.06, grip: 1.05, susp: 1.0, wr: 15, style: "fin",   awd: false },
-    { id: "bones",   name: "Bone Rattler", body: "#f2f2f2", trim: "#1a1a24", price: 700,  power: 1.12, grip: 1.0,  susp: 1.1, wr: 16, style: "rod",   awd: false },
-    { id: "comet",   name: "Neon Comet",   body: "#24e07a", trim: "#ff4df0", price: 1300, power: 1.18, grip: 1.1,  susp: 1.0, wr: 14, style: "wedge", awd: false },
-    { id: "rocket",  name: "Rocket Rod",   body: "#8b3dff", trim: "#ffe14d", price: 2200, power: 1.35, grip: 1.0,  susp: 1.0, wr: 15, style: "fin",   awd: false },
-    { id: "monster", name: "Monster Mash", body: "#ff8a00", trim: "#1a1a24", price: 3500, power: 1.2,  grip: 1.3,  susp: 1.35, wr: 21, style: "truck", awd: true },
-    { id: "gold",    name: "Gold Rush",    body: "#ffc400", trim: "#ff3b1f", price: 5500, power: 1.45, grip: 1.2,  susp: 1.15, wr: 16, style: "wedge", awd: true }
+    { id: "flame",   name: "Flame Racer",  body: "#ff3b1f", trim: "#ffd400", price: 0,    power: 1.0,  grip: 1.0,  susp: 1.0, wr: 15, style: "rod",   awd: false, ab: "magnet", snd: { base: 48, span: 140, type: "sawtooth" } },
+    { id: "shark",   name: "Shark Bite",   body: "#2f7bff", trim: "#bfe3ff", price: 300,  power: 1.06, grip: 1.05, susp: 1.0, wr: 15, style: "fin",   awd: false, ab: "swim",   snd: { base: 56, span: 150, type: "sawtooth" } },
+    { id: "bones",   name: "Bone Rattler", body: "#f2f2f2", trim: "#1a1a24", price: 700,  power: 1.12, grip: 1.0,  susp: 1.1, wr: 16, style: "rod",   awd: false, ab: "tough",  snd: { base: 40, span: 110, type: "square" } },
+    { id: "comet",   name: "Neon Comet",   body: "#24e07a", trim: "#ff4df0", price: 1300, power: 1.18, grip: 1.1,  susp: 1.0, wr: 14, style: "wedge", awd: false, ab: "spin",   snd: { base: 66, span: 200, type: "sawtooth" } },
+    { id: "rocket",  name: "Rocket Rod",   body: "#8b3dff", trim: "#ffe14d", price: 2200, power: 1.35, grip: 1.0,  susp: 1.0, wr: 15, style: "fin",   awd: false, ab: "rocket", snd: { base: 60, span: 230, type: "sawtooth" } },
+    { id: "monster", name: "Monster Mash", body: "#ff8a00", trim: "#1a1a24", price: 3500, power: 1.2,  grip: 1.3,  susp: 1.35, wr: 21, style: "truck", awd: true,  ab: "crush",  snd: { base: 30, span: 85,  type: "square" } },
+    { id: "gold",    name: "Gold Rush",    body: "#ffc400", trim: "#ff3b1f", price: 5500, power: 1.45, grip: 1.2,  susp: 1.15, wr: 16, style: "wedge", awd: true,  ab: "gold",   snd: { base: 52, span: 175, type: "sawtooth" } }
   ];
+  const ABILITY = {
+    magnet: { icon: "🧲", name: "Coin magnet",  text: "pulls in coins close by" },
+    swim:   { icon: "🌊", name: "Swimmer",      text: "swims out of the water, twice a run" },
+    tough:  { icon: "🦴", name: "Tough roof",   text: "survives one roof landing a run" },
+    spin:   { icon: "🌀", name: "Air spinner",  text: "turns faster in the air for easier flips" },
+    rocket: { icon: "🚀", name: "Big nitro",    text: "starts full of nitro and burns it slower" },
+    crush:  { icon: "🪨", name: "Rock crusher", text: "smashes rocks without slowing down" },
+    gold:   { icon: "💰", name: "Double coins", text: "every coin you pick up counts twice" }
+  };
   const UPS = [
     { id: "e", name: "Engine",     icon: "⚙️", text: "more power and speed" },
     { id: "t", name: "Tires",      icon: "🛞", text: "more grip" },
@@ -79,12 +92,41 @@
       { id: "roFlip",   icon: "🔄", name: "Stunt Driver",  desc: "Do a flip in Race Off",               test: () => !!R().flipped },
       { id: "roCombo",  icon: "💥", name: "Combo Master",  desc: "Chain a x4 stunt combo in Race Off",  test: () => (R().bestCombo || 0) >= 4 },
       { id: "roRival",  icon: "🏎️", name: "Rival Beater",  desc: "Beat a rival car in Race Off",        test: () => Object.keys(R().rivals || {}).length >= 1 },
-      { id: "roStyle",  icon: "🎨", name: "Custom Paint",  desc: "Buy paint or wheels in Race Off",     test: () => Object.keys(R().cos || {}).length >= 1 }
+      { id: "roStyle",  icon: "🎨", name: "Custom Paint",  desc: "Buy paint or wheels in Race Off",     test: () => Object.keys(R().cos || {}).length >= 1 },
+      { id: "roBuild",  icon: "🛠️", name: "Track Builder", desc: "Build a Race Off track and finish it", test: () => (R().tracks || []).some(t => t.best > 0) }
     ],
     mount
   });
   const weatherFor = (seed, world) => { const r = seeded(seed ^ 0x5bd1e995); r(); r(); const o = WX_BY_WORLD[world]; return o[Math.floor(r() * o.length)]; };
   const today = () => { const d = new Date(); return d.getFullYear() * 10000 + (d.getMonth() + 1) * 100 + d.getDate(); };
+  // a track you build: control points [x, y] (x grows, the first is the start at 0, 0), gap segments, and items [x, kind]
+  const ITEM_KINDS = { coin: "c", fuel: "f", nitro: "n", rock: "r", pad: "p" };
+  const newTrack = () => ({ name: "My track " + (((R().tracks || []).length) + 1), world: 0, best: 0,
+    pts: [[0, 0], [400, 0], [800, -70], [1200, 0], [1600, 0], [2000, -140], [2400, 0], [2800, 0]], gaps: [], items: [[560, "c"], [1450, "f"], [2150, "c"]] });
+  const toCode = t => { const j = JSON.stringify({ n: t.name, w: t.world, p: t.pts, g: t.gaps, i: t.items }), b = new TextEncoder().encode(j); let bin = ""; b.forEach(c => { bin += String.fromCharCode(c); }); return "RO1." + btoa(bin); };
+  // a pasted code is checked piece by piece; anything odd and it is refused
+  function fromCode(code){
+    try {
+      const c = String(code || "").replace(/\s+/g, "");
+      if (!c.startsWith("RO1.") || c.length > 60000) return null;
+      const o = JSON.parse(new TextDecoder().decode(Uint8Array.from(atob(c.slice(4)), ch => ch.charCodeAt(0))));
+      if (!o || typeof o !== "object" || !Array.isArray(o.p) || o.p.length < 3 || o.p.length > 120) return null;
+      const pts = [];
+      for (const q of o.p) {
+        if (!Array.isArray(q) || q.length !== 2) return null;
+        const x = Math.round(+q[0]), y = Math.round(+q[1]);
+        if (!isFinite(x) || !isFinite(y) || Math.abs(y) > 1600 || x > 40000) return null;
+        if (pts.length ? x - pts[pts.length - 1][0] < 80 : x !== 0) return null;
+        pts.push([x, y]);
+      }
+      pts[0][1] = 0;
+      const gaps = [...new Set((Array.isArray(o.g) ? o.g : []).map(v => Math.round(+v)))].filter(i => i > 0 && i < pts.length - 2 && pts[i + 1][0] - pts[i][0] <= 900);
+      const items = (Array.isArray(o.i) ? o.i : []).filter(q => Array.isArray(q) && isFinite(+q[0]) && typeof q[1] === "string" && q[1].length === 1 && "cfnrp".includes(q[1])).slice(0, 150).map(q => [Math.round(+q[0]), q[1]]);
+      const w = Math.round(+o.w);
+      return { name: String(o.n || "").replace(/[<>&"]/g, "").trim().slice(0, 24) || "Shared track", world: w >= 0 && w < 5 ? w : 0, best: 0, pts, gaps, items };
+    } catch (e) { return null; }
+  }
+  const esc = t => String(t).replace(/[&<>"]/g, ch => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" })[ch]);
   function totalStars(){ const s = R().stars || {}; return Object.values(s).reduce((a, m) => a + (m & 1) + ((m >> 1) & 1) + ((m >> 2) & 1), 0); }
   const starsOf = n => { const m = (R().stars || {})[n] || 0; return (m & 1) + ((m >> 1) & 1) + ((m >> 2) & 1); };
 
@@ -124,11 +166,17 @@
             <button class="sw-pedal sw-nitro" data-rokey="nitro" type="button" aria-label="Nitro">🔥 NITRO</button>
             <button class="sw-pedal sw-gas" data-rokey="gas" type="button" aria-label="Gas, and nose up in the air">GAS ▶</button>
           </div>
+          <div class="ro-edit" id="roEdit" hidden>
+            <div role="group" aria-label="Build tools">
+              <button type="button" data-tool="move" aria-label="Move">✋<span class="tl"> Move</span></button><button type="button" data-tool="add" aria-label="Add a dot">➕<span class="tl"> Dot</span></button><button type="button" data-tool="del" aria-label="Erase">🧽<span class="tl"> Erase</span></button><button type="button" data-tool="gap" aria-label="Gap">🕳️<span class="tl"> Gap</span></button><button type="button" data-tool="coin" aria-label="Coins">🪙</button><button type="button" data-tool="fuel" aria-label="Fuel can">⛽</button><button type="button" data-tool="nitro" aria-label="Nitro can">🔥</button><button type="button" data-tool="rock" aria-label="Rock">🪨</button><button type="button" data-tool="pad" aria-label="Speed pad">⚡</button>
+            </div>
+            <div><button type="button" data-ed="world" aria-label="World">🌳</button><button type="button" data-ed="name" aria-label="Name">✏️<span class="tl"> Name</span></button><button type="button" class="go" data-ed="test">▶ Test</button><button type="button" data-ed="done">✔ Done</button></div>
+          </div>
           <div class="game-panel ro-panel" id="roPanel">
             <div class="game-panel-title" id="roTitle">Race Off</div>
             <div class="game-panel-text" id="roText"></div>
             <button class="btn" id="roPlayBtn" type="button">▶ Race</button>
-            <div class="ro-tabs" role="group" aria-label="Menu"><button class="btn ghost small" type="button" data-tab="play">🏁 Play</button><button class="btn ghost small" type="button" data-tab="garage">🔧 Garage</button><button class="btn ghost small" type="button" data-tab="style">🎨 Style</button></div>
+            <div class="ro-tabs" role="group" aria-label="Menu"><button class="btn ghost small" type="button" data-tab="play">🏁 Play</button><button class="btn ghost small" type="button" data-tab="garage">🔧 Garage</button><button class="btn ghost small" type="button" data-tab="style">🎨 Style</button><button class="btn ghost small" type="button" data-tab="build">🛠️ Build</button></div>
             <div class="ro-body" id="roBody"></div>
           </div>
         </div>
@@ -153,6 +201,8 @@
     let combo = 0, comboT = 0, stunts = 0, bestCombo = 0, wheelieT = 0, wheelie = false, hitCool = 0;
     let lastRun = null, resultsOn = false, replayT = 0, tiltRoll = 0, tiltSeen = false;
     const srcOn = { pad: {}, tilt: {} };
+    let squeal = 0, swims = 0, toughUsed = false;                    // tyre slip this frame, abilities used this run
+    let pickTrack = 0, edIdx = -1, edTrack = null, edTool = "move", drag = null;   // your own tracks and the editor
 
     /* ---------------- the ground: a polyline that is made as you drive ---------------- */
     function newTerrain(seed, d0, endless, goalPx){
@@ -272,7 +322,7 @@
         engine: 1750 * C.power * (1 + 0.12 * U.e), vmax: 1050 * (0.9 + 0.1 * C.power) * (1 + 0.06 * U.e),
         grip: 1.0 * C.grip * (1 + 0.1 * U.t),
         k: 150 * C.susp * (1 + 0.06 * U.s), damp: 15 * Math.sqrt(C.susp) * (1 + 0.16 * U.s),
-        drain: 1 / (1 + 0.15 * U.f), nitroPow: 1 + 0.12 * U.n, nitroUse: 1 / (1 + 0.1 * U.n)
+        drain: 1 / (1 + 0.15 * U.f), nitroPow: 1 + 0.12 * U.n, nitroUse: 1 / (1 + 0.1 * U.n) * (C.ab === "rocket" ? 0.6 : 1)
       };
     }
     function spawn(x){
@@ -313,6 +363,7 @@
         if (pad && driven) Ft += 1400;
         if (brake) { if (vt > 40) Ft -= Math.min(900, mu * Fn); else if (driven) Ft -= S.engine * 0.5 * (S.C.awd ? 0.5 : 1) * Math.max(0, 1 - Math.max(0, -vt) / (S.vmax * 0.4)); }
         else if (!drive) Ft -= Math.max(-0.2 * Fn, Math.min(0.2 * Fn, vt * 1.4));
+        if (racing && Fn > 200 && Math.abs(Ft) > mu * Fn * 1.05 && (drive || (brake && vt > 200))) squeal = 1;   // the tyre is spinning or skidding
         Ft = Math.max(-mu * Fn, Math.min(mu * Fn, Ft));
         // pushes sideways of the ground, no more than the wheel can grip
         const fx2 = ct.tx * Ft, fy2 = ct.ty * Ft;
@@ -325,7 +376,7 @@
       // rocks slow the car down, unless the wheels sail over them
       if (rocks.length && racing && hitCool <= 0) rocks.forEach(rk => {
         if (rk.hit || Math.abs(rk.x - c.x) > 130) return;
-        c.wheels.forEach(wh => { if (!rk.hit && wh.sx !== undefined && Math.hypot(wh.sx - rk.x, wh.sy - rk.y) < rk.r + S.wr - 3) { rk.hit = true; hitCool = 0.4; c.vx *= 0.45; c.vy -= 160; c.w -= 1.2; shake = 7; Fun.sfx.thunk(); fx.pop("OUCH!", W / 2, H * 0.3, "#ff9a8a", 30); for (let i = 0; i < 8; i++) sparks.push({ x: rk.x, y: rk.y - rk.r, vx: (Math.random() - 0.5) * 260, vy: -Math.random() * 220, t: 0 }); } });
+        c.wheels.forEach(wh => { if (!rk.hit && wh.sx !== undefined && Math.hypot(wh.sx - rk.x, wh.sy - rk.y) < rk.r + S.wr - 3) { rk.hit = true; if (S.C.ab === "crush") { rk.smashed = true; shake = 4; Fun.sfx.bonk(); fx.pop("SMASH!", W / 2, H * 0.3, "#ffb86b", 30); for (let i = 0; i < 14; i++) sparks.push({ x: rk.x, y: rk.y - rk.r, vx: (Math.random() - 0.5) * 420, vy: -Math.random() * 320, t: 0 }); return; } hitCool = 0.4; c.vx *= 0.45; c.vy -= 160; c.w -= 1.2; shake = 7; Fun.sfx.thunk(); fx.pop("OUCH!", W / 2, H * 0.3, "#ff9a8a", 30); for (let i = 0; i < 8; i++) sparks.push({ x: rk.x, y: rk.y - rk.r, vx: (Math.random() - 0.5) * 260, vy: -Math.random() * 220, t: 0 }); } });
       });
       // the bumpers and the driver's head
       [[52, 10], [-52, 10], [-4, -30], [14, -24], [-22, -22]].forEach(([lx, ly], i) => {
@@ -340,7 +391,8 @@
         if (i < 2 && pen > 3 && Math.random() < 0.3) sparks.push({ x: qx, y: g.y, vx: (Math.random() - 0.5) * 200, vy: -Math.random() * 160, t: 0 });
       });
       // in the air: gas rolls the nose up, brake rolls it down
-      if (!touching) { if (racing && keys.gas) c.w -= 9 * h; if (racing && keys.brake) c.w += 9 * h; c.w *= 1 - 0.5 * h; }
+      const spin = S.C.ab === "spin" ? 15 : 9;
+      if (!touching) { if (racing && keys.gas) c.w -= spin * h; if (racing && keys.brake) c.w += spin * h; c.w *= 1 - 0.5 * h; }
       else { c.w *= 1 - 2.2 * h; c.w = Math.max(-5, Math.min(5, c.w)); }
       ax -= c.vx * 0.012; ay -= c.vy * 0.004;
       c.vx += ax * h; c.vy += ay * h; c.w += tq * h;
@@ -371,28 +423,57 @@
 
     /* ---------------- a run ---------------- */
     function startRun(){
-      const endless = mode !== "career";
-      lvl = endless ? null : LEVELS[pickLvl];
+      const custom = mode === "custom", ct = custom ? R().tracks[pickTrack] : null;
+      const endless = mode !== "career" && !custom;
+      lvl = custom ? { n: -1, custom: true, world: ct.world, goal: Math.round(ct.pts[ct.pts.length - 1][0] / PX_M), d: 0.3 } : endless ? null : LEVELS[pickLvl];
       W0 = endless ? WORLDS[Math.floor(Math.random() * WORLDS.length)] : WORLDS[lvl.world];
-      goalX = endless ? 1e12 : lvl.goal * PX_M;
+      goalX = endless ? 1e12 : custom ? ct.pts[ct.pts.length - 1][0] : lvl.goal * PX_M;
       const daily = mode === "daily", dseed = today();
       if (daily) W0 = WORLDS[dseed % 5];
       const seed = daily ? dseed : endless ? (Date.now() & 0xffff) : 100 + lvl.n * 7919;
       terrain = newTerrain(seed, daily ? 0.45 + (dseed % 7) / 20 : endless ? 0.05 : lvl.d, endless, goalX);
       terrain.haz = lvl ? (lvl.n < 2 ? 0 : 0.12 + 0.38 * lvl.d) : daily ? 0.35 : 0.25;
-      weather = lvl ? (lvl.n === 0 ? "clear" : weatherFor(seed, lvl.world)) : weatherFor(seed, WORLDS.indexOf(W0));
+      weather = custom ? "clear" : lvl ? (lvl.n === 0 ? "clear" : weatherFor(seed, lvl.world)) : weatherFor(seed, WORLDS.indexOf(W0));
       pickups = []; pads = []; dust = []; sparks = []; rocks = []; zones = [];
+      if (custom) fillCustom(terrain, ct);
       extend(terrain, 2400); spawn(120);
+      swims = 0; toughUsed = false;
       combo = 0; comboT = 0; stunts = 0; bestCombo = 0; wheelieT = 0; wheelie = false; hitCool = 0; resultsOn = false; lastRun = null;
       rivalWon = false; rivalGap = null; rival = null;
       if (lvl && lvl.boss) { const g = groundAt(terrain, 120); rival = { x: 120, y: g.y - 38, a: 0, v: (560 + 9 * lvl.n) * (R().assist ? 0.9 : 1) }; }
-      fuel = 1; nitro = 0.4; time = 0; runCoins = 0; flips = 0; maxAir = 0; usedNitro = false; outT = 0; endT = 0; dist = 0; shake = 0; clock = 0;
-      missions = endless ? [] : missionsOf(lvl); done = {};
+      fuel = 1; nitro = car.S.C.ab === "rocket" ? 1 : 0.4; time = 0; runCoins = 0; flips = 0; maxAir = 0; usedNitro = false; outT = 0; endT = 0; dist = 0; shake = 0; clock = 0;
+      missions = endless || custom ? [] : missionsOf(lvl); done = {};
       cam.x = car.x; cam.y = car.y; cam.z = 1; fx.clear();
       rec = []; recT = 0; ghostGap = null;
-      ghost = !endless && R().ghost && R().ghost[lvl.n] ? R().ghost[lvl.n] : null;
+      ghost = !endless && !custom && R().ghost && R().ghost[lvl.n] ? R().ghost[lvl.n] : null;
       state = "count";
       stats = null;
+    }
+    // your own track: the ground through the dots (smooth curves, one-sided next to a gap), then the items
+    function fillCustom(T, t){
+      const P = t.pts, gaps = new Set(t.gaps), last = P.length - 1;
+      const slope = i => {
+        if (i === 0 || i === last) return 0;
+        const L = !gaps.has(i - 1), Rt = !gaps.has(i);
+        const v = L && Rt ? (P[i + 1][1] - P[i - 1][1]) / (P[i + 1][0] - P[i - 1][0]) : L ? (P[i][1] - P[i - 1][1]) / (P[i][0] - P[i - 1][0]) : Rt ? (P[i + 1][1] - P[i][1]) / (P[i + 1][0] - P[i][0]) : 0;
+        return Math.max(-2, Math.min(2, v));
+      };
+      T.pieces = []; T.cur = { pts: [{ x: -400, y: 0 }, { x: 0, y: 0 }] }; T.pieces.push(T.cur);
+      for (let i = 0; i < last; i++) {
+        const [x0, y0] = P[i], [x1, y1] = P[i + 1], dx = x1 - x0;
+        if (gaps.has(i)) { T.cur = { pts: [{ x: x1, y: y1 }] }; T.pieces.push(T.cur); continue; }
+        const m0 = slope(i), m1 = slope(i + 1), k = Math.max(2, Math.round(dx / 22));
+        for (let j = 1; j <= k; j++) { const u = j / k, u2 = u * u, u3 = u2 * u; T.cur.pts.push({ x: x0 + dx * u, y: (2 * u3 - 3 * u2 + 1) * y0 + (u3 - 2 * u2 + u) * dx * m0 + (3 * u2 - 2 * u3) * y1 + (u3 - u2) * dx * m1 }); }
+      }
+      T.cur.pts.push({ x: P[last][0] + 800, y: P[last][1] });
+      T.x = 1e12; T.y = P[last][1];
+      t.items.forEach(([x, k]) => {
+        const g = groundAt(T, x); if (!g) return;
+        if (k === "c") { for (let i = 0; i < 5; i++) { const gi = groundAt(T, x + i * 60); if (gi) pickups.push({ x: x + i * 60, y: gi.y - 44, t: i === 2 ? "gold" : "coin", got: false }); } }
+        else if (k === "f" || k === "n") pickups.push({ x, y: g.y - 54, t: k === "f" ? "fuel" : "nitro", got: false });
+        else if (k === "r") rocks.push({ x, y: g.y, r: 20, hit: false });
+        else if (k === "p") pads.push({ x0: x, x1: x + 220 });
+      });
     }
     function missionDone(m){
       switch (m.id) {
@@ -422,6 +503,10 @@
         if (m > S.dayBest.m) S.dayBest.m = m;
         if (S.dayDone !== day && m >= 300) { S.dayDone = day; bonus = 100; store.raceoffDaily = (store.raceoffDaily || 0) + 1; dailyNote = "Daily bonus +100! "; }
       }
+      else if (mode === "custom") {
+        const t = R().tracks[pickTrack];
+        if (finished && t && (!t.best || time < t.best)) { t.best = Math.round(time * 10) / 10; newBest = true; }
+      }
       else if (finished) {
         let mask = (S.stars || {})[lvl.n] || 0;
         missions.forEach((mi, i) => { if (missionDone(mi) && !(mask >> i & 1)) { mask |= 1 << i; newStars++; } });
@@ -432,17 +517,18 @@
         const prev = S.bestTime[lvl.n];
         if (!prev || time < prev) { newBest = true; S.bestTime[lvl.n] = Math.round(time * 10) / 10; S.ghost[lvl.n] = { car: S.car, d: rec.concat([[Math.round(car.x), Math.round(car.y), Math.round(car.a * 100)]]) }; }
       }
-      const earned = runCoins + bonus;
+      const earned = mode === "custom" ? 0 : runCoins + bonus;   // coins on your own tracks are just for fun
       S.coins += earned;
-      lastRun = { d: rec.concat([[Math.round(car.x), Math.round(car.y), Math.round(car.a * 100)]]), m, why, time, car: S.car, finish: finished, label: mode === "career" ? `level ${lvl.n + 1}` : mode === "daily" ? "today's daily track" : "an endless run" };
+      lastRun = { d: rec.concat([[Math.round(car.x), Math.round(car.y), Math.round(car.a * 100)]]), m, why, time, car: S.car, finish: finished, label: mode === "custom" ? `my own track "${R().tracks[pickTrack].name}"` : mode === "career" ? `level ${lvl.n + 1}` : mode === "daily" ? "today's daily track" : "an endless run" };
       stats = { m, why, earned, bonus, runCoins, newStars, newBest, time, dailyNote, stunts, bestCombo, rivalWon, mission: missions.map(mi => ({ text: mi.text, ok: missionDone(mi) })) };
       Hub.saveStore(); Hub.checkBadges();
-      if (finished) { Fun.sfx.tada(); Hub.confettiBurst(canvas); } else { Fun.sfx.crash(); if (why === "crash") fx.pop("CRASH!", W / 2, H * 0.35, "#ff6b6b", 48); if (why === "fuel") fx.pop("OUT OF FUEL!", W / 2, H * 0.35, "#ff6b4a", 44); if (why === "fell") fx.pop("SPLASH!", W / 2, H * 0.35, "#7fd0ff", 44); }
+      if (finished) { Fun.sfx.tada(); Hub.confettiBurst(canvas); } else { Fun.sfx.crash(); if (store.sound !== false && why !== "fuel") music.sting(); if (why === "crash") fx.pop("CRASH!", W / 2, H * 0.35, "#ff6b6b", 48); if (why === "fuel") fx.pop("OUT OF FUEL!", W / 2, H * 0.35, "#ff6b4a", 44); if (why === "fell") fx.pop("SPLASH!", W / 2, H * 0.35, "#7fd0ff", 44); }
       setTimeout(() => showResults(), finished ? 1400 : 1100);
     }
 
     function update(dt){
-      clock += dt;
+      clock += dt; squeal = 0;
+      if (state === "edit") return;
       if (state === "replay") { updateReplay(dt); return; }
       if (state === "count") { if (clock > 1.9) { state = "race"; Fun.sfx.whoosh(); } else { physics(Math.min(dt, 1 / 60)); car.x = 120; car.vx = 0; } }   // held on the start line while the lights count down
       else if (state === "race") {
@@ -460,12 +546,14 @@
         const gasing = keys.gas && fuel > 0;
         fuel = Math.max(0, fuel - dt * (gasing ? 0.036 : 0.012) * S.drain * (R().assist ? 0.65 : 1));
         if (keys.nitro && nitro > 0 && fuel > 0) { nitro = Math.max(0, nitro - dt * 0.28 * S.nitroUse); usedNitro = true; }
+        const ab = car.S.C.ab, cm = ab === "gold" ? 2 : 1;
         pickups.forEach(p => {
+          if (ab === "magnet" && !p.got && (p.t === "coin" || p.t === "gold") && Math.abs(p.x - car.x) < 200 && Math.hypot(p.x - car.x, p.y - car.y) < 200) { const k = Math.min(1, dt * 7); p.x += (car.x - p.x) * k; p.y += (car.y - p.y) * k; }
           if (p.got || Math.abs(p.x - car.x) > 70) return;
           if (Math.hypot(p.x - car.x, p.y - car.y) < (p.t === "coin" ? 46 : 56)) {
             p.got = true;
-            if (p.t === "coin") { runCoins++; Fun.sfx.coin(); }
-            else if (p.t === "gold") { runCoins += 5; Fun.sfx.coin(); fx.pop("+5", W * 0.5, 120, "#ffd84d", 24); }
+            if (p.t === "coin") { runCoins += cm; Fun.sfx.coin(); }
+            else if (p.t === "gold") { runCoins += 5 * cm; Fun.sfx.coin(); fx.pop("+" + 5 * cm, W * 0.5, 120, "#ffd84d", 24); }
             else if (p.t === "fuel") { fuel = Math.min(1, fuel + 0.5); Fun.sfx.ding(); fx.pop("FUEL!", W * 0.5, 120, "#ff6b4a", 30); }
             else { nitro = Math.min(1, nitro + 0.5); Fun.sfx.zap(); fx.pop("NITRO!", W * 0.5, 120, "#4df2ff", 30); }
           }
@@ -475,6 +563,8 @@
         if (gc && car.y > gc.y + 30) car.head = true;   // the body is inside the ground
         if (rival) rivalGap = Math.round((car.x - rival.x) / PX_M);
         if (ghost) { const g = ghostAt(time); ghostGap = g ? Math.round((car.x - g.x) / PX_M) : null; }
+        if (car.head && ab === "tough" && !toughUsed) { toughUsed = true; rescue("SAVED BY THE TOUGH ROOF!", car.x); }
+        else if (car.y > lastGroundY + 420 && ab === "swim" && swims < 2) { const pc = terrain.pieces.find(p => p.pts[0].x > car.x - 60); if (pc) { swims++; rescue(`SWIM! 🌊 ${2 - swims} left`, pc.pts[0].x + 70); } else endRun("fell"); }
         if (car.head) endRun("crash");
         else if (car.y > lastGroundY + 420) endRun("fell");
         else if (fuel <= 0 && Math.hypot(car.vx, car.vy) < 30) { outT += dt; if (outT > 1.4) endRun("fuel"); } else outT = 0;
@@ -494,8 +584,23 @@
       cam.z += (tz - cam.z) * Math.min(1, dt * 1.5);
       cam.x += (car.x + Math.min(240, sp * 0.18) - cam.x) * Math.min(1, dt * 6);
       cam.y += (car.y - 30 - cam.y) * Math.min(1, dt * 3.5);
-      if (R().music !== false && store.sound !== false) music.engine(Math.min(1, sp / 1300), state === "race" || state === "count");
+      if (store.sound !== false) {
+        const on = state === "race" || state === "count";
+        music.engine(Math.min(1, sp / 1300), on, car.S.C.snd, on && keys.gas && fuel > 0 ? 1 : 0);
+        music.loop("squeal", on && squeal ? 0.05 : 0);
+        music.loop("boost", on && keys.nitro && nitro > 0 && fuel > 0 ? 0.1 : 0);
+        music.loop("rain", weather === "rain" ? 0.045 : weather === "snow" ? 0.015 : 0);
+      }
     }
+    // an ability saves the run: the car is put back on its wheels at x
+    function rescue(msg, x){
+      const g = groundAt(terrain, x) || { y: lastGroundY, tx: 1, ty: 0 };
+      car.x = x; car.y = g.y - 70; car.a = Math.atan2(g.ty, g.tx); car.w = 0; car.vy = -120; car.vx = Math.max(260, Math.abs(car.vx) * 0.6); car.head = false;
+      car.wheels.forEach(w => { w.len = 22; w.sx = undefined; w.sy = undefined; });
+      lastGroundY = g.y; airT = 0; airRot = 0; shake = 6; Fun.sfx.boing();
+      fx.pop(msg, W / 2, H * 0.3, "#7dff9a", 30);
+    }
+    function quietSounds(){ ["squeal", "boost", "rain"].forEach(k => music.loop(k, 0)); music.engine(0, false); }
 
     /* ---------------- the rival car: scripted, it follows the ground at a steady pace ---------------- */
     function updateRival(dt){
@@ -614,6 +719,7 @@
     }
     function drawRocks(){
       rocks.forEach(rk => {
+        if (rk.smashed) return;
         const X = sx(rk.x), Y = sy(rk.y), r = rk.r * cam.z; if (X < -60 || X > W + 60) return;
         ctx.fillStyle = "#7d8290"; ctx.strokeStyle = "#2c303c"; ctx.lineWidth = 2.5; ctx.beginPath(); ctx.moveTo(X - r * 1.15, Y + 2); ctx.lineTo(X - r * 0.8, Y - r * 0.8); ctx.lineTo(X - r * 0.1, Y - r * 1.15); ctx.lineTo(X + r * 0.7, Y - r * 0.85); ctx.lineTo(X + r * 1.15, Y + 2); ctx.closePath(); ctx.fill(); ctx.stroke();
         ctx.fillStyle = "rgba(255,255,255,0.22)"; ctx.beginPath(); ctx.moveTo(X - r * 0.7, Y - r * 0.7); ctx.lineTo(X - r * 0.1, Y - r * 1.05); ctx.lineTo(X + r * 0.1, Y - r * 0.6); ctx.closePath(); ctx.fill();
@@ -753,6 +859,8 @@
     function draw(dt){
       fitCanvas(); ctx.setTransform(scale, 0, 0, scale, 0, 0);
       if (!terrain) { ctx.fillStyle = "#6fc3ff"; ctx.fillRect(0, 0, W, H); return; }
+      if (state === "edit") { drawBackground(); drawTerrain(); drawRocks(); drawPickups(); drawEditor(); return; }
+      if (!car) { drawBackground(); drawTerrain(); drawRocks(); drawPickups(); return; }   // a track built before any race
       if (shake > 0) ctx.translate((Math.random() - 0.5) * shake, (Math.random() - 0.5) * shake);
       drawBackground(); drawZones(); drawTerrain(); drawRocks(); drawPickups();
       dust.forEach(d => { ctx.fillStyle = `rgba(230,220,200,${Math.max(0, 0.6 - d.t)})`; ctx.beginPath(); ctx.arc(sx(d.x), sy(d.y), (4 + d.t * 14) * cam.z, 0, 7); ctx.fill(); });
@@ -762,6 +870,19 @@
       drawWeather();
       sparks.forEach(s => { ctx.fillStyle = "#ffd84d"; ctx.fillRect(sx(s.x), sy(s.y), 3, 3); });
       fx.draw(ctx, dt); drawHud();
+    }
+    function drawEditor(){
+      const P = edTrack.pts, gaps = new Set(edTrack.gaps);
+      ctx.save(); ctx.lineWidth = 3; ctx.setLineDash([8, 8]); ctx.strokeStyle = "#ff6b6b";
+      P.forEach((p, i) => { if (gaps.has(i)) { ctx.beginPath(); ctx.moveTo(sx(p[0]), sy(p[1])); ctx.lineTo(sx(P[i + 1][0]), sy(P[i + 1][1])); ctx.stroke(); } });
+      ctx.setLineDash([]);
+      P.forEach(([x, y], i) => { ctx.fillStyle = i === 0 ? "#9aa3b5" : drag && drag.i === i ? "#ffe14d" : "#fff"; ctx.strokeStyle = "#140a20"; ctx.beginPath(); ctx.arc(sx(x), sy(y), i === 0 ? 7 : 11, 0, 7); ctx.fill(); ctx.stroke(); });
+      ctx.font = '900 16px "Bricolage Grotesque", system-ui'; ctx.textAlign = "center"; ctx.textBaseline = "middle"; ctx.fillStyle = "#fff"; ctx.strokeStyle = "rgba(0,0,0,0.6)"; ctx.lineWidth = 4;
+      const g0 = groundAt(terrain, 120); if (g0) { ctx.strokeText("START", sx(120), sy(g0.y) - 60 * cam.z); ctx.fillText("START", sx(120), sy(g0.y) - 60 * cam.z); }
+      const hint = { move: "Drag a dot to shape the ground · drag empty space to scroll", add: "Tap where a new dot should go (a new hill or dip)", del: "Tap a dot or an item to remove it", gap: "Tap between two dots to make a gap (or close it)", coin: "Tap to put a row of coins", fuel: "Tap to put a fuel can", nitro: "Tap to put a nitro can", rock: "Tap to put a rock", pad: "Tap to put a speed pad" }[edTool];
+      ctx.fillStyle = "rgba(0,0,0,0.55)"; ctx.fillRect(0, H - 34, W, 34);
+      ctx.fillStyle = "#fff"; ctx.font = "700 15px system-ui"; ctx.fillText(`${hint}  ·  ${Math.round(P[P.length - 1][0] / PX_M)} m`, W / 2, H - 17);
+      ctx.restore(); ctx.textBaseline = "alphabetic";
     }
     function loop(now){
       if (!open) return;
@@ -774,7 +895,7 @@
 
     /* ---------------- the menu: play and garage ---------------- */
     function showResults(){
-      running = false;
+      running = false; quietSounds();
       const s = stats, L = lvl;
       if (!s) return;
       resultsOn = true;
@@ -788,6 +909,11 @@
         titleEl.textContent = `📅 ${s.m} m`;
         textEl.textContent = `${endWhy}. ${s.dailyNote}+${s.earned} coins. Today's best: ${R().dayBest.m} m.` + stuntLine + " Come back tomorrow for a new track!";
         showPanel("↻ Again");
+      } else if (mode === "custom") {
+        const t = R().tracks[pickTrack]; tab = "build";
+        titleEl.textContent = s.why === "finish" ? `🏁 ${t.name}` : s.why === "fuel" ? "⛽ Out of fuel" : s.why === "fell" ? "💦 You fell in!" : "💥 Crash!";
+        textEl.textContent = (s.why === "finish" ? `Done in ${s.time.toFixed(1)} s${s.newBest ? " (new best!)" : ` (best ${t.best} s)`}.` : `${s.m} of ${L.goal} m.`) + stuntLine + " Coins on your own tracks are just for fun.";
+        showPanel("↻ Test again");
       } else if (s.why === "finish") {
         titleEl.textContent = `🏁 ${"⭐".repeat(starsOf(L.n))}${"☆".repeat(3 - starsOf(L.n))}`;
         textEl.textContent = `${L.boss ? (s.rivalWon ? "The rival got there first. " : "You beat the rival! ") : ""}${s.dailyNote}Level ${L.n + 1} done in ${s.time.toFixed(1)} s${s.newBest ? ' (new best! 👻 your ghost will race you next time)' : ` (best ${R().bestTime[L.n]} s)`}: +${s.earned} coins (${s.runCoins} collected, ${s.bonus} bonus).` + s.mission.map(m => ` ${m.ok ? "✔" : "✘"} ${m.text}.`).join("") + stuntLine;
@@ -816,11 +942,17 @@
           h += `<div class="sw-worlds">` + WORLDS.map((wd, wi) => `<button type="button" class="sw-world${wi === pickWorld ? " on" : ""}" data-world="${wi}" ${unlocked(wi * 6) ? "" : "disabled"}>${unlocked(wi * 6) ? wd.icon : "🔒"} ${wd.name}</button>`).join("") + `</div><div class="sw-levels">` +
             LEVELS.filter(L => L.world === pickWorld).map(L => { const st = starsOf(L.n), ok = unlocked(L.n); return `<button type="button" class="sw-lvl${L.n === pickLvl ? " on" : ""}" data-lvl="${L.n}" ${ok ? "" : "disabled"}><b>${ok ? L.n + 1 : "🔒"}</b><span>${L.boss ? "🏎️ " : ""}${L.goal} m</span><i>${"★".repeat(st)}${"☆".repeat(3 - st)}</i>${(S.bestTime || {})[L.n] ? `<em>👻 ${S.bestTime[L.n]} s</em>` : ""}</button>`; }).join("") + `</div>`;
           h += `<div class="ro-missions"><b>Missions, level ${pickLvl + 1}:</b> ` + missionsOf(LEVELS[pickLvl]).map(m => `<span>${((S.stars || {})[pickLvl] >> missionsOf(LEVELS[pickLvl]).indexOf(m) & 1) ? "✔" : "○"} ${m.text}</span>`).join("") + `</div>`;
-        } else if (mode === "daily") h += `<p class="ro-note">Today's track (${WORLDS[today() % 5].icon} ${WORLDS[today() % 5].name}) is the same for everybody. Reach 300 m for a daily bonus and beat your best distance.</p>`;
+        } else if (mode === "custom") h += `<p class="ro-note">Next race: your own track "${esc((R().tracks[pickTrack] || {}).name || "")}". Pick a mode above to go back to the levels.</p>`;
+        else if (mode === "daily") h += `<p class="ro-note">Today's track (${WORLDS[today() % 5].icon} ${WORLDS[today() % 5].name}) is the same for everybody. Reach 300 m for a daily bonus and beat your best distance.</p>`;
         else h += `<p class="ro-note">Drive as far as you can. The ground never ends, and neither does the fuel hunt: grab the red cans!</p>`;
         h += `<button type="button" class="sw-world${S.assist ? " on" : ""}" data-assist="1">🛟 Assist: ${S.assist ? "ON" : "OFF"} <small>${S.assist ? "narrower gaps, fuel lasts longer" : "tap if a level feels too hard"}</small></button>`;
         h += `<button type="button" class="sw-world${S.tilt ? " on" : ""}" data-tilt="1">📱 Tilt steering: ${S.tilt ? "ON" : "OFF"} <small>${S.tilt ? "tip right = gas, left = brake" : "experimental, for phones"}</small></button>`;
         body.innerHTML = h;
+      } else if (tab === "build") {
+        const T = S.tracks || [];
+        let h = `<p class="ro-note">Build your own track: shape the hills, add gaps, coins, fuel, rocks and speed pads, then test drive it. Share it with a code. Coins on your own tracks are just for fun.</p><div class="ro-modes"><button type="button" class="btn small" data-new="1">➕ New track</button><button type="button" class="btn small" data-import="1">📥 Paste a code</button></div><div class="ro-tracks">`;
+        h += T.map((t, i) => `<div class="ro-track${mode === "custom" && i === pickTrack ? " on" : ""}"><span>${esc(t.name)}<small>${WORLDS[t.world].icon} ${Math.round(t.pts[t.pts.length - 1][0] / PX_M)} m${t.best ? ` · best ${t.best} s` : ""}</small></span><div><button type="button" class="btn small" data-drive="${i}" aria-label="Drive">▶</button><button type="button" class="btn small" data-edit="${i}" aria-label="Edit">✏️</button><button type="button" class="btn small" data-code="${i}" aria-label="Share code">📤</button><button type="button" class="btn small" data-deltrack="${i}" aria-label="Delete">🗑️</button></div></div>`).join("") || `<p class="ro-note">No tracks yet. Tap "New track"!</p>`;
+        body.innerHTML = h + "</div>";
       } else if (tab === "style") {
         const sw = (arr, key, cur, own) => arr.map(o => { const have = o.price === 0 || !!S.cos[key + ":" + o.id]; return `<button type="button" class="ro-swb${o.id === cur ? " on" : ""}" data-${key}="${o.id}" aria-label="${o.name}" style="--c:${o.c || "#888"}"><i></i><span>${o.name}</span><small>${o.id === cur ? "✓" : have ? "Owned" : "🪙 " + o.price}</small></button>`; }).join("");
         body.innerHTML = `<div class="ro-bank">🪙 ${S.coins} coins</div><div class="ro-note"><b>Paint</b> (all cars)</div><div class="ro-swatches">${sw(PAINTS, "paint", S.paint || "stock")}</div><div class="ro-note"><b>Wheels</b></div><div class="ro-swatches">${sw(RIMS, "rim", S.rim || "chrome")}</div>`;
@@ -831,7 +963,8 @@
           return `<button type="button" class="sw-car${c.id === gc ? " on" : ""}${c.id === S.car ? " using" : ""}" data-car="${c.id}" style="--c:${c.body};--t:${c.trim}"><i></i><span>${c.name}</span><small>${own ? (c.id === S.car ? "✓ Using" : "Owned") : "🪙 " + c.price}</small></button>`;
         }).join("") + `</div>`;
         const own = !!S.owned[C.id];
-        h += `<div class="ro-carbar"><b>${C.name}</b> `;
+        const AB = ABILITY[C.ab];
+        h += `<div class="ro-carbar"><b>${C.name}</b> <span class="ro-ab">${AB.icon} ${AB.name}: ${AB.text}</span> `;
         if (!own) h += `<button type="button" class="btn small" data-buycar="${C.id}" ${S.coins >= C.price ? "" : "disabled"}>Buy 🪙 ${C.price}</button>`;
         else if (S.car !== C.id) h += `<button type="button" class="btn small" data-usecar="${C.id}">Use this car</button>`;
         h += `</div><div class="ro-ups">` + UPS.map(u => {
@@ -844,6 +977,18 @@
     body.addEventListener("click", e => {
       const S = R(), b = e.target.closest("button"); if (!b || b.disabled) return;
       if (b.dataset.replay) { startReplay(); return; }
+      if (b.dataset.drive) { mode = "custom"; pickTrack = +b.dataset.drive; start(); return; }
+      if (b.dataset.edit) { openEditor(+b.dataset.edit); return; }
+      if (b.dataset.new) { openEditor(-1); return; }
+      if (b.dataset.code) { const code = toCode(S.tracks[+b.dataset.code]); if (navigator.clipboard) navigator.clipboard.writeText(code).then(() => Hub.toast("📋", "Track code copied", "Send it, and paste it in Build to load it")).catch(() => window.prompt("Copy this track code", code)); else window.prompt("Copy this track code", code); return; }
+      if (b.dataset.import) {
+        const code = window.prompt("Paste a track code (it starts with RO1.)"); if (!code) return;
+        const t = fromCode(code); S.tracks = S.tracks || [];
+        if (!t) { Hub.toast("🤔", "That code didn't work", "Check you copied all of it"); return; }
+        if (S.tracks.length >= 8) { Hub.toast("🛠️", "8 tracks is the most", "Delete one to make room"); return; }
+        S.tracks.push(t); Hub.saveStore(); Fun.sfx.ding(); renderBody(); return;
+      }
+      if (b.dataset.deltrack) { const i = +b.dataset.deltrack; if (!window.confirm(`Delete "${S.tracks[i].name}"?`)) return; S.tracks.splice(i, 1); if (mode === "custom") { mode = "career"; pickTrack = 0; } Hub.saveStore(); renderBody(); return; }
       if (b.dataset.share) { shareRun(); return; }
       if (b.dataset.tilt) { toggleTilt(); }
       else if (b.dataset.paint || b.dataset.rim) {
@@ -879,10 +1024,13 @@
 
     function start(){
       if (mode === "career" && !unlocked(pickLvl)) pickLvl = 0;
+      if (mode === "custom" && !(R().tracks || [])[pickTrack]) mode = "career";
+      if (state === "edit") leaveEditor();
       startRun();
-      $("roLevel").textContent = (mode === "endless" ? "Endless" : mode === "daily" ? "Daily" : `Level ${lvl.n + 1}${lvl.boss ? " 🏎️" : ""}`) + (WX_ICON[weather] ? " " + WX_ICON[weather] : "");
+      $("roLevel").textContent = (mode === "custom" ? "🛠️ " + R().tracks[pickTrack].name : mode === "endless" ? "Endless" : mode === "daily" ? "Daily" : `Level ${lvl.n + 1}${lvl.boss ? " 🏎️" : ""}`) + (WX_ICON[weather] ? " " + WX_ICON[weather] : "");
       running = true; panel.hidden = true;
       Object.keys(keys).forEach(k => { keys[k] = false; });
+      if (store.sound !== false) music.wake();
       if (R().music !== false && store.sound !== false) music.start();
       canvas.focus();
     }
@@ -894,11 +1042,102 @@
       const S = R(); if (!S.owned[S.car]) S.car = "flame";
       pickLvl = LEVELS.find(L => unlocked(L.n) && !(((S.stars || {})[L.n] || 0) & 1))?.n ?? 0; pickWorld = Math.floor(pickLvl / 6);
       tab = "play"; resultsOn = false; titleEl.textContent = "🚙 Race Off";
+      edBar.hidden = true; overlay.classList.remove("ro-editing"); if (mode === "custom") mode = "career";
       textEl.textContent = "Physics stunt racing! Spring over hills, jump gaps, flip in the air and don't land on your roof. Collect coins and fuel, finish the missions for stars, and spend your coins in the garage.";
       setMusicBtn(); showPanel("▶ Race");
       last = performance.now(); requestAnimationFrame(loop);
     }
-    function closeGame(){ open = false; running = false; overlay.hidden = true; document.body.style.overflow = ""; music.stop(); }
+    function closeGame(){ if (state === "edit") leaveEditor(); open = false; running = false; overlay.hidden = true; document.body.style.overflow = ""; music.stop(); }
+
+    /* ---------------- the track editor ---------------- */
+    const edBar = $("roEdit");
+    function openEditor(i){
+      const S = R(); S.tracks = S.tracks || [];
+      if (i < 0) { if (S.tracks.length >= 8) { Hub.toast("🛠️", "8 tracks is the most", "Delete one to make room"); return; } S.tracks.push(newTrack()); i = S.tracks.length - 1; Hub.saveStore(); }
+      edIdx = i; edTrack = S.tracks[i]; edTool = "move"; drag = null;
+      mode = "custom"; pickTrack = i; state = "edit"; running = true; panel.hidden = true; resultsOn = false;
+      overlay.classList.add("ro-editing"); edBar.hidden = false;
+      preview(); cam.z = 0.55; cam.x = 700; cam.y = -40;
+      quietSounds(); renderEdBar(); $("roLevel").textContent = "🛠️ Build";
+    }
+    function leaveEditor(){ edBar.hidden = true; overlay.classList.remove("ro-editing"); state = "ready"; running = false; drag = null; Hub.saveStore(); }
+    // the editor shows the real ground, coins and rocks, built again after every change
+    function preview(){
+      W0 = WORLDS[edTrack.world]; weather = "clear"; rival = null; ghost = null; zones = [];
+      terrain = newTerrain(1, 0.3, false, 0); pickups = []; pads = []; rocks = [];
+      fillCustom(terrain, edTrack);
+      goalX = edTrack.pts[edTrack.pts.length - 1][0]; lvl = { n: -1, custom: true, world: edTrack.world, goal: Math.round(goalX / PX_M), d: 0.3 };
+    }
+    function renderEdBar(){
+      edBar.querySelectorAll("[data-tool]").forEach(b => b.setAttribute("aria-pressed", String(b.dataset.tool === edTool)));
+      const wd = WORLDS[edTrack.world]; edBar.querySelector('[data-ed="world"]').innerHTML = `${wd.icon}<span class="tl"> ${wd.name}</span>`;
+    }
+    edBar.addEventListener("click", e => {
+      const b = e.target.closest("button"); if (!b || state !== "edit") return;
+      if (b.dataset.tool) { edTool = b.dataset.tool; Fun.sfx.pop(); renderEdBar(); return; }
+      const a = b.dataset.ed;
+      if (a === "world") { edTrack.world = (edTrack.world + 1) % WORLDS.length; preview(); }
+      else if (a === "name") { const nm = window.prompt("Name your track", edTrack.name); if (nm !== null) edTrack.name = nm.replace(/[<>&"]/g, "").trim().slice(0, 24) || edTrack.name; }
+      else if (a === "test") { leaveEditor(); mode = "custom"; pickTrack = edIdx; start(); return; }
+      else if (a === "done") { leaveEditor(); mode = "custom"; pickTrack = edIdx; tab = "build"; titleEl.textContent = "🛠️ " + edTrack.name; textEl.textContent = "Saved! Drive it, share its code, or keep building."; showPanel("▶ Drive it"); return; }
+      Hub.saveStore(); renderEdBar();
+    });
+    const toWorld = e => { const r = canvas.getBoundingClientRect(), xc = (e.clientX - r.left) / r.width * W, yc = (e.clientY - r.top) / r.height * H; return { xc, yc, x: (xc - W * 0.36) / cam.z + cam.x, y: (yc - H * 0.58) / cam.z + cam.y }; };
+    function dotAt(p){ let best = -1, bd = 28; edTrack.pts.forEach(([x, y], i) => { const d = Math.hypot(sx(x) - p.xc, sy(y) - p.yc); if (d < bd) { bd = d; best = i; } }); return best; }
+    const segAt = x => { const P = edTrack.pts; for (let i = 0; i < P.length - 1; i++) if (x >= P[i][0] && x < P[i + 1][0]) return i; return -1; };
+    function editTap(p){
+      const t = edTrack, P = t.pts, last = P[P.length - 1][0], x = Math.round(p.x), y = Math.round(Math.max(-1600, Math.min(1600, p.y)));
+      const say = (a, b) => { Hub.toast("🛠️", a, b); };
+      if (edTool === "add") {
+        if (P.length >= 120 || x > 40000) return say("That's as long as a track gets", "");
+        const j = P.findIndex(q => q[0] > x);
+        if (j === -1) { if (x - last < 80) return; P.push([x, y]); return true; }
+        if (j === 0 || x - P[j - 1][0] < 80 || P[j][0] - x < 80) return say("Too close to another dot", "Tap a bit further away");
+        if (t.gaps.includes(j - 1)) return say("That's a gap", "Close the gap first, or add the dot outside it");
+        P.splice(j, 0, [x, y]); t.gaps = t.gaps.map(g => g >= j ? g + 1 : g); return true;
+      }
+      if (edTool === "del") {
+        const i = dotAt(p);
+        if (i > 0) { if (P.length <= 3) return say("A track needs 3 dots", ""); P.splice(i, 1); t.gaps = t.gaps.filter(g => g !== i - 1 && g !== i).map(g => g > i ? g - 1 : g); return true; }
+        let bi = -1, bd = 70 / cam.z; t.items.forEach(([ix], k) => { if (Math.abs(ix - x) < bd) { bd = Math.abs(ix - x); bi = k; } });
+        if (bi >= 0) { t.items.splice(bi, 1); return true; }
+        return;
+      }
+      if (edTool === "gap") {
+        const s = segAt(x);
+        if (s <= 0 || s >= P.length - 2) return say("Not there", "Gaps go between two dots, not at the start or the end");
+        const k = t.gaps.indexOf(s);
+        if (k >= 0) { t.gaps.splice(k, 1); return true; }
+        if (P[s + 1][0] - P[s][0] > 900) return say("Too wide to jump", "Add a dot to make that bit shorter first");
+        t.gaps.push(s); return true;
+      }
+      const kind = ITEM_KINDS[edTool]; if (!kind) return;
+      const s = segAt(x);
+      if (x < 300 || s < 0 || t.gaps.includes(s)) return say("Can't put that there", "Put it on the ground, after the start");
+      if (t.items.length >= 150) return say("That's a lot of stuff!", "Erase something first");
+      t.items.push([x, kind]); return true;
+    }
+    canvas.addEventListener("pointerdown", e => {
+      if (state === "replay") { endReplay(); return; }
+      if (state !== "edit") return;
+      e.preventDefault(); try { canvas.setPointerCapture(e.pointerId); } catch (err) { /* fine */ }
+      const p = toWorld(e);
+      if (edTool === "move") { const i = dotAt(p); drag = i > 0 ? { i } : { pan: true, xc: p.xc, yc: p.yc }; return; }
+      if (editTap(p)) { Fun.sfx.pop(); preview(); Hub.saveStore(); }
+    });
+    canvas.addEventListener("pointermove", e => {
+      if (state !== "edit" || !drag) return;
+      const p = toWorld(e);
+      if (drag.pan) { cam.x -= (p.xc - drag.xc) / cam.z; cam.y -= (p.yc - drag.yc) / cam.z; drag.xc = p.xc; drag.yc = p.yc; clampEdCam(); return; }
+      const P = edTrack.pts, i = drag.i, lo = P[i - 1][0] + 80, hi = i < P.length - 1 ? P[i + 1][0] - 80 : 40000;
+      P[i][0] = Math.round(Math.max(lo, Math.min(hi, p.x))); P[i][1] = Math.round(Math.max(-1600, Math.min(1600, p.y)));
+      const s = i - 1; if (edTrack.gaps.includes(s) && P[i][0] - P[s][0] > 900) P[i][0] = P[s][0] + 900;
+      if (edTrack.gaps.includes(i) && P[i + 1][0] - P[i][0] > 900) P[i][0] = P[i + 1][0] - 900;
+      preview();
+    });
+    ["pointerup", "pointercancel"].forEach(nm => canvas.addEventListener(nm, () => { if (drag && !drag.pan) Hub.saveStore(); drag = null; }));
+    canvas.addEventListener("wheel", e => { if (state !== "edit") return; e.preventDefault(); cam.x += (e.deltaX + e.deltaY) / cam.z * 0.6; clampEdCam(); }, { passive: false });
+    function clampEdCam(){ const P = edTrack.pts; cam.x = Math.max(0, Math.min(P[P.length - 1][0] + 500, cam.x)); cam.y = Math.max(-1800, Math.min(1800, cam.y)); }
 
     /* ---------------- controls ---------------- */
     const KEYMAP = { ArrowRight: "gas", KeyD: "gas", ArrowUp: "gas", KeyW: "gas", ArrowLeft: "brake", KeyA: "brake", ArrowDown: "brake", KeyS: "brake", Space: "nitro", ShiftLeft: "nitro", KeyN: "nitro" };
@@ -917,11 +1156,10 @@
       ["pointerup", "pointercancel", "lostpointercapture"].forEach(n => btn.addEventListener(n, () => { keys[k] = false; btn.classList.remove("on"); }));
     });
     canvas.tabIndex = 0;
-    canvas.addEventListener("pointerdown", () => { if (state === "replay") endReplay(); });
     $("roCloseBtn").addEventListener("click", () => Hub.leave());
     Fun.soundButton($("roCloseBtn"));
     playBtn.addEventListener("click", start);
-    window.__ro = { get weather(){ return weather; }, get rocks(){ return rocks; }, get zones(){ return zones; }, get rival(){ return rival; }, get combo(){ return combo; }, get stunts(){ return stunts; }, get lastRun(){ return lastRun; }, stunt, startReplay, get ghost(){ return ghost; }, get gap(){ return ghostGap; }, keys, get state(){ return state; }, get car(){ return car; }, get fuel(){ return fuel; }, get dist(){ return dist; }, get coins(){ return runCoins; }, get stats(){ return stats; }, get flips(){ return flips; }, get maxAir(){ return maxAir; },
+    window.__ro = { openEditor, get edTrack(){ return edTrack; }, editTap: (x, y, tool) => { edTool = tool; const r = editTap({ x, y, xc: sx(x), yc: sy(y) }); preview(); return r; }, fromCode, toCode, custom: i => { mode = "custom"; pickTrack = i; start(); }, get swims(){ return swims; }, get toughUsed(){ return toughUsed; }, get nitro(){ return nitro; }, get squeal(){ return squeal; }, get weather(){ return weather; }, get rocks(){ return rocks; }, get zones(){ return zones; }, get rival(){ return rival; }, get combo(){ return combo; }, get stunts(){ return stunts; }, get lastRun(){ return lastRun; }, stunt, startReplay, get ghost(){ return ghost; }, get gap(){ return ghostGap; }, keys, get state(){ return state; }, get car(){ return car; }, get fuel(){ return fuel; }, get dist(){ return dist; }, get coins(){ return runCoins; }, get stats(){ return stats; }, get flips(){ return flips; }, get maxAir(){ return maxAir; },
       level: i => { mode = "career"; pickLvl = i; start(); }, endless: () => { mode = "endless"; start(); }, slope: () => { const g = groundAt(terrain, car.x); return g ? Math.atan2(g.ty, g.tx) : 0; }, slopeAt: x => { const g = groundAt(terrain, x); return g ? Math.atan2(g.ty, g.tx) : null; }, groundY: x => { const g = groundAt(terrain, x); return g ? g.y : null; }, R };
 
     return { open: openGame, close: closeGame };

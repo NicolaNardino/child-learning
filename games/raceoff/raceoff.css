@@ -37,3 +37,25 @@
 .ro-swb i{ width: 26px; height: 26px; border-radius: 50%; background: var(--c); border: 2px solid rgba(255,255,255,0.7); }
 .ro-swb small{ font-size: 10px; font-weight: 600; opacity: 0.85; }
 .ro-swb.on{ border-color: #7dff9a; box-shadow: 0 0 0 2px #7dff9a inset; }
+/* the track editor: tools along the top of the picture, the pedals out of the way */
+.ro-edit{ position: absolute; top: 6px; left: 6px; right: 6px; z-index: 3; display: flex; flex-wrap: wrap; gap: 6px; justify-content: space-between; pointer-events: none; }
+.ro-edit[hidden]{ display: none; }
+.ro-edit > div{ display: flex; flex-wrap: wrap; gap: 4px; pointer-events: auto; }
+.ro-edit button{ font: 800 13px system-ui, sans-serif; min-height: 34px; padding: 4px 8px; border-radius: 9px; border: 2px solid rgba(255,255,255,0.55); background: rgba(14,12,34,0.78); color: #fff; cursor: pointer; }
+.ro-edit button[aria-pressed="true"]{ background: #ff7a00; border-color: #ff7a00; color: #14102c; }
+.ro-edit button.go{ background: #38d96b; border-color: #38d96b; color: #0b2a14; }
+#roOverlay.ro-editing .sw-pedals{ display: none; }
+#roOverlay.ro-editing #roCanvas{ cursor: crosshair; }
+.ro-tracks{ display: flex; flex-direction: column; gap: 5px; width: 100%; max-width: 560px; }
+.ro-track{ display: flex; justify-content: space-between; align-items: center; gap: 8px; background: rgba(255,255,255,0.08); border: 2px solid transparent; border-radius: 10px; padding: 5px 8px 5px 12px; text-align: left; }
+.ro-track.on{ border-color: #ff7a00; }
+.ro-track > span{ display: flex; flex-direction: column; font-weight: 800; font-size: 14px; min-width: 0; overflow-wrap: anywhere; }
+.ro-track small{ font-weight: 500; font-size: 11px; opacity: 0.8; }
+.ro-track > div{ display: flex; gap: 4px; flex-shrink: 0; }
+.ro-ab{ font-size: 12px; opacity: 0.9; }
+@media (max-width: 900px){
+  .ro-edit .tl{ display: none; }
+  .ro-edit{ top: 4px; left: 4px; right: 4px; gap: 4px; }
+  .ro-edit > div{ gap: 3px; }
+  .ro-edit button{ min-height: 30px; padding: 2px 6px; font-size: 12px; border-width: 1.5px; }
+}
