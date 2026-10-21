@@ -252,7 +252,7 @@
         const len = 520 + rnd() * 420, dy = (bias ? bias * -1 : rnd() < 0.55 ? -1 : 1) * (70 + rnd() * (110 + d * 120));
         addPts(T, len, t => dy * (1 - Math.cos(Math.PI * t)) / 2);
       } else if (pickSeg < 0.58) { // bumps
-        const len = 520 + rnd() * 220, A = 8 + d * 12, wl = 78 + rnd() * 30;
+        const len = 520 + rnd() * 220, A = 5 + d * 8, wl = 120 + rnd() * 46;   // gentle enough for a wheel to climb out of a dip
         addPts(T, len, t => A * Math.sin(len * t / wl * Math.PI * 2), 14);
       } else if (pickSeg < 0.86) { // a ramp and a gap to jump
         const gap = (200 + d * 170 + rnd() * 60) * (T.assist ? 0.78 : 1);
@@ -340,13 +340,24 @@
       const boostOn = racing && keys.nitro && nitro > 0 && fuel > 0;
       WHEELS.forEach(([lx, ly], wi) => {
         const wh = c.wheels[wi], Px = c.x + lx * ca - ly * sa, Py = c.y + lx * sa + ly * ca;
-        const Cx = Px + dn[0] * Lmax, Cy = Py + dn[1] * Lmax;
-        const ct = contact(terrain, Cx, Cy, wr);
+        let Cx = Px + dn[0] * Lmax, Cy = Py + dn[1] * Lmax;
+        let ct = contact(terrain, Cx, Cy, wr);
+        // a hard landing can put the wheel's reach deeper than a wheel-radius under the ground, where the contact
+        // test (which only looks a wheel-radius around the point) misses it and the wheel sinks into the dirt:
+        // then pull the reach back up to the surface and test again
+        if (!ct) {
+          const under = t => { const g = groundAt(terrain, Px + dn[0] * t); return !!g && Py + dn[1] * t > g.y; };
+          if (under(Lmax)) {
+            let lo = 0, hi = Lmax; for (let k = 0; k < 8; k++) { const m = (lo + hi) / 2; if (under(m)) hi = m; else lo = m; }
+            Cx = Px + dn[0] * lo; Cy = Py + dn[1] * lo; ct = contact(terrain, Cx, Cy, wr);
+          }
+        }
         wh.on = !!ct;
         if (!ct) { wh.len += (Lmax - wh.len) * Math.min(1, h * 14); wh.ang += (drive ? 26 : 5) * h; wh.sx = Px + dn[0] * wh.len; wh.sy = Py + dn[1] * wh.len; return; }
         touching++;
         const Wx = Cx + ct.nx * ct.pen, Wy = Cy + ct.ny * ct.pen;
         let ex = Px - Wx, ey = Py - Wy, len = Math.hypot(ex, ey) || 1; ex /= len; ey /= len;
+        if (ex * ct.nx + ey * ct.ny < 0.3) { ex = ct.nx; ey = ct.ny; len = Math.min(len, Lmin * 0.5); }   // the mount is in the ground: push straight out, hard
         const L = Math.max(Lmin, Math.min(Lmax, len)); let comp = Lmax - L, extra = len < Lmin ? Lmin - len : 0;
         const rx = Px - c.x, ry = Py - c.y, vPx = c.vx - c.w * ry, vPy = c.vy + c.w * rx;
         const cv = -(vPx * ex + vPy * ey);
