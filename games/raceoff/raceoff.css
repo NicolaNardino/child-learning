@@ -59,3 +59,4 @@
   .ro-edit > div{ gap: 3px; }
   .ro-edit button{ min-height: 30px; padding: 2px 6px; font-size: 12px; border-width: 1.5px; }
 }
+.ro-preview{ width: min(100%, 360px); aspect-ratio: 360 / 160; border-radius: 12px; border: 2px solid rgba(255,255,255,0.3); display: block; }
