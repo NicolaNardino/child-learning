@@ -164,7 +164,7 @@
 
     function frame(now){
       if (!alive || !c.isConnected) return;
-      const dt = Math.max(0, Math.min(0.05, (now - last) / 1000 || 0)); last = now; t += dt;
+      const dt = Fun.dt(now, last, 0.05); last = now; t += dt;
       if (jump) {
         jump.t += dt;
         if (!jump.fell && jump.t >= 0.9) {

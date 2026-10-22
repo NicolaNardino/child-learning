@@ -11,7 +11,6 @@
   const { WW, WH, WD, world, at, ID, K, TEX, FACE, KIND, IS_SOLID, HOTBAR, BLOCKS, generate, spawnPoint, skyState, TORCH_DIR, wallTorch, IS_OPAQUE, isFurnace, furnaceFacing, T } = BW;
   const SV = BW.Survival;
   const CYCLE = 360;              // a whole day and night takes 6 minutes
-  const SLOTS = HOTBAR.length;
   // the times the clock button jumps to
   const TIMES = [{ t: 0.04, icon: "🌅", name: "Morning" }, { t: 0.25, icon: "☀️", name: "Day" }, { t: 0.47, icon: "🌇", name: "Sunset" }, { t: 0.75, icon: "🌙", name: "Night" }];
   const WORLD_VERSION = 2; // bumped when the terrain changed shape, so an old save doesn't land in the wrong place
@@ -649,7 +648,7 @@
       if (document.pointerLockElement === canvas || matchMedia("(pointer: coarse)").matches) return;   // touch screens: no mouse to lock, and a lock would swallow the joystick
       try { const r = canvas.requestPointerLock(); if (r && r.catch) r.catch(() => {}); } catch (e) {}
     }
-    function releaseKeys(){ Object.keys(keys).forEach(k => { keys[k] = false; }); }
+    function releaseKeys(){ Fun.release(keys); }
 
     function start(){
       running = true;
@@ -675,8 +674,7 @@
     function open(){
       isOpen = true; running = false;
       ensureWorld();
-      overlay.hidden = false;
-      document.body.style.overflow = "hidden";
+      Fun.screen(overlay, true);
       releaseKeys();
       setMode(store.blockMode === "survival" ? "survival" : "creative");
       playBtn.textContent = store.blocksPlaced || store.blocksBroken ? "▶ Continue" : "▶ Play";
@@ -688,8 +686,7 @@
     function close(){
       ui.close();
       isOpen = false; running = false;
-      overlay.hidden = true;
-      document.body.style.overflow = "";
+      Fun.screen(overlay, false);
       if (document.pointerLockElement === canvas) document.exitPointerLock();
       store.blockPos = [p.x, p.y, p.z, yaw, pitch];
       store.blockTime = dayT;
@@ -699,7 +696,7 @@
 
     function loop(now){
       if (!isOpen) return;
-      const dt = Math.max(0, Math.min(1 / 30, (now - last) / 1000 || 0));
+      const dt = Fun.dt(now, last);
       last = now; frame++;
       if (running && !ui.isOpen()) step(dt);
       else if (running) { for (let k = 0; k < 3; k++) move(dt / 3); }   // with a screen open you stand still, but you still fall

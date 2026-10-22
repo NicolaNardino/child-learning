@@ -133,7 +133,7 @@
       return list;
     })();
 
-    let zbRunning = false, zbLast = 0, zbFrame = 0, zbClock = 0;
+    let zbRunning = false, zbLast = 0, zbClock = 0;
     let hero = null, zombies = [], shots = [], puffs = [], pickups = [];
     let zbScore = 0, zbWave = 0, zbToSpawn = 0, zbSpawnT = 0, zbPhase = "break", zbBreak = 0;
     let zbFlash = { text: "", t: 0 };
@@ -891,7 +891,6 @@
       if (!zbOpen) return;
       const dt = Math.min(1 / 30, (now - zbLast) / 1000 || 0);
       zbLast = now; fxDt = dt;
-      zbFrame++;
       if (zbRunning) zbStep(dt);
       drawZb();
       updateZbHud();
@@ -902,7 +901,7 @@
       resetZb();
       zbRunning = true;
       zbPanel.hidden = true;
-      Object.keys(zbKeys).forEach(k => { zbKeys[k] = false; });
+      Fun.release(zbKeys);
       zbCanvas.focus();
     }
     function endZb(){
@@ -926,8 +925,7 @@
       zbOpen = true;
       zbRunning = false;
       resetZb();
-      zbOverlay.hidden = false;
-      document.body.style.overflow = "hidden";
+      Fun.screen(zbOverlay, true);
       zbPanelTitle.textContent = "🧟 Zombie Blaster";
       zbPanelText.textContent = "Zombies are climbing out of the graveyard, and this time you're right there in it! Click to look around with the mouse and blast them with your goo blaster before they grab you. Clear a wave to win back a heart. Watch the radar so nobody sneaks up behind you!"
         + (store.zombieBest ? ` Your best: ${store.zombieBest}.` : "");
@@ -941,8 +939,7 @@
       zbOpen = false;
       zbRunning = false;
       letGo();
-      zbOverlay.hidden = true;
-      document.body.style.overflow = "";
+      Fun.screen(zbOverlay, false);
       }
 
     const ZB_KEYMAP = {
@@ -963,7 +960,7 @@
       const k = ZB_KEYMAP[e.code];
       if (k) zbKeys[k] = false;
     });
-    window.addEventListener("blur", () => Object.keys(zbKeys).forEach(k => { zbKeys[k] = false; }));
+    window.addEventListener("blur", () => Fun.release(zbKeys));
     // click the game and the mouse turns your head (the browser hides the pointer until Esc);
     // without that, point with the mouse and hold the button to keep blasting there
     const looking = () => document.pointerLockElement === zbCanvas;

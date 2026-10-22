@@ -132,7 +132,7 @@
     }
     function drop(){
       if (!running || !mv || wait > 0) return;
-      const st = S(), t = top(), n = blocks().length, a = mv.along, size = a === "x" ? t.w : t.d;
+      const st = S(), t = top(), a = mv.along, size = a === "x" ? t.w : t.d;
       const off = mv[a] - (a === "x" ? t.x : t.z);
       const at = proj(mv.x, mv.y + 1, mv.z) || { x: W / 2, y: H / 2 };
       // use up the block from the queue (a wide block uses itself and the block it carries)
@@ -507,7 +507,7 @@
     }
     function loop(now){
       if (!open) return;
-      const dt = Math.max(0, Math.min(1 / 30, (now - last) / 1000 || 0));
+      const dt = Fun.dt(now, last);
       last = now;
       if (running) step(dt); else clock += dt;
       fit();
@@ -531,7 +531,7 @@
     }
     function openGame(){
       open = true; running = false;
-      overlay.hidden = false; document.body.style.overflow = "hidden";
+      Fun.screen(overlay, true);
       const st = S();
       recount(); fx.clear(); debris = []; mv = null; wait = 0; streak = 0; far = false;
       viewY = blocks().length; viewD = 14;
@@ -554,7 +554,7 @@
     function closeGame(){
       if (open) save();
       open = false; running = false;
-      overlay.hidden = true; document.body.style.overflow = "";
+      Fun.screen(overlay, false);
     }
 
     /* ---------------- controls ---------------- */

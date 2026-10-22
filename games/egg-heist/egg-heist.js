@@ -861,7 +861,7 @@
       }
       function loop(now){
         if (!open) return;
-        const dt = Math.max(0, Math.min(1 / 30, (now - last) / 1000 || 0));
+        const dt = Fun.dt(now, last);
         last = now; frameDt = dt;
         if (running) step(dt); else clock += dt;
         fit();
@@ -871,7 +871,7 @@
       }
       function start(){
         running = true; panel.hidden = true;
-        Object.keys(keys).forEach(k => { keys[k] = false; });
+        Fun.release(keys);
         stick.reset();
         canvas.focus();
         tip.show(cfg.tip, 4500);
@@ -886,7 +886,7 @@
       }
       function openGame(){
         open = true; running = false;
-        overlay.hidden = false; document.body.style.overflow = "hidden";
+        Fun.screen(overlay, true);
         reset();
         titleEl.textContent = `${cfg.icon} ${cfg.title}`;
         textEl.textContent = cfg.intro;
@@ -901,7 +901,7 @@
         walkers.forEach(w => placeAt(bases[0], w.k, { def: w.def, hatched: false, hatchT: HATCH_TIME })); walkers = [];
         if (open && bases.length) save();
         open = false; running = false;
-        overlay.hidden = true; document.body.style.overflow = "";
+        Fun.screen(overlay, false);
         if (document.pointerLockElement === canvas) document.exitPointerLock();
       }
 
@@ -924,7 +924,7 @@
         e.preventDefault(); keys[k] = true;
       });
       window.addEventListener("keyup", e => { const k = KEYMAP[e.code]; if (k) keys[k] = false; });
-      window.addEventListener("blur", () => Object.keys(keys).forEach(k => { keys[k] = false; }));
+      window.addEventListener("blur", () => Fun.release(keys));
       document.addEventListener("pointerlockchange", () => {
         if (looking()) tip.show("🖱️ Press Esc to get your mouse back");
         else { unlockedAt = performance.now(); tip.hide(); }

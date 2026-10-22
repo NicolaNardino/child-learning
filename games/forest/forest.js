@@ -862,7 +862,7 @@
     }
     function loop(now){
       if (!open) return;
-      const dt = Math.max(0, Math.min(1 / 30, (now - last) / 1000 || 0));
+      const dt = Fun.dt(now, last);
       last = now;
       if (running) step(dt); else clock += dt;
       fit(); draw(dt); hud();
@@ -871,7 +871,7 @@
     function start(){
       if (!gl) return;
       running = true; panel.hidden = true;
-      Object.keys(keys).forEach(k => { keys[k] = false; });
+      Fun.release(keys);
       if (stick) stick.reset();
       canvas.focus();
       tip.show("🪓 Chop trees (click or Space), grab the logs (E) and feed the fire!", 4500);
@@ -886,7 +886,7 @@
     }
     function openGame(){
       open = true; running = false;
-      overlay.hidden = false; document.body.style.overflow = "hidden";
+      Fun.screen(overlay, true);
       if (!gl && !initGL()) {
         titleEl.textContent = "🌲 99 Nights";
         textEl.textContent = "Sorry! This game needs 3D graphics (WebGL), and this browser doesn't have it turned on.";
@@ -910,7 +910,7 @@
     function closeGame(){
       if (open) save();
       open = false; running = false;
-      overlay.hidden = true; document.body.style.overflow = "";
+      Fun.screen(overlay, false);
       if (document.pointerLockElement === canvas) document.exitPointerLock();
     }
 
@@ -942,7 +942,7 @@
       e.preventDefault(); keys[k] = true;
     });
     window.addEventListener("keyup", e => { const k = KEYMAP[e.code]; if (k) keys[k] = false; });
-    window.addEventListener("blur", () => Object.keys(keys).forEach(k => { keys[k] = false; }));
+    window.addEventListener("blur", () => Fun.release(keys));
     document.addEventListener("pointerlockchange", () => {
       if (looking()) tip.show("🖱️ Press Esc to get your mouse back");
       else { unlockedAt = performance.now(); tip.hide(); }

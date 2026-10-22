@@ -26,7 +26,7 @@
     S.notes = S.notes || 0;
 
     let open = false, raf = 0, last = 0, clock = 0;
-    let beat = 0, flash = 0, flicker = 0, jump = 0, sour = 0, streak = 0, lights = 0;
+    let flash = 0, flicker = 0, jump = 0, sour = 0, streak = 0;
     let notes = [];   // floating music notes
     let audio = null;
 
@@ -132,7 +132,7 @@
     function frame(now){
       raf = 0;
       if (!open) return;
-      const dt = Math.max(0, Math.min(0.05, (now - last) / 1000 || 0)); last = now; clock += dt;
+      const dt = Fun.dt(now, last, 0.05); last = now; clock += dt;
       flash = Math.max(0, flash - dt * 1.5); flicker = Math.max(0, flicker - dt); jump = Math.max(0, jump - dt * 0.8); sour = Math.max(0, sour - dt);
       drawStage();
       drawLights();

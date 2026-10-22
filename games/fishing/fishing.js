@@ -629,7 +629,7 @@
 
     function loop(now){
       if (!open) return;
-      const dt = Math.max(0, Math.min(1 / 30, (now - last) / 1000 || 0));
+      const dt = Fun.dt(now, last);
       last = now; fxDt = dt;
       if (panel.hidden || state === "caught") step(dt); else clock += dt;
       draw();
@@ -639,8 +639,7 @@
 
     function openGame(){
       open = true;
-      overlay.hidden = false;
-      document.body.style.overflow = "hidden";
+      Fun.screen(overlay, true);
       resetSwimmers();
       showStart();
       last = performance.now();
@@ -649,8 +648,7 @@
     }
     function closeGame(){
       open = false; holding = false;
-      overlay.hidden = true;
-      document.body.style.overflow = "";
+      Fun.screen(overlay, false);
       if (state !== "menu") { bob = null; hook = null; reel = null; actor = null; state = "idle"; }
     }
 

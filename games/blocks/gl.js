@@ -8,7 +8,7 @@
 (function(){
   "use strict";
   const BW = window.BlockWorld;
-  const { WW, WH, WD, SEA, world, at, ID, K, T, TILE_COLS, TILE_ROWS, BLOCKS, FACE, FACE6, KIND, IS_OPAQUE, EMIT, TORCH_DIR, atlasData } = BW;
+  const { WW, WH, WD, SEA, world, at, ID, K, T, TILE_COLS, TILE_ROWS, FACE, FACE6, KIND, IS_OPAQUE, EMIT, TORCH_DIR, atlasData } = BW;
   const CH = 16, NCX = WW / CH, NCZ = WD / CH;
   const FOV = 70 * Math.PI / 180;
   const AO = [0.5, 0.68, 0.84, 1];          // how bright a corner is with 3, 2, 1 or 0 blocks crowding it

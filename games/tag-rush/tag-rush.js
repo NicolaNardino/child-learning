@@ -64,7 +64,7 @@
     const roundEl = $("trRound"), taggersEl = $("trTaggers"), timeEl = $("trTime");
 
     const W = 960, H = 540;
-    const B = Blocky(ctx, W, H), { cam, polyPath, line3 } = B;
+    const B = Blocky(ctx, W, H), { polyPath, line3 } = B;
 
     let open = false, running = false, last = 0, clock = 0, frameDt = 1 / 60;
     let phase = "ready", phaseT = 0, round = 1, dir = 1, timeLeft = ROUND_TIME;
@@ -141,7 +141,6 @@
       }
     }
     const jump = b => { if (b.y === 0) b.vy = JUMP; };
-    const inStart = b => b.z * dir < -SAFE;
     const inGoal = b => b.z * dir > SAFE;
 
     function stepYou(dt){
@@ -309,11 +308,7 @@
     }
 
     let scale = 1;
-    function fitCanvas(){
-      const s = Fun.res(canvas.clientWidth, W, 3);
-      if (Math.abs(s - scale) < 0.01) return;
-      scale = s; canvas.width = Math.round(W * s); canvas.height = Math.round(H * s);
-    }
+    function fitCanvas(){ scale = Fun.fit(canvas, W, H, scale, 3); }
     function draw(){
       fitCanvas();
       ctx.setTransform(scale, 0, 0, scale, 0, 0);
@@ -372,7 +367,7 @@
     }
     function loop(now){
       if (!open) return;
-      const dt = Math.max(0, Math.min(1 / 30, (now - last) / 1000 || 0));
+      const dt = Fun.dt(now, last);
       last = now; frameDt = dt;
       if (running) step(dt);
       else clock += dt;
@@ -387,7 +382,7 @@
       placeCamera(0);
       running = true;
       panel.hidden = true;
-      Object.keys(keys).forEach(k => { keys[k] = false; });
+      Fun.release(keys);
       if (stick) stick.reset();
       canvas.focus();
     }
@@ -408,8 +403,7 @@
     function openGame(){
       open = true; running = false;
       reset(); placeCamera(0);
-      overlay.hidden = false;
-      document.body.style.overflow = "hidden";
+      Fun.screen(overlay, true);
       panelTitle.textContent = "🏁 Tag Rush";
       panelText.textContent = "You and 4 bots have to run across the baseplate to the green side without getting tagged by the red taggers. Every round there's one more tagger! Jump over a tagger to dodge it."
         + (store.tagRushBest ? ` Your best: ${store.tagRushBest} ${store.tagRushBest === 1 ? "round" : "rounds"}.` : "");
@@ -421,8 +415,7 @@
     }
     function closeGame(){
       open = false; running = false;
-      overlay.hidden = true;
-      document.body.style.overflow = "";
+      Fun.screen(overlay, false);
     }
 
     const KEYMAP = {
@@ -438,7 +431,7 @@
       keys[k] = true;
     });
     window.addEventListener("keyup", e => { const k = KEYMAP[e.code]; if (k) keys[k] = false; });
-    window.addEventListener("blur", () => Object.keys(keys).forEach(k => { keys[k] = false; }));
+    window.addEventListener("blur", () => Fun.release(keys));
     host.querySelectorAll("[data-trkey]").forEach(btn => {
       const k = btn.dataset.trkey;
       btn.addEventListener("pointerdown", e => { e.preventDefault(); keys[k] = true; });

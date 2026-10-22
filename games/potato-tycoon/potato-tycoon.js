@@ -334,11 +334,7 @@
       ctx.arcTo(x, y + h, x, y, r); ctx.arcTo(x, y, x + w, y, r); ctx.closePath();
     }
     let scale = 1;
-    function fitCanvas(){
-      const s = Fun.res(canvas.clientWidth, W, 3);
-      if (Math.abs(s - scale) < 0.01) return;
-      scale = s; canvas.width = Math.round(W * s); canvas.height = Math.round(H * s);
-    }
+    function fitCanvas(){ scale = Fun.fit(canvas, W, H, scale, 3); }
     function draw(){
       fitCanvas();
       ctx.setTransform(scale, 0, 0, scale, 0, 0);
@@ -358,7 +354,7 @@
 
     function loop(now){
       if (!open) return;
-      const dt = Math.max(0, Math.min(1 / 30, (now - last) / 1000 || 0));
+      const dt = Fun.dt(now, last);
       last = now; frameDt = dt; clock += dt;
       if (running) {
         stepYou(dt);
@@ -376,7 +372,7 @@
       if (S.farm === 0 && !handCount() && !S.peeledBin && !S.friesBin) return;
       running = true;
       panel.hidden = true;
-      Object.keys(keys).forEach(k => { keys[k] = false; });
+      Fun.release(keys);
       if (stick) stick.reset();
       canvas.focus();
     }
@@ -389,8 +385,7 @@
     function openGame(){
       open = true; running = false;
       load(); B.follow(you, camYaw, 0);
-      overlay.hidden = false;
-      document.body.style.overflow = "hidden";
+      Fun.screen(overlay, true);
       const fresh = !store.potato;
       panelTitle.textContent = "🥔 Potato Tycoon";
       panelText.textContent = fresh
@@ -407,8 +402,7 @@
     function closeGame(){
       if (open && S) save();
       open = false; running = false;
-      overlay.hidden = true;
-      document.body.style.overflow = "";
+      Fun.screen(overlay, false);
     }
 
     const KEYMAP = {
@@ -424,7 +418,7 @@
       keys[k] = true;
     });
     window.addEventListener("keyup", e => { const k = KEYMAP[e.code]; if (k) keys[k] = false; });
-    window.addEventListener("blur", () => Object.keys(keys).forEach(k => { keys[k] = false; }));
+    window.addEventListener("blur", () => Fun.release(keys));
     // drag the screen to turn the camera round you
     let dragX = null;
     canvas.addEventListener("pointerdown", e => { dragX = e.clientX; try { canvas.setPointerCapture(e.pointerId); } catch (err) {} });

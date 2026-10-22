@@ -195,7 +195,7 @@
     const W = 960, H = 540;
 
     let open = false, running = false, last = 0, clock = 0, scale = 1;
-    let lvl = 0, T = null, car = null, cam = { x: 0, y: 0, z: 1 }, time = 0, coins = 0, nitro = 0.5, state = "ready", crashT = 0, doneT = 0;
+    let lvl = 0, T = null, car = null, cam = { x: 0, y: 0, z: 1 }, time = 0, coins = 0, nitro = 0.5, state = "ready", crashT = 0;
     let lastCheck = null, flipAcc = 0, bits = [], score = 0, fuel = 1, outT = 0, shake = 0, bounce = 0, dust = [];
     const keys = { gas: false, brake: false, nitro: false };
     let carDef = CARS[0];
@@ -215,7 +215,7 @@
     function startLevel(i){
       lvl = i; T = buildTrack(LEVELS[i]); time = 0; coins = 0; nitro = 0.5; lastCheck = null; bits = []; score = 0; fuel = 1; outT = 0; shake = 0; bounce = 0; dust = [];
       carDef = CARS.find(c => c.id === W8().car && totalStars() >= c.stars) || CARS[0];
-      spawn(null); state = "count"; doneT = 0; crashT = 0; clock = 0;
+      spawn(null); state = "count"; crashT = 0; clock = 0;
       cam.x = car.x; cam.y = car.y; fx.clear();
     }
 
@@ -310,7 +310,7 @@
       if (car.on && car.piece === T.pieces.length - 1 && car.x > T.finishX) finish();
     }
     function finish(){
-      state = "done"; doneT = 0;
+      state = "done";
       const S = W8(), L = T.length, t3 = L / 900, t2 = L / 650;
       const stars = time <= t3 ? 3 : time <= t2 ? 2 : 1;
       const was = S.stars[lvl] || 0, best = S.best[lvl];
@@ -331,11 +331,7 @@
     }
 
     /* ---------------- drawing ---------------- */
-    function fitCanvas(){
-      const s = Fun.res(canvas.clientWidth, W, 2);
-      if (Math.abs(s - scale) < 0.01) return;
-      scale = s; canvas.width = Math.round(W * s); canvas.height = Math.round(H * s);
-    }
+    function fitCanvas(){ scale = Fun.fit(canvas, W, H, scale, 2); }
     const sx = x => (x - cam.x) * cam.z + W * 0.38, sy = y => (y - cam.y) * cam.z + H * 0.55;
     function drawBackground(){
       const th = THEMES[LEVELS[lvl].theme];
@@ -551,7 +547,7 @@
       } else if (state === "crash") {
         crashT += dt;
         if (crashT > 1.1) { spawn(lastCheck); state = "race"; time += 1; fuel = Math.max(fuel, 0.35); }
-      } else if (state === "done") { doneT += dt; if (car.on) { car.v *= Math.pow(0.3, dt); car.s += car.v * dt; const a = at(T.pieces[car.piece], car.s); car.x = a.x + a.n[0] * CAR_H; car.y = a.y + a.n[1] * CAR_H; car.wheel += car.v * dt / 14; } }
+      } else if (state === "done") { if (car.on) { car.v *= Math.pow(0.3, dt); car.s += car.v * dt; const a = at(T.pieces[car.piece], car.s); car.x = a.x + a.n[0] * CAR_H; car.y = a.y + a.n[1] * CAR_H; car.wheel += car.v * dt / 14; } }
       shake = Math.max(0, shake - dt * 30); bounce = Math.max(0, bounce - dt * 3);
       for (let i = dust.length - 1; i >= 0; i--) { const d2 = dust[i]; d2.t += dt; d2.x += d2.vx * dt; d2.y += d2.vy * dt; d2.vy += 400 * dt; if (d2.t > 0.6) dust.splice(i, 1); }
       // the camera looks ahead when you're fast, and zooms out a little
@@ -565,7 +561,7 @@
     }
     function loop(now){
       if (!open) return;
-      const dt = Math.max(0, Math.min(1 / 30, (now - last) / 1000 || 0));
+      const dt = Fun.dt(now, last);
       last = now;
       if (running) update(dt); else clock += dt;
       draw(dt); if (T) hud();
@@ -607,7 +603,7 @@
     function start(){
       startLevel(pickLvl);
       running = true; panel.hidden = true;
-      Object.keys(keys).forEach(k => { keys[k] = false; });
+      Fun.release(keys);
       if (W8().music !== false && store.sound !== false) music.start();
       canvas.focus();
     }
@@ -619,7 +615,7 @@
     function openGame(){
       open = true; running = false; state = "ready";
       if (!T) { T = buildTrack(LEVELS[0]); lvl = 0; spawn(null); cam.x = car.x; cam.y = car.y; }
-      overlay.hidden = false; document.body.style.overflow = "hidden";
+      Fun.screen(overlay, true);
       const S = W8();
       pickLvl = Math.min(LEVELS.length - 1, LEVELS.findIndex((_, i) => !(S.stars[i] >= 1)) === -1 ? 0 : LEVELS.findIndex((_, i) => !(S.stars[i] >= 1)));
       panelTitle.textContent = "🏎️ Stunt Wheels";
@@ -627,7 +623,7 @@
       setMusicBtn(); showPanel("▶ Race");
       last = performance.now(); requestAnimationFrame(loop);
     }
-    function closeGame(){ open = false; running = false; overlay.hidden = true; document.body.style.overflow = ""; music.stop(); }
+    function closeGame(){ open = false; running = false; Fun.screen(overlay, false); music.stop(); }
 
     /* ---------------- controls ---------------- */
     const KEYMAP = { ArrowRight: "gas", KeyD: "gas", ArrowUp: "gas", KeyW: "gas", ArrowLeft: "brake", KeyA: "brake", ArrowDown: "brake", KeyS: "brake", Space: "nitro", ShiftLeft: "nitro", KeyN: "nitro" };
@@ -640,12 +636,8 @@
       e.preventDefault(); keys[k] = true;
     });
     window.addEventListener("keyup", e => { const k = KEYMAP[e.code]; if (k) keys[k] = false; });
-    window.addEventListener("blur", () => { Object.keys(keys).forEach(k => { keys[k] = false; }); });
-    host.querySelectorAll("[data-swkey]").forEach(btn => {
-      const k = btn.dataset.swkey;
-      btn.addEventListener("pointerdown", e => { e.preventDefault(); btn.setPointerCapture(e.pointerId); keys[k] = true; btn.classList.add("on"); });
-      ["pointerup", "pointercancel", "lostpointercapture"].forEach(n => btn.addEventListener(n, () => { keys[k] = false; btn.classList.remove("on"); }));
-    });
+    window.addEventListener("blur", () => Fun.release(keys));
+    Fun.holdButtons(host.querySelectorAll("[data-swkey]"), keys, "swkey");
     canvas.tabIndex = 0;
     $("swCloseBtn").addEventListener("click", () => Hub.leave());
     Fun.soundButton($("swCloseBtn"));

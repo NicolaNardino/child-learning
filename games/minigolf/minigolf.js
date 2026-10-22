@@ -200,11 +200,7 @@
     }
 
     /* ---------------- drawing ---------------- */
-    function fitCanvas(){
-      const s = Fun.res(canvas.clientWidth, W, 2);
-      if (Math.abs(s - scale) < 0.01) return;
-      scale = s; canvas.width = Math.round(W * s); canvas.height = Math.round(H * s);
-    }
+    function fitCanvas(){ scale = Fun.fit(canvas, W, H, scale, 2); }
     function flat(r, fill, z){
       const pts = [[r[0], r[1]], [r[0] + r[2], r[1]], [r[0] + r[2], r[1] + r[3]], [r[0], r[1] + r[3]]];
       ctx.beginPath(); pts.forEach(([x, y], i) => { const [sx, sy] = proj(x, y, z); i ? ctx.lineTo(sx, sy) : ctx.moveTo(sx, sy); }); ctx.closePath(); ctx.fillStyle = fill; ctx.fill();
@@ -329,7 +325,7 @@
     }
     function loop(now){
       if (!open) return;
-      const dt = Math.max(0, Math.min(1 / 30, (now - last) / 1000 || 0));
+      const dt = Fun.dt(now, last);
       last = now;
       if (running) update(dt); else clock += dt;
       draw(dt); hud();
@@ -340,14 +336,14 @@
     function start(){ card = []; loadHole(0); running = true; panel.hidden = true; canvas.focus(); }
     function openGame(){
       open = true; running = false; card = []; loadHole(0); state = "ready"; status = "";
-      overlay.hidden = false; document.body.style.overflow = "hidden";
+      Fun.screen(overlay, true);
       panelTitle.textContent = "⛳ Blox Mini Golf";
       panelText.textContent = `Nine crazy-golf holes, par ${PAR}. Drag back and let go to putt, like a slingshot. Dodge the windmill and the sliding block, keep out of the sand and the water, and use the speed pads!`
         + (store.golfBest ? ` Your best round: ${store.golfBest}.` : "");
       playBtn.textContent = "▶ Play"; panel.hidden = false;
       last = performance.now(); requestAnimationFrame(loop); playBtn.focus();
     }
-    function closeGame(){ open = false; running = false; overlay.hidden = true; document.body.style.overflow = ""; }
+    function closeGame(){ open = false; running = false; Fun.screen(overlay, false); }
 
     /* ---------------- controls ---------------- */
     const canPutt = () => running && state === "aim";

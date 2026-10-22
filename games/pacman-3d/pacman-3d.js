@@ -635,8 +635,7 @@
       pacOpen = true;
       pacRunning = false;
       resetPac();
-      pacOverlay.hidden = false;
-      document.body.style.overflow = "hidden";
+      Fun.screen(pacOverlay, true);
       pacPanelTitle.textContent = "🟡 Pac-Man 3D";
       pacPanelText.textContent = "This time you ARE Pac-Man, deep inside the maze! Gobble up every dot and don't let the ghosts catch you. Eat a big flashing dot and the ghosts turn blue — then chase them for extra points. The little map shows where everyone is."
         + (store.pac3dBest ? ` Your best: ${store.pac3dBest}.` : "");
@@ -649,8 +648,7 @@
     function closePac(){
       pacOpen = false;
       pacRunning = false;
-      pacOverlay.hidden = true;
-      document.body.style.overflow = "";
+      Fun.screen(pacOverlay, false);
     }
 
     const PAC_KEYMAP = {

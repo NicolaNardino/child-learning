@@ -551,11 +551,7 @@
     }
 
     let scale = 1;
-    function fitCanvas(){
-      const s = Fun.res(canvas.clientWidth, W, 3);
-      if (Math.abs(s - scale) < 0.01) return;
-      scale = s; canvas.width = Math.round(W * s); canvas.height = Math.round(H * s);
-    }
+    function fitCanvas(){ scale = Fun.fit(canvas, W, H, scale, 3); }
     function draw(){
       fitCanvas();
       ctx.setTransform(scale, 0, 0, scale, 0, 0);
@@ -639,7 +635,7 @@
     }
     function loop(now){
       if (!open) return;
-      const dt = Math.max(0, Math.min(1 / 30, (now - last) / 1000 || 0));
+      const dt = Fun.dt(now, last);
       last = now; frameDt = dt;
       if (running) step(dt);
       else clock += dt;
@@ -654,7 +650,7 @@
       placeCamera(0);
       running = true;
       panel.hidden = true;
-      Object.keys(keys).forEach(k => { keys[k] = false; });
+      Fun.release(keys);
       dropStick();
       canvas.focus();
     }
@@ -674,8 +670,7 @@
     function openGame(){
       open = true; running = false;
       reset(); placeCamera(0);
-      overlay.hidden = false;
-      document.body.style.overflow = "hidden";
+      Fun.screen(overlay, true);
       panelTitle.textContent = "🏀 Blox Hoops";
       panelText.textContent = "You're the yellow-headed player on the blue team with Noob_Max and PixelMia. Hold Space and let go when the marker is in the green to shoot, or press Space right under the hoop to SLAM DUNK! E passes. Without the ball, Space jumps to block, and running into the dribbler steals it. Shots from behind the big line are worth 3. Most points in 3 minutes wins!"
         + (store.hoopsWins ? ` Wins so far: ${store.hoopsWins}.` : "");
@@ -687,8 +682,7 @@
     }
     function closeGame(){
       open = false; running = false;
-      overlay.hidden = true;
-      document.body.style.overflow = "";
+      Fun.screen(overlay, false);
     }
 
     const KEYMAP = {
@@ -710,7 +704,7 @@
       if (e.code === "Space" && open) { releaseShoot(); return; }
       const k = KEYMAP[e.code]; if (k) keys[k] = false;
     });
-    window.addEventListener("blur", () => { Object.keys(keys).forEach(k => { keys[k] = false; }); charging = false; dropStick(); });
+    window.addEventListener("blur", () => { Fun.release(keys); charging = false; dropStick(); });
     // the joystick follows your thumb and springs back when you let go
     const stickEl = $("hpStick"), knob = $("hpKnob");
     function moveStick(e){

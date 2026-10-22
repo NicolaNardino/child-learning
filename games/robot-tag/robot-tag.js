@@ -595,7 +595,7 @@
       tagRunning = true;
       tagPanel.hidden = true;
       jumpQueued = false;
-      Object.keys(tagKeys).forEach(k => { tagKeys[k] = false; });
+      Fun.release(tagKeys);
       tagCanvas.focus();
     }
 
@@ -622,8 +622,7 @@
       tagOpen = true;
       tagRunning = false;
       resetTag();
-      tagOverlay.hidden = false;
-      document.body.style.overflow = "hidden";
+      Fun.screen(tagOverlay, true);
       tagPanelTitle.textContent = "🏃 Robot Tag";
       tagPanelText.textContent = "The robots want to tag you! Run, jump and wall-jump to stay away for 3 minutes. Every minute another robot joins, and they get faster and faster…"
         + (store.tagBest ? ` Your best: ${Hub.formatTime(store.tagBest)}.` : "");
@@ -637,8 +636,7 @@
     function closeTag(){
       tagOpen = false;
       tagRunning = false;
-      tagOverlay.hidden = true;
-      document.body.style.overflow = "";
+      Fun.screen(tagOverlay, false);
     }
 
     const TAG_KEYMAP = {

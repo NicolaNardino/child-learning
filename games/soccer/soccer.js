@@ -570,11 +570,7 @@
     }
 
     let scale = 1;
-    function fitCanvas(){
-      const s = Fun.res(canvas.clientWidth, W, 3);
-      if (Math.abs(s - scale) < 0.01) return;
-      scale = s; canvas.width = Math.round(W * s); canvas.height = Math.round(H * s);
-    }
+    function fitCanvas(){ scale = Fun.fit(canvas, W, H, scale, 3); }
     function draw(){
       fitCanvas();
       ctx.setTransform(scale, 0, 0, scale, 0, 0);
@@ -658,7 +654,7 @@
     }
     function loop(now){
       if (!open) return;
-      const dt = Math.max(0, Math.min(1 / 30, (now - last) / 1000 || 0));
+      const dt = Fun.dt(now, last);
       last = now; frameDt = dt;
       if (running) step(dt);
       else clock += dt;
@@ -673,7 +669,7 @@
       placeCamera(0);
       running = true;
       panel.hidden = true;
-      Object.keys(keys).forEach(k => { keys[k] = false; });
+      Fun.release(keys);
       dropStick();
       canvas.focus();
     }
@@ -696,8 +692,7 @@
     function openGame(){
       open = true; running = false;
       reset(); placeCamera(0);
-      overlay.hidden = false;
-      document.body.style.overflow = "hidden";
+      Fun.screen(overlay, true);
       panelTitle.textContent = "⚽ Blox Soccer";
       panelText.textContent = "You're the yellow-headed player on the blue team, with Noob_Max, PixelMia and GK_Bob in goal. Run into the ball to dribble, hold Space to shoot (longer = harder), press E to pass, and run into a red player with the ball to tackle. Most goals in 3 minutes wins!"
         + (store.soccerWins ? ` Wins so far: ${store.soccerWins}.` : "");
@@ -709,8 +704,7 @@
     }
     function closeGame(){
       open = false; running = false;
-      overlay.hidden = true;
-      document.body.style.overflow = "";
+      Fun.screen(overlay, false);
     }
 
     const KEYMAP = {
@@ -732,7 +726,7 @@
       if (e.code === "Space" && open) { releaseShot(); return; }
       const k = KEYMAP[e.code]; if (k) keys[k] = false;
     });
-    window.addEventListener("blur", () => { Object.keys(keys).forEach(k => { keys[k] = false; }); charging = false; stick.on = false; });
+    window.addEventListener("blur", () => { Fun.release(keys); charging = false; stick.on = false; });
     // the joystick follows your thumb (it can go a little outside the ring) and springs back when you let go
     const stickEl = $("soStick"), knob = $("soKnob");
     function moveStick(e){

@@ -113,7 +113,6 @@
   const LESSONS = [];
   let keys = "";
   NEU.forEach(([n, neu, title]) => { keys += neu; LESSONS[n] = { n, title, keys, neu, kind: "drill" }; });
-  const alle = keys;
   LESSONS[22] = { n: 22, title: "Grossbuchstaben: linke Hand (Shift rechts)", kind: "caps", side: "left" };
   LESSONS[23] = { n: 23, title: "Grossbuchstaben: rechte Hand (Shift links)", kind: "caps", side: "right" };
   LESSONS[24] = { n: 24, title: "Nomen schreibt man gross", kind: "caps", side: "both" };
@@ -292,7 +291,7 @@
       function draw(now){
         raf = 0;
         if (!isOpen || !on()) return;
-        const dt = Math.max(0, Math.min(0.05, (now - last) / 1000 || 0)); last = now;
+        const dt = Fun.dt(now, last, 0.05); last = now;
         shown += (pos - shown) * Math.min(1, dt * 10);
         robo = done ? robo : roboPos();
         speed += ((startT && !done ? stats().apm : 0) / 60 - speed) * Math.min(1, dt * 2);

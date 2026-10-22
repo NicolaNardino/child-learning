@@ -284,7 +284,7 @@
     /* ---------------- each frame ---------------- */
     function step(dt){
       clock += dt;
-      const st = S(), now = Date.now();
+      const now = Date.now();
       if (restock()) { tip.show("🛒 Sam's shop has new seeds!", 3000); Fun.sfx.ding(); if (!shopEl.hidden) drawShop(); }
       if (me.goal) {
         const dx = me.goal.x - me.x, dz = me.goal.z - me.z, d = Math.hypot(dx, dz);
@@ -592,7 +592,7 @@
     }
     function loop(now){
       if (!open) return;
-      const dt = Math.max(0, Math.min(1 / 30, (now - last) / 1000 || 0));
+      const dt = Fun.dt(now, last);
       last = now;
       if (running) step(dt); else clock += dt;
       fit(); draw(dt); hud();
@@ -605,7 +605,7 @@
     }
     function openGame(){
       open = true; running = false;
-      overlay.hidden = false; document.body.style.overflow = "hidden";
+      Fun.screen(overlay, true);
       const st = S(), now = Date.now();
       plots(); restock();
       let ready = 0;
@@ -625,7 +625,7 @@
     function closeGame(){
       if (open) save();
       open = false; running = false;
-      overlay.hidden = true; document.body.style.overflow = "";
+      Fun.screen(overlay, false);
     }
 
     /* ---------------- controls ---------------- */
