@@ -14,6 +14,12 @@ Stunt Wheels has its own big pedals on touch screens. Every game with a player t
 
 👪 **For grown-ups:** the link at the bottom of the home screen opens a progress report (practice in the last 7 days, and how accurate the answers are in every topic of every subject, with "needs practice" and "strong" marks) and a **backup**: copy a progress code (or save it as a file), then paste it on another phone, tablet or computer to carry everything over. Nothing is sent anywhere.
 
+👨‍👩‍👦 **Players:** the home screen has a button for each player (➕ New player adds one, up to 6). Each player has their own progress, coins, trophies and saved games; tapping another player switches to theirs. The Grown-ups page can rename or remove players, and its backup code carries every player at once (it also says when the last code was made, and the home screen reminds you after a month).
+
+💬 **Play-testing:** every game has a 💬 button in its top bar. Tap it when something is too hard, boring, broken or a great idea, add a few words if you like, and the note is kept (with the game, the player and the time) on the Grown-ups page, where all the notes can be copied at once and sent on.
+
+📲 **Offline:** the first visit keeps a copy of every game and subject, so after that the whole app works without internet. On Android and computers an *Install app* button appears at the bottom of the home screen; on iPhone and iPad it explains Share → Add to Home Screen.
+
 ## 📚 Learning
 
 - 🔢 **Fast Math**: a maths practice notebook. It gives you endless new questions, and every answer comes with a worked explanation.
@@ -75,8 +81,9 @@ index.html                 the launcher: home, section lists, and the list of ap
 manifest.webmanifest, sw.js, icons/   install on a phone (Add to Home Screen) and play offline
 core/
   core.css                 the shared look: theme, buttons, effects, trophies, launcher
-  core.js                  saved progress, trophies, confetti, the app list and screen switching (window.Hub)
-  grownups.js              the Grown-ups page: progress report, and the backup code (window.Hub.page)
+  core.js                  players and their saved progress, trophies, confetti, the app list and screen switching (window.Hub)
+  grownups.js              the Grown-ups page: progress report, players, play-test notes and the backup code (window.Hub.page)
+  feedback.js              the 💬 play-test note button in every game's top bar (window.Feedback)
   fun.js                   the silly bits the games share: comic pop-up words, sounds, cartoon faces, the 🔊 switch, a wobble, the touch joystick, the graphics quality setting (window.Fun)
   daily.js                 today's three challenges, the streak and the coins (window.Daily)
   shop.js                  the shop page at #/shop and Hub.cosmetic(slot) for the looks you bought
@@ -124,7 +131,7 @@ Progress is saved in this browser's `localStorage` under one key, shared by ever
 
 ### Smoke test
 
-Every pull request and every push to `main` runs a GitHub Actions check (`.github/workflows/smoke.yml`): it makes sure every script parses, then `tests/smoke.mjs` opens every Learning subject and every game in a headless Chromium, presses Play, plays a little (arrow keys, Space and a mouse drag), and fails if any page throws an error. It then opens everything again on a phone-sized screen and fails if anything sticks out sideways, a game runs off the bottom, or something covers the Play button. To run it yourself: `npm install --no-save playwright && npx playwright install chromium && node tests/smoke.mjs`.
+Every pull request and every push to `main` runs a GitHub Actions check (`.github/workflows/smoke.yml`): it makes sure every script parses, then `tests/smoke.mjs` opens every Learning subject and every game in a headless Chromium, presses Play, plays a little (arrow keys, Space and a mouse drag), and fails if any page throws an error. It then opens everything again on a phone-sized screen and fails if anything sticks out sideways, a game runs off the bottom, or something covers the Play button. Then `tests/features.mjs` checks the players (each with their own progress), the 💬 notes, a backup code restoring every player in a fresh browser, and that the first visit keeps every file for offline use. Last, `tests/raceoff.mjs` lets an autopilot drive four Race Off levels and fails if the car gets stuck or its wheels sink into the ground (it fails on the code before that bug was fixed). `tests/serve.mjs` is the little file server they share. To run them yourself: `npm install --no-save playwright && npx playwright install chromium`, then `node tests/smoke.mjs`, `node tests/features.mjs` and `node tests/raceoff.mjs`.
 
 ### Adding a new app
 

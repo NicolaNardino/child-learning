@@ -11,8 +11,32 @@
 (function(){
   "use strict";
 
-  /* ---------------- saved progress: one object in localStorage, shared by every app ---------------- */
-  const STORE_KEY = "numberline:v1"; // Fast Math's old key, so progress saved before the split carries over
+  /* ---------------- players: each one has their own saved progress ----------------
+     The list lives in localStorage "lp:profiles" as { active, list: [{ id, name, face }], lastBackup }.
+     The first player ("main") keeps the original key, so progress saved before profiles carries over. */
+  const PROFILES_KEY = "lp:profiles", FACES = ["🦊", "🐼", "🐯", "🐸", "🐧", "🦄", "🐙", "🐲"];
+  const profiles = (() => {
+    try { const p = JSON.parse(localStorage.getItem(PROFILES_KEY)); if (p && Array.isArray(p.list) && p.list.length) return p; } catch (e) {}
+    return { active: "main", list: [{ id: "main", name: "", face: FACES[0] }] };
+  })();
+  if (!profiles.list.some(p => p.id === profiles.active)) profiles.active = profiles.list[0].id;
+  const keyOf = id => id === "main" ? "numberline:v1" : "numberline:v1:" + id;
+  function saveProfiles(){ try { localStorage.setItem(PROFILES_KEY, JSON.stringify(profiles)); } catch (e) {} }
+  const Profiles = {
+    FACES, keyOf, data: () => profiles, save: saveProfiles,
+    active: () => profiles.list.find(p => p.id === profiles.active),
+    add(name){
+      const id = "p" + Date.now().toString(36), face = FACES[profiles.list.length % FACES.length];
+      profiles.list.push({ id, name: String(name).trim().slice(0, 20), face }); saveProfiles(); return id;
+    },
+    // switching player loads that player's progress, so the page starts again
+    switchTo(id){ if (!profiles.list.some(p => p.id === id)) return; saveStore(); profiles.active = id; saveProfiles(); location.hash = "#/"; location.reload(); },
+    rename(id, name){ const p = profiles.list.find(q => q.id === id); if (p) { p.name = String(name).trim().slice(0, 20); saveProfiles(); } },
+    remove(id){ if (id === profiles.active || profiles.list.length < 2) return false; profiles.list = profiles.list.filter(p => p.id !== id); try { localStorage.removeItem(keyOf(id)); } catch (e) {} saveProfiles(); return true; }
+  };
+
+  /* ---------------- saved progress: one object in localStorage per player, shared by every app ---------------- */
+  const STORE_KEY = keyOf(profiles.active); // the first player keeps Fast Math's old key, so old progress carries over
   const store = (() => {
     try {
       const raw = localStorage.getItem(STORE_KEY);
@@ -21,6 +45,9 @@
     return {};
   })();
   if (!store.badges) store.badges = {};
+  // the player's name lives in both places: the list (for the buttons) and their progress (where apps read it)
+  if (!Profiles.active().name && store.name) { Profiles.active().name = store.name; saveProfiles(); }
+  else if (Profiles.active().name && !store.name) store.name = Profiles.active().name;
   function saveStore(){
     try { localStorage.setItem(STORE_KEY, JSON.stringify(store)); } catch (e) {}
   }
@@ -136,7 +163,29 @@
   const appViews = document.getElementById("appViews");
   let current = null; // { section, app } of what's on screen
 
+  function renderProfiles(){
+    const row = document.getElementById("profileRow"); if (!row) return;
+    row.innerHTML = "";
+    profiles.list.forEach(p => {
+      const b = document.createElement("button");
+      b.type = "button"; b.className = "profile-chip" + (p.id === profiles.active ? " on" : "");
+      b.setAttribute("aria-pressed", String(p.id === profiles.active));
+      b.textContent = `${p.face || "🙂"} ${p.name || "Player"}`;
+      if (p.id !== profiles.active) b.addEventListener("click", () => Profiles.switchTo(p.id));
+      row.appendChild(b);
+    });
+    if (profiles.list.length < 6) {
+      const add = document.createElement("button");
+      add.type = "button"; add.className = "profile-chip add"; add.textContent = "➕ New player";
+      add.addEventListener("click", () => { const n = prompt("What's the new player's name?"); if (n && n.trim()) Profiles.switchTo(Profiles.add(n)); });
+      row.appendChild(add);
+    }
+  }
   function renderHome(){
+    renderProfiles();
+    // a gentle reminder to back up, once there is progress worth keeping and no code for a month
+    const last = profiles.lastBackup || 0;
+    document.getElementById("backupNudge").hidden = !(Object.keys(store.badges || {}).length >= 3 && Date.now() - last > 30 * 864e5);
     document.getElementById("homeName").textContent = store.name || "there";
     if (window.Daily) Daily.renderHome(document.getElementById("dailyCard"));
     // jump back in: the last few apps opened
@@ -243,6 +292,7 @@
       if (!store.playedDay.ids.includes(a.id)) store.playedDay.ids.push(a.id);
       saveStore();
       a.ctrl.open();
+      document.dispatchEvent(new CustomEvent("hub:open", { detail: { id: a.id, title: a.title, icon: a.icon, host: a.host } }));
       if (window.Daily) Daily.check();
     } else if (next.section) {
       renderSection(next.section);
@@ -274,6 +324,7 @@
   kidName.addEventListener("input", () => {
     store.name = kidName.value.trim();
     saveStore();
+    const me = Profiles.active(); if (me) { me.name = store.name; saveProfiles(); renderProfiles(); }
     document.getElementById("homeName").textContent = store.name || "there";
   });
 
@@ -289,5 +340,5 @@
   // what the Grown-ups page needs to know about the apps and the trophies
   const appList = () => apps.map(a => ({ id: a.id, section: a.section, title: a.title, icon: a.icon, stat: a.stat ? a.stat() : "", badges: a.badges.length, earned: a.badges.filter(b => store.badges[b.id]).length }));
   const toast = (icon, line1, line2) => showToast({ icon, name: line2 }, line1);
-  window.Hub = { store, saveStore, formatTime, confettiBurst, checkBadges, register, leave, page, appList, toast, STORE_KEY };
+  window.Hub = { store, saveStore, formatTime, confettiBurst, checkBadges, register, leave, page, appList, toast, STORE_KEY, Profiles };
 })();
