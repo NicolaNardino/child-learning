@@ -112,6 +112,7 @@ games/
   chess/                   Blox Chess: engine.js has the rules and BloxBot (alpha-beta search), chess.js the board, colours and controls
   wheels/                  Stunt Wheels: wheels.js builds the tracks from a plan and runs the car on and off them; music.js is the soundtrack
   raceoff/                 Race Off: raceoff.js is the physics car, the ground that is made as you drive, the missions and the garage
+                           (car.js draws the cars: your car, the ghost, the rival and the garage preview)
   hoops/                   Blox Hoops: 3 against 3 basketball with the blocky players (the shot meter, the rim and backboard, dunks)
   ping-pong/               Ping Pong 3D (the table, the hall, the ball's physics and Pong-Bot, drawn in 3D on a 2D canvas)
   turbo-track/             Turbo Track (track.js has the five tracks and builds them, sky.js draws the sky, turbo-track.js is the race)

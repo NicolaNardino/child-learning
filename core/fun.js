@@ -12,6 +12,13 @@
      Fun.stickKeys(stick, keys, map) feeds that joystick into a game's key table
      Fun.joystick(stage) a thumb joystick in the bottom-left corner, on phones and tablets only:
                          { x, y, on, reset() }, x right and y down, each -1 to 1
+   And the plumbing every game screen repeats:
+     Fun.dt(now, last, max) seconds since the last frame, never below 0 or above max (default 1/30)
+     Fun.fit(canvas, W, H, scale, max) resizes a canvas drawn at W x H to the pixel scale Fun.res picks and
+                         returns that scale (unchanged unless it moved), so: scale = Fun.fit(canvas, W, H, scale, 2)
+     Fun.screen(overlay, on) shows or hides a game's full-screen overlay and stops the page scrolling behind it
+     Fun.release(keys)   lets go of every key in a key table (on blur, or when a game starts)
+     Fun.holdButtons(buttons, keys, attr) on-screen buttons that hold keys[button.dataset[attr]] while pressed
    Sounds are on unless Hub.store.sound is false. */
 (function(){
   "use strict";
@@ -236,5 +243,23 @@
   document.addEventListener("click", e => { const b = e.target.closest("[data-quality-btn]"); if (b) cycleQuality(); });
   document.querySelectorAll("[data-quality-btn]").forEach(b => { b.textContent = qualityText(); });
 
-  window.Fun = { pops, sfx, face, soundButton, shake, hint, joystick, stickKeys, quality, res, setQuality, qualityText };
+  /* ---------------- the plumbing every game screen repeats ---------------- */
+  const dt = (now, last, max) => Math.max(0, Math.min(max || 1 / 30, (now - last) / 1000 || 0));
+  function fit(canvas, W, H, scale, max){
+    const s = res(canvas.clientWidth, W, max || 2);
+    if (Math.abs(s - scale) < 0.01) return scale;
+    canvas.width = Math.round(W * s); canvas.height = Math.round(H * s);
+    return s;
+  }
+  function screen(overlay, on){ overlay.hidden = !on; document.body.style.overflow = on ? "hidden" : ""; }
+  function release(keys){ Object.keys(keys).forEach(k => { keys[k] = false; }); }
+  function holdButtons(buttons, keys, attr){
+    buttons.forEach(btn => {
+      const k = btn.dataset[attr];
+      btn.addEventListener("pointerdown", e => { e.preventDefault(); btn.setPointerCapture(e.pointerId); keys[k] = true; btn.classList.add("on"); });
+      ["pointerup", "pointercancel", "lostpointercapture"].forEach(n => btn.addEventListener(n, () => { keys[k] = false; btn.classList.remove("on"); }));
+    });
+  }
+
+  window.Fun = { pops, sfx, face, soundButton, shake, hint, joystick, stickKeys, quality, res, setQuality, qualityText, dt, fit, screen, release, holdButtons };
 })();

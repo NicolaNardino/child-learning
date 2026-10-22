@@ -32,7 +32,6 @@
   const zoneAt = x => ZONE_X.findIndex(([a, b]) => x >= a && x < b);
 
   /* ---------------- painted once ---------------- */
-  let still = null;
   function paintStill(){
     const c = document.createElement("canvas");
     c.width = WORLD; c.height = H;
@@ -138,7 +137,6 @@
     g.restore();
     g.fillStyle = "#1f6bff"; g.beginPath(); g.moveTo(120, sandY(120) + 100); g.lineTo(146, sandY(120) + 100); g.lineTo(142, sandY(120) + 126); g.lineTo(124, sandY(120) + 126); g.closePath(); g.fill();
     g.strokeStyle = "#ffd21f"; g.lineWidth = 2; g.beginPath(); g.arc(133, sandY(120) + 100, 13, Math.PI, 0); g.stroke();
-    still = c;
     return c;
   }
 

@@ -874,7 +874,7 @@
 
     function loop(now){
       if (!open) return;
-      const dt = Math.max(0, Math.min(0.05, (now - last) / 1000 || 0)); last = now; fxDt = dt;
+      const dt = Fun.dt(now, last, 0.05); last = now; fxDt = dt;
       update(dt);
       placeHead(dt);
       draw();
@@ -922,8 +922,7 @@
 
     function openGame(){
       open = true; mode = "menu";
-      overlay.hidden = false;
-      document.body.style.overflow = "hidden";
+      Fun.screen(overlay, true);
       score = { P: 0, O: 0 }; rally = null; msg = null; ball.y = -1;
       panelTitle.textContent = "🏓 Ping Pong 3D";
       panelText.textContent = "Play table tennis against Pong-Bot! Move your paddle to the ball and it bounces off. Swing fast to hit hard, hit with the edge to aim to the side, and swing down on a high ball to smash it. First to 11 wins."
@@ -938,8 +937,7 @@
     }
     function closeGame(){
       open = false; mode = "menu";
-      overlay.hidden = true;
-      document.body.style.overflow = "";
+      Fun.screen(overlay, false);
     }
 
     $("ppCloseBtn").addEventListener("click", () => Hub.leave());

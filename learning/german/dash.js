@@ -21,7 +21,7 @@
     S.meters = S.meters || 0; S.schoggi = S.schoggi || 0;
 
     let open = false, raf = 0, last = 0, clock = 0;
-    let roll = 0, speed = 1, gap = 5, shownGap = 5, jump = 0, trip = 0, turbo = 0, caught = 0, streak = 0;
+    let roll = 0, speed = 1, gap = 5, shownGap = 5, jump = 0, trip = 0, turbo = 0, caught = 0;
     let goodies = [];        // Schoggi floating ahead on the path, at a distance z
     let sign = null;         // a town sign coming up
 
@@ -126,7 +126,7 @@
     function frame(now){
       raf = 0;
       if (!open) return;
-      const dt = Math.max(0, Math.min(0.05, (now - last) / 1000 || 0)); last = now; clock += dt;
+      const dt = Fun.dt(now, last, 0.05); last = now; clock += dt;
       speed += ((turbo > 0 ? 2.6 : 1.1) - speed) * Math.min(1, dt * 2);
       roll += speed * dt * 1.2;
       jump = Math.max(0, jump - dt * 1.8); trip = Math.max(0, trip - dt * 1.6); turbo = Math.max(0, turbo - dt); caught = Math.max(0, caught - dt);
@@ -177,7 +177,6 @@
 
     return {
       answer(correct, st){
-        streak = st;
         if (correct) {
           const before = Math.floor(S.meters / 100);
           S.meters += STEP * (turbo > 0 || st >= 5 ? 2 : 1); S.schoggi++;

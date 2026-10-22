@@ -546,8 +546,7 @@
       pacOpen = true;
       pacRunning = false;
       resetPac();
-      pacOverlay.hidden = false;
-      document.body.style.overflow = "hidden";
+      Fun.screen(pacOverlay, true);
       pacPanelTitle.textContent = "👻 Pac-Man";
       pacPanelText.textContent = "Gobble up every dot and don't let the ghosts catch you! Eat a big flashing dot and the ghosts turn blue — then you can chase them for extra points."
         + (store.pacBest ? ` Your best: ${store.pacBest}.` : "");
@@ -560,8 +559,7 @@
     function closePac(){
       pacOpen = false;
       pacRunning = false;
-      pacOverlay.hidden = true;
-      document.body.style.overflow = "";
+      Fun.screen(pacOverlay, false);
     }
 
     const PAC_KEYMAP = {

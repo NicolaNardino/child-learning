@@ -16,7 +16,6 @@
     if (whole !== 0 && rem !== 0) return whole + " " + rem + "/" + sd;
     return sn + "/" + sd;
   }
-  function fmtMoney(){ return ""; }
   function round2(x){ return Math.round(x * 100) / 100; }
 
   // parse "3/4", "-2/5", "1 1/2", "2" -> {n,d} or null

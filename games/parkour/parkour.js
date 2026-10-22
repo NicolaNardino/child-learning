@@ -304,7 +304,6 @@
       });
     }
     // where a spot in the world is on the screen (or null when it's behind the camera)
-    function screenAt(x, y, z){ const q = camSpace(x, y, z); return q[2] > NEAR ? toScreen(q) : null; }
     function popOver(text, colour, size){ fx.pop(text, W / 2, H * 0.36, colour, size || 34); }
 
     /* ----- painting far to near: a block goes in front when the camera is on its side of the gap between them ----- */
@@ -664,12 +663,7 @@
       }
     }
     let scale = 1;
-    function fitCanvas(){
-      const s = Fun.res(canvas.clientWidth, W, 3);
-      if (Math.abs(s - scale) < 0.01) return;
-      scale = s;
-      canvas.width = Math.round(W * s); canvas.height = Math.round(H * s);
-    }
+    function fitCanvas(){ scale = Fun.fit(canvas, W, H, scale, 3); }
 
     /* ----- playing ----- */
     function respawn(){
@@ -733,7 +727,7 @@
     }
     function loop(now){
       if (!open) return;
-      const dt = Math.max(0, Math.min(1 / 30, (now - last) / 1000 || 0));
+      const dt = Fun.dt(now, last);
       last = now; frameDt = dt;
       clock += dt;
       if (running) step(dt);
@@ -752,7 +746,7 @@
       reset();
       running = true;
       panel.hidden = true;
-      Object.keys(keys).forEach(k => { keys[k] = false; });
+      Fun.release(keys);
       flash = { text: "Go! Reach the 🏆", t: 2 };
       canvas.focus();
     }
@@ -777,8 +771,7 @@
       open = true;
       running = false;
       reset();
-      overlay.hidden = false;
-      document.body.style.overflow = "hidden";
+      Fun.screen(overlay, true);
       panelTitle.textContent = "🧗 Parkour Run";
       panelText.textContent = "You're up in the sky, seeing it all through your own eyes! Click to look around with the mouse, jump across the blocks and reach the trophy. Don't touch the red kill bricks. If you fall or touch red, you go back to your last 🚩 flag."
         + (store.parkourBest ? ` Your best: ${fmtTime(store.parkourBest)}.` : "");
@@ -792,8 +785,7 @@
       open = false;
       running = false;
       letGo();
-      overlay.hidden = true;
-      document.body.style.overflow = "";
+      Fun.screen(overlay, false);
     }
 
     const KEYMAP = {
@@ -819,7 +811,7 @@
       const k = KEYMAP[e.code];
       if (k) keys[k] = false;
     });
-    window.addEventListener("blur", () => Object.keys(keys).forEach(k => { keys[k] = false; }));
+    window.addEventListener("blur", () => Fun.release(keys));
     // click with the mouse and it turns your head (until Esc); on a touch screen, drag to turn
     const looking = () => document.pointerLockElement === canvas;
     let unlockedAt = 0;

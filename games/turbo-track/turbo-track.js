@@ -931,7 +931,7 @@
 
     function loop(now){
       if (!open) return;
-      const dt = Math.max(0, Math.min(1 / 30, (now - last) / 1000 || 0));
+      const dt = Fun.dt(now, last);
       clock = now / 1000;
       last = now; frameDt = dt;
       step(dt);
@@ -955,8 +955,7 @@
 
     function openGame(){
       open = true;
-      overlay.hidden = false;
-      document.body.style.overflow = "hidden";
+      Fun.screen(overlay, true);
       if (!cars.length) newPreviewRace();
       showGarage();
       last = performance.now();
@@ -971,9 +970,8 @@
     }
     function closeGame(){
       open = false;
-      overlay.hidden = true;
-      document.body.style.overflow = "";
-      Object.keys(keys).forEach(k => { keys[k] = false; });
+      Fun.screen(overlay, false);
+      Fun.release(keys);
       if (state !== "garage") { newPreviewRace(); state = "garage"; }
     }
 

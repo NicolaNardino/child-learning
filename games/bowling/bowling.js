@@ -255,11 +255,7 @@
     }
 
     /* ---------------- drawing ---------------- */
-    function fitCanvas(){
-      const s = Fun.res(canvas.clientWidth, W, 2);
-      if (Math.abs(s - scale) < 0.01) return;
-      scale = s; canvas.width = Math.round(W * s); canvas.height = Math.round(H * s);
-    }
+    function fitCanvas(){ scale = Fun.fit(canvas, W, H, scale, 2); }
     function P(x, y, z){ const d = z - cam.z; if (d < 0.25) return null; const k = F / d; return [CX + x * k, HY + (cam.y - y) * k, k]; }
     function quad(pts, fill){
       const s = pts.map(p => P(p[0], p[1], p[2]));
@@ -413,7 +409,7 @@
     }
     function loop(now){
       if (!open) return;
-      const dt = Math.max(0, Math.min(1 / 30, (now - last) / 1000 || 0));
+      const dt = Fun.dt(now, last);
       last = now;
       if (running) update(dt); else clock += dt;
       draw(dt); hud();
@@ -434,14 +430,14 @@
     }
     function openGame(){
       open = true; running = false; state = "ready"; reset();
-      overlay.hidden = false; document.body.style.overflow = "hidden";
+      Fun.screen(overlay, true);
       panelTitle.textContent = "🎳 Blox Bowling";
       panelText.textContent = "Ten frames of bowling. Swipe up the lane to throw: swipe faster for a faster ball, and curve your swipe to hook it into the pins. Knock all 10 down with one ball for a STRIKE, or with two for a SPARE."
         + (store.bowlBest ? ` Your best: ${store.bowlBest}.` : "");
       showPanel("▶ Play");
       last = performance.now(); requestAnimationFrame(loop);
     }
-    function closeGame(){ open = false; running = false; overlay.hidden = true; document.body.style.overflow = ""; }
+    function closeGame(){ open = false; running = false; Fun.screen(overlay, false); }
 
     /* ---------------- controls ---------------- */
     const canThrow = () => running && state === "aim" && turn === 0;
@@ -460,7 +456,7 @@
       if (e.code === "Space" && open) { release(); return; }
       const k = KEYS[e.code]; if (k) keys[k] = false;
     });
-    window.addEventListener("blur", () => { Object.keys(keys).forEach(k => { keys[k] = false; }); charging = false; gesture = null; });
+    window.addEventListener("blur", () => { Fun.release(keys); charging = false; gesture = null; });
     const local = e => { const r = canvas.getBoundingClientRect(); return [(e.clientX - r.left) * W / r.width, (e.clientY - r.top) * H / r.height]; };
     // a swipe throws; a sideways drag first moves you along the line
     canvas.addEventListener("pointerdown", e => {

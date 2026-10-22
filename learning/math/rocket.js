@@ -86,7 +86,7 @@
     function frame(now){
       raf = 0;
       if (!open) return;
-      const dt = Math.max(0, Math.min(0.05, (now - last) / 1000 || 0)); last = now; clock += dt;
+      const dt = Fun.dt(now, last, 0.05); last = now; clock += dt;
       boost = Math.max(0, boost - dt * 0.5); wobble = Math.max(0, wobble - dt * 1.2);
       speed += ((1 + boost * 5) - speed) * Math.min(1, dt * 3);
       const bg = ctx.createRadialGradient(CX, CY, 10, CX, CY, W * 0.6);
@@ -98,7 +98,7 @@
       neb.addColorStop(0, `hsla(${hue},80%,50%,0.18)`); neb.addColorStop(1, "rgba(0,0,0,0)"); ctx.fillStyle = neb; ctx.fillRect(0, 0, W, H);
       // the stars fly towards you; faster means longer streaks
       stars.forEach((s, i) => {
-        const z0 = s.z; s.z -= speed * dt * 7;
+        s.z -= speed * dt * 7;
         if (s.z < 0.4) { stars[i] = newStar(false); return; }
         const a = proj(s.x, s.y, s.z), b = proj(s.x, s.y, Math.min(40, s.z + speed * 0.35 + 0.1));
         ctx.strokeStyle = `rgba(${200 + s.c * 55},${210 + s.c * 40},255,${Math.min(1, 1.2 - s.z / 30)})`;
@@ -121,7 +121,7 @@
         const g = ctx.createRadialGradient(-R * 0.3, -R * 0.3, R * 0.1, 0, 0, R); g.addColorStop(0, "#c9b8a0"); g.addColorStop(1, "#5a4a3a");
         ctx.fillStyle = g; ctx.beginPath(); for (let i = 0; i < 9; i++) { const a = i / 9 * 6.283, r = R * (0.75 + 0.25 * Math.sin(i * 7)); ctx.lineTo(Math.cos(a) * r, Math.sin(a) * r); } ctx.closePath(); ctx.fill();
         ctx.restore();
-        if (rock.z < 1.1) { const q = proj(0, 0, 2); fx.pop("BONK!", CX, CY + 20, "#ffd2a0", 40); fx.burst(CX, CY + 30, "#ffd2a0", 24, 200); Fun.sfx.bonk(); wobble = 1; rock = null; }
+        if (rock.z < 1.1) { fx.pop("BONK!", CX, CY + 20, "#ffd2a0", 40); fx.burst(CX, CY + 30, "#ffd2a0", 24, 200); Fun.sfx.bonk(); wobble = 1; rock = null; }
       }
       drawRocket();
       // km flown, and the next planet

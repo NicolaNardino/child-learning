@@ -86,7 +86,7 @@
     let open = false, running = false, last = 0, clock = 0, scale = 1;
     let balls = [], cue = null, turn = 0, groups = [null, null], state = "ready";   // ready, aim, place, roll, ai, over
     let aim = 0, power = 0, charging = false, inHand = false, broke = false, shot = null, settleT = 0;
-    let hover = null, runCount = 0, potThisGame = 0, status = "", ai = null, overT = 0, firstGame = true;
+    let hover = null, runCount = 0, potThisGame = 0, status = "", ai = null, firstGame = true;
     let mode = MODES[store.poolMode] ? store.poolMode : "normal", shots = 0;
     const spin = { x: 0, y: 0 };   // where the cue hits the white ball: x right, y up, each -1 to 1
     const practice = () => mode === "practice";
@@ -112,7 +112,7 @@
     function reset(){
       balls = rack(); cue = balls[0];
       groups = [null, null]; inHand = false; broke = false; shot = null; power = 0; charging = false;
-      runCount = 0; potThisGame = 0; hover = null; ai = null; overT = 0;
+      runCount = 0; potThisGame = 0; hover = null; ai = null;
       turn = firstGame || practice() ? 0 : (Math.random() < 0.5 ? 0 : 1); firstGame = false;
       shots = 0; setSpin(0, 0);
       aim = Math.atan2(0, 1);
@@ -208,7 +208,7 @@
       b.x = x;
     }
     function finish(winner, why){
-      state = "over"; running = false; overT = 0;
+      state = "over"; running = false;
       const won = winner === 0;
       store.poolPlayed = (store.poolPlayed || 0) + 1;
       if (won) store.poolWins = (store.poolWins || 0) + 1;
@@ -221,7 +221,7 @@
       showPanel("▶ Play again");
     }
     function finishPractice(){
-      state = "over"; running = false; overT = 0;
+      state = "over"; running = false;
       const best = !store.poolPracticeBest || shots < store.poolPracticeBest;
       if (best) store.poolPracticeBest = shots;
       Hub.saveStore(); Hub.checkBadges();
@@ -379,15 +379,11 @@
       else if (state === "roll") {
         stepPhysics(dt);
         if (moving()) settleT = 0; else { settleT += dt; if (settleT > 0.35) endShot(); }
-      } else if (state === "over") { overT += dt; stepPhysics(dt); }
+      } else if (state === "over") { stepPhysics(dt); }
     }
 
     /* ---------------- drawing ---------------- */
-    function fitCanvas(){
-      const s = Fun.res(canvas.clientWidth, W, 2);
-      if (Math.abs(s - scale) < 0.01) return;
-      scale = s; canvas.width = Math.round(W * s); canvas.height = Math.round(H * s);
-    }
+    function fitCanvas(){ scale = Fun.fit(canvas, W, H, scale, 2); }
     const poly = (pts, fill) => { ctx.beginPath(); pts.forEach(([x, y], i) => { const [sx, sy] = proj(x, y); i ? ctx.lineTo(sx, sy) : ctx.moveTo(sx, sy); }); ctx.closePath(); ctx.fillStyle = fill; ctx.fill(); };
     const rim = (m, fill) => poly([[-m, -m], [L + m, -m], [L + m, WD + m], [-m, WD + m]], fill);
 
@@ -591,7 +587,7 @@
 
     function loop(now){
       if (!open) return;
-      const dt = Math.max(0, Math.min(1 / 30, (now - last) / 1000 || 0));
+      const dt = Fun.dt(now, last);
       last = now;
       if (running || state === "over") update(dt); else clock += dt;
       draw(dt);
@@ -611,14 +607,14 @@
       store.poolMode = mode; Hub.saveStore();
       reset();
       running = true; panel.hidden = true;
-      Object.keys(keys).forEach(k => { keys[k] = false; });
+      Fun.release(keys);
       if (state === "aim") status = practice() ? "Practice: pot all 15 balls. You break!" : "You break! Aim, then shoot.";
       canvas.focus();
     }
     function openGame(){
       open = true; running = false; state = "ready";
       reset(); status = "";
-      overlay.hidden = false; document.body.style.overflow = "hidden";
+      Fun.screen(overlay, true);
       panelTitle.textContent = "🎱 Blox Pool";
       panelText.textContent = "American 8-ball against BloxBot. Pot all of your group, solids or stripes (the first ball you pot decides), then sink the black 8 to win. Potting the white cue ball or hitting the wrong ball first is a foul, and the other player gets the cue ball to put anywhere. Pick how good BloxBot is, or practise on your own."
         + (store.poolWins ? ` Wins so far: ${store.poolWins}.` : "");
@@ -626,7 +622,7 @@
       last = performance.now(); requestAnimationFrame(loop);
     }
     function closeGame(){
-      open = false; running = false; overlay.hidden = true; document.body.style.overflow = "";
+      open = false; running = false; Fun.screen(overlay, false);
     }
 
     /* ---------------- controls ---------------- */
