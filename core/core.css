@@ -392,3 +392,22 @@ button.rainbow{ animation: rainbow-flash 0.6s linear; }
 .shop-swatch{ width: 56px; height: 56px; border-radius: 50%; border: 3px solid #14102c; box-shadow: 0 4px 10px rgba(0,0,0,0.35); }
 .shop-name{ font-weight: 700; font-size: 14px; }
 .shop-item .btn:disabled{ opacity: 0.55; cursor: default; }
+
+/* players on the home screen */
+.profile-row{ display: flex; flex-wrap: wrap; gap: 6px; margin: 4px 0 8px; }
+.profile-chip{ font: 700 13px system-ui, sans-serif; padding: 6px 12px; border-radius: 999px; border: 2px solid var(--ink-soft); background: transparent; color: var(--ink); cursor: pointer; min-height: 36px; }
+.profile-chip.on{ background: var(--accent); border-color: var(--accent); color: var(--accent-ink); cursor: default; }
+.profile-chip.add{ border-style: dashed; color: var(--ink-soft); }
+
+/* the 💬 play-test note window, above any game */
+.fb-modal{ position: fixed; inset: 0; z-index: 1002; background: rgba(0,0,0,0.55); display: flex; align-items: center; justify-content: center; padding: 16px; }
+.fb-modal[hidden]{ display: none; }
+.fb-card{ background: var(--paper-raised); color: var(--ink); border-radius: 16px; padding: 16px; width: min(440px, 100%); display: flex; flex-direction: column; gap: 10px; box-shadow: 0 10px 40px rgba(0,0,0,0.5); }
+.fb-card h2{ margin: 0; font-size: 18px; }
+.fb-kinds{ display: flex; flex-wrap: wrap; gap: 6px; }
+.fb-kind{ font: 700 14px system-ui, sans-serif; padding: 8px 12px; border-radius: 12px; border: 2px solid var(--ink-soft); background: transparent; color: var(--ink); cursor: pointer; min-height: 40px; }
+.fb-kind[aria-pressed="true"]{ background: var(--accent); border-color: var(--accent); color: var(--accent-ink); }
+.fb-text{ font: inherit; border-radius: 10px; padding: 8px; border: 2px solid var(--ink-soft); background: var(--paper); color: var(--ink); resize: vertical; }
+.fb-row{ display: flex; justify-content: flex-end; gap: 8px; }
+.gu-notes li{ flex-direction: column; align-items: flex-start; gap: 2px; }
+.install-btn{ font: inherit; font-size: 13px; color: var(--ink-soft); background: none; border: none; text-decoration: underline; text-underline-offset: 3px; cursor: pointer; padding: 0; }

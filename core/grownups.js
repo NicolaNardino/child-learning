@@ -1,9 +1,11 @@
-/* Grown-ups: a page at #/grownups for parents, with two things.
-   1. A progress report: how much was practised the last 7 days, and for every subject how accurate the answers
-      are in each topic, so you can see at a glance what needs more practice.
-   2. A backup: progress only lives in this browser, so here you can copy a "progress code" (or save it as a file)
-      and paste it on another phone, tablet or computer to carry everything over.
-   Nothing leaves the device unless you copy the code yourself. */
+/* Grown-ups: a page at #/grownups for parents.
+   1. A progress report for the player who is on now: how much was practised the last 7 days, and for every
+      subject how accurate the answers are in each topic, so you can see at a glance what needs more practice.
+   2. Players: rename or remove the family's players (each has their own progress).
+   3. Play-test notes: what the kids flagged with the 💬 button in a game, ready to copy and send.
+   4. A backup: progress only lives in this browser, so here you can copy a "progress code" (or save it as a file)
+      with every player in it, and paste it on another phone, tablet or computer to carry everything over.
+   Nothing leaves the device unless you copy it yourself. */
 (function(){
   "use strict";
   const store = Hub.store;
@@ -15,8 +17,25 @@
     const out = new Response(new Blob([bytes]).stream().pipeThrough(stream));
     return new Uint8Array(await out.arrayBuffer());
   }
+  const P = Hub.Profiles;
+  // the code holds every player: { __lp: 2, profiles, stores: { id: progress } }; old codes hold one progress
+  function everything(){
+    Hub.saveStore();
+    const meta = P.data(), stores = {};
+    meta.list.forEach(p => { try { stores[p.id] = p.id === meta.active ? store : JSON.parse(localStorage.getItem(P.keyOf(p.id)) || "{}"); } catch (e) { stores[p.id] = {}; } });
+    return { __lp: 2, profiles: { active: meta.active, list: meta.list }, stores };
+  }
+  function restore(data){
+    if (data.__lp === 2 && data.profiles && Array.isArray(data.profiles.list) && data.stores) {
+      const meta = P.data();
+      data.profiles.list.forEach(p => { if (p && typeof p.id === "string" && /^[\w-]{1,40}$/.test(p.id)) localStorage.setItem(P.keyOf(p.id), JSON.stringify(data.stores[p.id] || {})); });
+      meta.list = data.profiles.list.filter(p => p && typeof p.id === "string" && /^[\w-]{1,40}$/.test(p.id)).map(p => ({ id: p.id, name: String(p.name || "").slice(0, 20), face: P.FACES.includes(p.face) ? p.face : P.FACES[0] }));
+      meta.active = meta.list.some(p => p.id === data.profiles.active) ? data.profiles.active : meta.list[0].id;
+      P.save();
+    } else localStorage.setItem(Hub.STORE_KEY, JSON.stringify(data));
+  }
   async function makeCode(){
-    const raw = new TextEncoder().encode(JSON.stringify(store));
+    const raw = new TextEncoder().encode(JSON.stringify(everything()));
     if (typeof CompressionStream === "function") return "LP2-" + b64(await pipe(raw, new CompressionStream("gzip")));
     return "LP1-" + b64(raw);
   }
@@ -124,9 +143,12 @@
           <p class="tagline">How practice is going, and a way to take progress to another device.</p>
         </header>
         <div id="guReport"></div>
+        <section class="gu-card" id="guPlayers"></section>
+        <section class="gu-card" id="guNotes"></section>
         <section class="gu-card" id="guBackup">
           <h2>💾 Back up or move progress</h2>
-          <p class="gu-note">Progress is saved in this browser only. If the browser is cleared, or you switch to a new phone, it would be lost. Copy the progress code below, keep it somewhere safe, and paste it on the other device to bring everything back.</p>
+          <p class="gu-note">Progress is saved in this browser only. If the browser is cleared, or you switch to a new phone, it would be lost. Copy the progress code below (it holds every player), keep it somewhere safe, and paste it on the other device to bring everything back.</p>
+          <p class="gu-note"><b id="guLast"></b></p>
           <div class="gu-row">
             <button class="btn" id="guMake" type="button">1. Make my progress code</button>
           </div>
@@ -149,9 +171,36 @@
       </div>`;
       const $ = id => host.querySelector("#" + id);
       let code = "";
+      // the players: rename or remove (the one playing now can't be removed)
+      function renderPlayers(){
+        const meta = P.data();
+        $("guPlayers").innerHTML = `<h2>👨‍👩‍👦 Players</h2><p class="gu-note">Each player has their own progress, coins and trophies. Switch player on the home screen. The report above is for ${esc((P.active().face || "") + " " + (P.active().name || "Player"))}.</p><ul class="gu-list">` +
+          meta.list.map(p => `<li><span>${esc(p.face || "🙂")} ${esc(p.name || "Player")}${p.id === meta.active ? " <small>(playing now)</small>" : ""}</span><span class="gu-row"><button class="btn ghost small" type="button" data-rename="${esc(p.id)}">Rename</button>${p.id === meta.active ? "" : `<button class="btn ghost small" type="button" data-remove="${esc(p.id)}">Remove</button>`}</span></li>`).join("") + `</ul>`;
+      }
+      $("guPlayers").addEventListener("click", e => {
+        const b = e.target.closest("button"); if (!b) return;
+        const meta = P.data();
+        if (b.dataset.rename) { const p = meta.list.find(q => q.id === b.dataset.rename), n = prompt("New name", p.name || ""); if (n !== null && n.trim()) { P.rename(p.id, n); if (p.id === meta.active) { store.name = n.trim().slice(0, 20); Hub.saveStore(); } renderPlayers(); } }
+        if (b.dataset.remove) { const p = meta.list.find(q => q.id === b.dataset.remove); if (confirm(`Remove ${p.name || "this player"} and all their progress? This can't be undone (unless you have a progress code).`)) { P.remove(p.id); renderPlayers(); } }
+      });
+      // play-test notes from the 💬 button
+      function renderNotes(){
+        const notes = window.Feedback ? Feedback.all() : [];
+        $("guNotes").innerHTML = `<h2>📝 Play-test notes</h2><p class="gu-note">When something in a game is too hard, boring, broken or a great idea, the 💬 button in the game saves a note here. Copy them all and send them on to whoever is building the app.</p>` +
+          (notes.length ? `<ul class="gu-list gu-notes">${notes.slice().reverse().map(n => `<li><span>${esc(n.icon || "")} <b>${esc(n.title)}</b> · ${esc(n.kind)}${n.text ? ": " + esc(n.text) : ""}</span><small>${esc(n.who || "")} · ${new Date(n.t).toLocaleString("en-GB", { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" })}</small></li>`).join("")}</ul>
+            <div class="gu-row"><button class="btn" id="guNotesCopy" type="button">📋 Copy all ${notes.length} notes</button><button class="btn ghost" id="guNotesClear" type="button">🗑️ Clear</button><span class="gu-msg" id="guNotesMsg" aria-live="polite"></span></div>`
+            : `<p class="gu-note">No notes yet.</p>`);
+      }
+      $("guNotes").addEventListener("click", async e => {
+        const b = e.target.closest("button"); if (!b) return;
+        if (b.id === "guNotesCopy") { try { await navigator.clipboard.writeText(Feedback.asText()); $("guNotesMsg").textContent = "Copied!"; } catch (err) { prompt("Copy these notes", Feedback.asText()); } }
+        if (b.id === "guNotesClear" && confirm("Clear all play-test notes?")) { Feedback.clear(); renderNotes(); }
+      });
+      const lastBackupText = () => { const t = P.data().lastBackup; if (!t) return "No progress code made yet on this device."; const d = Math.floor((Date.now() - t) / 864e5); return `Last progress code made ${d === 0 ? "today" : d === 1 ? "yesterday" : d + " days ago"}.`; };
       $("guMake").addEventListener("click", async () => {
         try {
           code = await makeCode();
+          P.data().lastBackup = Date.now(); P.save(); $("guLast").textContent = lastBackupText();
           $("guCode").value = code; $("guCopy").disabled = false; $("guSave").disabled = false;
           $("guMsg1").textContent = `Done: ${code.length.toLocaleString("en")} characters`;
           $("guCode").focus(); $("guCode").select();
@@ -175,15 +224,15 @@
       $("guRestore").addEventListener("click", async () => {
         try {
           const data = await readCode($("guPaste").value);
-          const names = Object.keys(data).length;
-          if (!confirm(`Replace the progress on this device with the progress in this code (${names} saved things)?`)) return;
-          localStorage.setItem(Hub.STORE_KEY, JSON.stringify(data));
+          const what = data.__lp === 2 ? `${data.profiles.list.length} player${data.profiles.list.length === 1 ? "" : "s"}` : `${Object.keys(data).length} saved things`;
+          if (!confirm(`Replace the progress on this device with the progress in this code (${what})?`)) return;
+          restore(data);
           $("guMsg2").textContent = "Restored! Loading...";
           setTimeout(() => { location.hash = "#/"; location.reload(); }, 600);
         } catch (e) { $("guMsg2").textContent = e.message || "That didn't work."; }
       });
       return {
-        open(){ $("guReport").innerHTML = report(); },
+        open(){ $("guReport").innerHTML = report(); renderPlayers(); renderNotes(); $("guLast").textContent = lastBackupText(); },
         close(){}
       };
     }

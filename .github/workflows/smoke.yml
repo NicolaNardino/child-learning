@@ -8,7 +8,7 @@ on:
 jobs:
   smoke:
     runs-on: ubuntu-latest
-    timeout-minutes: 15
+    timeout-minutes: 20
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
@@ -22,3 +22,7 @@ jobs:
           npx playwright install --with-deps chromium
       - name: Open every app and game
         run: node tests/smoke.mjs
+      - name: Players, play-test notes and backup
+        run: node tests/features.mjs
+      - name: Race Off physics (the car mustn't sink into the ground or get stuck)
+        run: node tests/raceoff.mjs

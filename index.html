@@ -274,6 +274,7 @@
   <header class="hub-head">
     <h1>Learn &amp; Play</h1>
     <p class="tagline">Hi <span id="homeName">there</span>! What do you feel like today?</p>
+    <div class="profile-row" id="profileRow" role="group" aria-label="Who's playing?"></div>
     <div class="name-row">
       <label for="kidName">Your name</label>
       <input id="kidName" type="text" maxlength="20" placeholder="name" autocomplete="off">
@@ -303,7 +304,8 @@
     <div class="recent-list" id="recentList"></div>
   </section>
   <footer>Progress is saved in this browser only, so it'll be here next time on this device.</footer>
-  <p class="home-grownups"><a href="#/shop">🛍️ Shop</a> · <a href="#/grownups">👪 Grown-ups: progress report and backup</a> · <button class="home-quality" type="button" data-quality-btn title="Lower graphics run better on older phones">⚙️ Graphics: Auto</button></p>
+  <p class="home-grownups" id="backupNudge" hidden><a href="#/grownups">💾 Time for a backup: make a progress code on the Grown-ups page</a></p>
+  <p class="home-grownups"><a href="#/shop">🛍️ Shop</a> · <a href="#/grownups">👪 Grown-ups: progress report, players, notes and backup</a> · <button class="home-quality" type="button" data-quality-btn title="Lower graphics run better on older phones">⚙️ Graphics: Auto</button> <button class="install-btn" type="button" id="installBtn" hidden>· 📲 Install app (works offline)</button></p>
 </div>
 
 <!-- a section: its apps, then its trophy shelf -->
@@ -328,6 +330,7 @@
 
 <script src="core/core.js"></script>
 <script src="core/fun.js"></script>
+<script src="core/feedback.js"></script>
 <script src="core/daily.js"></script>
 <script src="core/shop.js"></script>
 <script src="learning/notebook.js"></script>
@@ -384,4 +387,18 @@
 <script>
   // keep a copy of the app for offline use (only over https or localhost, where browsers allow it)
   if ("serviceWorker" in navigator) window.addEventListener("load", () => { navigator.serviceWorker.register("sw.js").catch(() => {}); });
+  // "Install app": Chrome and Edge offer their own install prompt; on iPhone and iPad it's Share, then Add to Home Screen
+  (function(){
+    const btn = document.getElementById("installBtn"), standalone = matchMedia("(display-mode: standalone)").matches || navigator.standalone;
+    const ios = /iP(hone|ad|od)/.test(navigator.userAgent) || (navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1);
+    let ask = null;
+    if (standalone) return;
+    window.addEventListener("beforeinstallprompt", e => { e.preventDefault(); ask = e; btn.hidden = false; });
+    if (ios) btn.hidden = false;
+    btn.addEventListener("click", async () => {
+      if (ask) { ask.prompt(); await ask.userChoice; ask = null; btn.hidden = true; }
+      else Hub.toast("📲", "Install on iPhone or iPad", "In Safari tap Share, then Add to Home Screen");
+    });
+    window.addEventListener("appinstalled", () => { btn.hidden = true; });
+  })();
 </script>
