@@ -117,10 +117,10 @@
   // the games are grouped on their page; anything new and not listed here goes under "More games"
   const CATEGORIES = [
     { title: "🏁 Racing", ids: ["raceoff", "wheels", "turbo"] },
-    { title: "⚽ Sports", ids: ["soccer", "hoops", "pool", "bowling", "minigolf", "ping-pong"] },
-    { title: "🗺️ Adventure", ids: ["forest", "parkour", "robot-tag", "tag-rush", "zombie-blaster", "egg-heist", "brainrot-heist"] },
-    { title: "👾 Arcade", ids: ["pacman", "pacman-3d", "snake", "beats", "lander", "blockdrop", "bricks", "frog", "tower", "fishing"] },
-    { title: "🧱 Build & grow", ids: ["blocks", "garden", "potato-tycoon", "storm-fire"] },
+    { title: "⚽ Sports", ids: ["soccer", "hoops", "pool", "bowling", "ping-pong"] },
+    { title: "🗺️ Adventure", ids: ["forest", "parkour", "robot-tag", "tag-rush", "zombie-blaster", "egg-heist"] },
+    { title: "👾 Arcade", ids: ["pacman", "pacman-3d", "snake", "lander", "blockdrop", "bricks", "frog", "tower", "fishing"] },
+    { title: "🧱 Build & grow", ids: ["blocks", "garden", "storm-fire"] },
     { title: "🧠 Brain games", ids: ["chess", "memory"] }
   ];
 

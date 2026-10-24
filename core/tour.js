@@ -50,7 +50,7 @@
     { at: ".door.games", text: () => `🎮 Games: ${count("games")} of them! Racing, sports, adventures, arcade classics, building games and brain games.` },
     { at: "#dailyCard", text: () => "📅 Every day there are three new challenges. Finish them for 🪙 coins, and play every day to keep your 🔥 streak going." },
     { at: "#appSearch", text: () => "🔎 Looking for something? Type here to find any game or subject straight away." },
-    { at: '.home-grownups a[href="#/shop"]', text: () => "🛍️ Spend your coins in the Shop on new looks: pool cloths, bowling balls and golf balls." },
+    { at: '.home-grownups a[href="#/shop"]', text: () => "🛍️ Spend your coins in the Shop on new looks: pool cloths and bowling balls." },
     { at: '.home-grownups a[href="#/grownups"]', text: () => "👪 For grown-ups: a progress report, the players, play-test notes and a backup code to move everything to another device." },
     { end: true, text: () => "That's the tour! Want me to present every single app, one by one?" }
   ];
