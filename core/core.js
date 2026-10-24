@@ -119,7 +119,7 @@
     { title: "🏁 Racing", ids: ["raceoff", "wheels", "turbo"] },
     { title: "⚽ Sports", ids: ["soccer", "hoops", "pool", "bowling", "minigolf", "ping-pong"] },
     { title: "🗺️ Adventure", ids: ["forest", "parkour", "robot-tag", "tag-rush", "zombie-blaster", "egg-heist", "brainrot-heist"] },
-    { title: "👾 Arcade", ids: ["pacman", "pacman-3d", "snake", "tower", "fishing"] },
+    { title: "👾 Arcade", ids: ["pacman", "pacman-3d", "snake", "beats", "lander", "tower", "fishing"] },
     { title: "🧱 Build & grow", ids: ["blocks", "garden", "potato-tycoon", "storm-fire"] },
     { title: "🧠 Brain games", ids: ["chess"] }
   ];

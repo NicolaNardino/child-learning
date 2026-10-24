@@ -1,0 +1,15 @@
+/* Rainbow Beats: the stage, and the song list on the start panel. */
+#btCanvas{
+  display: block; width: 100%; aspect-ratio: 16 / 9; height: auto;
+  border-radius: 12px; border: 2px solid rgba(255,255,255,0.25); background: #160b33; touch-action: none;
+}
+#btCanvas:focus{ outline: none; }
+.bt-panel{ background: rgba(14,6,34,0.8); justify-content: flex-start; overflow-y: auto; }
+.bt-songs{ display: flex; flex-direction: column; gap: 6px; width: min(420px, 100%); }
+.bt-song{ display: flex; justify-content: space-between; align-items: center; gap: 10px; text-align: left; }
+.bt-song small{ font-weight: 600; opacity: 0.85; white-space: nowrap; }
+.bt-songs .btn.ghost{ color: #fff; border-color: rgba(255,255,255,0.4); }
+@media (max-width: 640px), (max-height: 500px){
+  .bt-song{ padding: 5px 10px; font-size: 13px; }
+  .bt-panel .game-panel-text{ display: none; }
+}
