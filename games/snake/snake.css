@@ -26,3 +26,4 @@
   .sn-box .game-stage{ width: calc((100vh - 60px) * 5 / 4); width: calc((100dvh - 60px) * 5 / 4); }
   .sn-pad{ grid-template-columns: repeat(3, 54px); }
 }
+.sn-panel-btns{ display: flex; gap: 10px; flex-wrap: wrap; justify-content: center; }
