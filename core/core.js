@@ -119,9 +119,9 @@
     { title: "🏁 Racing", ids: ["raceoff", "wheels", "turbo"] },
     { title: "⚽ Sports", ids: ["soccer", "hoops", "pool", "bowling", "minigolf", "ping-pong"] },
     { title: "🗺️ Adventure", ids: ["forest", "parkour", "robot-tag", "tag-rush", "zombie-blaster", "egg-heist", "brainrot-heist"] },
-    { title: "👾 Arcade", ids: ["pacman", "pacman-3d", "snake", "beats", "lander", "blockdrop", "tower", "fishing"] },
+    { title: "👾 Arcade", ids: ["pacman", "pacman-3d", "snake", "beats", "lander", "blockdrop", "bricks", "frog", "tower", "fishing"] },
     { title: "🧱 Build & grow", ids: ["blocks", "garden", "potato-tycoon", "storm-fire"] },
-    { title: "🧠 Brain games", ids: ["chess"] }
+    { title: "🧠 Brain games", ids: ["chess", "memory"] }
   ];
 
   /* ---------------- trophies: every app brings its own, each section has a shelf ---------------- */
