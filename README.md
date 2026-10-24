@@ -6,6 +6,8 @@ Learning and games for a 5th grader. The home screen asks **Learning** or **Game
 
 ▶️ **Play it here: https://nicolanardino.github.io/child-learning/**
 
+🤖 **New here?** Robo the robot shows you around. On a first visit the home screen offers *Start the tour* (it never pops up by itself), and *🎬 Meet the apps* at the bottom of the home screen starts it any time. The **guided tour** spotlights each part of the home screen in turn (players, Learning, Games, the daily challenges, search, the Shop and the Grown-ups page) with a speech bubble. Then the **show reel** presents every app, one by one, full screen: a big spinning icon, what it is, your best and your trophies, and a *🎮 Try it!* button. It moves on by itself every few seconds (◀ ▶ to skip, Space to pause), with chapters to jump to: Learning, Racing, Sports and the other game groups. Robo reads it all out loud (🔊 to switch off).
+
 There's nothing to install and no build step. Just open `index.html` in a browser.
 
 📱 **On a phone or tablet**, open the link and choose *Add to Home Screen* (Safari: the share button; Chrome: the ⋮ menu → *Install app*). Learn & Play then gets its own icon, opens full screen like an app, and still works without internet once it's been opened. ⚙️ **Graphics:** at the bottom of the home screen, *Graphics: Auto* can be switched to *High* or *Low*. Low draws the games at normal resolution and leaves out some extras (fewer trees in 99 Nights, no edge smoothing), which helps older phones. In Auto, a game that runs slowly for a few seconds switches itself to Low and says so.
@@ -96,6 +98,7 @@ core/
   fun.js                   the silly bits the games share: comic pop-up words, sounds, cartoon faces, the 🔊 switch, a wobble, the touch joystick, the graphics quality setting (window.Fun)
   daily.js                 today's three challenges, the streak and the coins (window.Daily)
   shop.js                  the shop page at #/shop and Hub.cosmetic(slot) for the looks you bought
+  tour.js, .css             Robo's guided tour of the home screen and the show reel of every app (window.Tour)
 learning/
   notebook.js, .css        the practice page every subject shares: topics, levels, answers, Time Trial, race, trophies, and an optional scene above the questions
   math/                    Fast Math (rocket.js is the Rocket Run above the questions)
